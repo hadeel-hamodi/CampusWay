@@ -1065,12 +1065,10 @@ maxAccel = Math.max(maxAccel, filteredAccel);
 
   const now=performance.now();
 
-  if(previousFiltered>stepThreshold &&
-     filteredAccel<stepThreshold*0.55 &&
-     now-lastStepAt>320){
-    lastStepAt=now;
-    handleDetectedStep();
-  }
+if(filteredAccel > 0.8 && now - lastStepAt > 400){
+  lastStepAt = now;
+  handleDetectedStep();
+}
 }
 
 async function requestSensorPermission(){
