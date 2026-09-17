@@ -1044,7 +1044,7 @@ function updateDeviceHeading(e){
 function updateDeviceMotion(e){
   sensorEvents++;
 
-  $('status').textContent = `Motion events: ${sensorEvents}`;
+  $('status').textContent = `Motion: ${sensorEvents} | accel: ${filteredAccel.toFixed(2)}`;
 
   const a=e.accelerationIncludingGravity || e.acceleration;
   if(!a) return;
