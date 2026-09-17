@@ -56,6 +56,14 @@
   Detected steps: <strong id="steps">0</strong>
 </div>
 
+<div class="value">
+  Step candidates: <strong id="candidates">0</strong>
+</div>
+
+<div class="value">
+  Walking: <strong id="walking">NO</strong>
+</div>
+
 <div id="log">Sensors not enabled.</div>
 
 <script>
@@ -68,8 +76,18 @@ let maxAccel = 0;
 let stepPeakDetected = false;
 let stepDipDetected = false;
 
-let lastStepAt = 0;
 let detectedSteps = 0;
+let candidateCount = 0;
+
+const stepCandidates = [];
+
+const CADENCE_MIN = 350;
+const CADENCE_MAX = 1000;
+const CONFIRM_COUNT = 3;
+const WALKING_TIMEOUT = 1500;
+
+let isWalking = false;
+let lastConfirmedCandidate = 0;
 
 function $(id){
   return document.getElementById(id);
@@ -148,11 +166,16 @@ function updateMotion(e){
     `${minAccel.toFixed(2)} to ${maxAccel.toFixed(2)}`;
 
   detectStep();
+  if(isWalking &&
+   performance.now() - lastConfirmedCandidate > WALKING_TIMEOUT){
+
+  isWalking = false;
+  stepCandidates.length = 0;
+  $('walking').textContent = 'NO';
+}
 }
 
 function detectStep(){
-  const now = performance.now();
-
   if(!stepPeakDetected && filteredAccel > 0.8){
     stepPeakDetected = true;
   }
@@ -168,18 +191,60 @@ function detectStep(){
     stepPeakDetected = false;
     stepDipDetected = false;
 
-    const interval = now - lastStepAt;
+    addStepCandidate();
+  }
+}
 
-    if(interval >= 350 && interval <= 1000){
-      lastStepAt = now;
-      detectedSteps++;
+function addStepCandidate(){
+  const now = performance.now();
 
-      $('steps').textContent = detectedSteps;
+  candidateCount++;
+  $('candidates').textContent = candidateCount;
+
+  // If the previous candidate was too recent,
+  // ignore this one as part of the walking rhythm.
+  if(stepCandidates.length){
+    const gap = now - stepCandidates[stepCandidates.length - 1];
+
+    if(gap < CADENCE_MIN){
+      return;
     }
-    else if(interval > 1000){
-      lastStepAt = now;
+
+    // Long pause = start a new possible walking sequence.
+    if(gap > CADENCE_MAX){
+      stepCandidates.length = 0;
     }
   }
+
+  stepCandidates.push(now);
+
+  // We need 3 rhythmic candidates before declaring walking.
+  if(!isWalking){
+    if(stepCandidates.length >= CONFIRM_COUNT){
+      isWalking = true;
+      $('walking').textContent = 'YES';
+
+      // These candidates represent real steps too,
+      // so don't throw away the first two.
+      detectedSteps += stepCandidates.length;
+      $('steps').textContent = detectedSteps;
+
+      lastConfirmedCandidate = now;
+
+      // Keep the latest candidate as the beginning
+      // of the continuing cadence.
+      stepCandidates.splice(0, stepCandidates.length - 1);
+    }
+
+    return;
+  }
+
+  // Already walking: each valid rhythmic candidate is a step.
+  detectedSteps++;
+  $('steps').textContent = detectedSteps;
+  lastConfirmedCandidate = now;
+
+  stepCandidates.splice(0, stepCandidates.length - 1);
 }
 
 $('enableBtn').onclick = enableSensors;
