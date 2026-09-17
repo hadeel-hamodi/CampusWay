@@ -64,6 +64,21 @@
   Walking: <strong id="walking">NO</strong>
 </div>
 
+<div class="value">
+  Beta: <strong id="beta">--</strong>°
+</div>
+
+<div class="value">
+  Gamma: <strong id="gamma">--</strong>°
+</div>
+
+<div class="value">
+  Beta range: <strong id="betaRange">--</strong>
+</div>
+
+<div class="value">
+  Gamma range: <strong id="gammaRange">--</strong>
+</div>
 <div id="log">Sensors not enabled.</div>
 
 <script>
@@ -85,6 +100,11 @@ const CADENCE_MIN = 350;
 const CADENCE_MAX = 1000;
 const CONFIRM_COUNT = 3;
 const WALKING_TIMEOUT = 1500;
+
+let minBeta = Infinity;
+let maxBeta = -Infinity;
+let minGamma = Infinity;
+let maxGamma = -Infinity;
 
 let isWalking = false;
 let lastConfirmedCandidate = 0;
@@ -136,6 +156,24 @@ function updateHeading(e){
 
   if(heading !== null && Number.isFinite(heading)){
     $('heading').textContent = heading.toFixed(0);
+  }
+
+  if(typeof e.beta === 'number'){
+    minBeta = Math.min(minBeta, e.beta);
+    maxBeta = Math.max(maxBeta, e.beta);
+
+    $('beta').textContent = e.beta.toFixed(1);
+    $('betaRange').textContent =
+      `${minBeta.toFixed(1)} to ${maxBeta.toFixed(1)}`;
+  }
+
+  if(typeof e.gamma === 'number'){
+    minGamma = Math.min(minGamma, e.gamma);
+    maxGamma = Math.max(maxGamma, e.gamma);
+
+    $('gamma').textContent = e.gamma.toFixed(1);
+    $('gammaRange').textContent =
+      `${minGamma.toFixed(1)} to ${maxGamma.toFixed(1)}`;
   }
 }
 
