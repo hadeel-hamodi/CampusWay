@@ -359,7 +359,7 @@ let filteredAccel=0;
 let previousFiltered=0;
 let stepThreshold=1.15;
 let detectedSteps=0;
-let stepLength=0.012;
+let stepLength=0.65; // estimated meters per detected step
 let deviceHeading=null;
 let minAccel = 0;
 let maxAccel = 0;
@@ -952,10 +952,10 @@ function updateProgressUI(){
 }
 
 
-function advanceAlongRoute(distance){
+function advanceAlongRoute(distanceMeters){
   if(!navigationActive || routeNodes.length<2) return;
 
-  let remaining=distance;
+  let remaining=distanceMeters;
 
   while(remaining>0 && progressIndex<routeNodes.length-1){
     const a=routeNodes[progressIndex];
@@ -969,14 +969,17 @@ function advanceAlongRoute(distance){
       continue;
     }
 
-    const segLen=Math.hypot(b.x-a.x,b.y-a.y);
-    if(segLen<0.000001){
+    const dxMeters=(b.x-a.x)*13.26;
+    const dyMeters=(b.y-a.y)*10.12;
+    const segLenMeters=Math.hypot(dxMeters,dyMeters);
+
+    if(segLenMeters<0.001){
       progressIndex++;
       progressT=0;
       continue;
     }
 
-    const leftOnSeg=segLen*(1-progressT);
+    const leftOnSeg=segLenMeters*(1-progressT);
 
     if(remaining>=leftOnSeg){
       remaining-=leftOnSeg;
@@ -994,7 +997,7 @@ function advanceAlongRoute(distance){
         floorButtons();
       }
     }else{
-      progressT += remaining/segLen;
+      progressT += remaining/segLenMeters;
       remaining=0;
     }
   }
@@ -1116,7 +1119,7 @@ function startAutoDemo(){
       return;
     }
 
-    advanceAlongRoute(0.008);
+    advanceAlongRoute(0.10);
   }, 80);
 }
 
