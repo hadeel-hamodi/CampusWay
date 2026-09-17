@@ -363,6 +363,7 @@ let stepLength=0.65; // estimated meters per detected step
 let deviceHeading=null;
 let minAccel = 0;
 let maxAccel = 0;
+let stepPeakDetected = false;
 let camera={x:500,y:350,scale:2.5};
 let headingDeg=0;
 let followCamera=true;
@@ -892,6 +893,21 @@ function route(){
   // Remember user-facing labels, especially for the virtual "Elevators" destination.
   routeNodes[0]._displayLabel=selectionLabel(rawFrom);
   routeNodes[routeNodes.length-1]._displayLabel=selectionLabel(rawTo);
+  let routeMeters = 0;
+
+for(let i = 0; i < routeNodes.length - 1; i++){
+  const a = routeNodes[i];
+  const b = routeNodes[i + 1];
+
+  if(a.floor !== b.floor) continue;
+
+  const dxMeters = (b.x - a.x) * 13.26;
+  const dyMeters = (b.y - a.y) * 10.12;
+
+  routeMeters += Math.hypot(dxMeters, dyMeters);
+}
+
+console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
   activeFloor=routeNodes[0].floor;
   progressIndex=0;progressT=0;animating=false;
@@ -1068,7 +1084,14 @@ maxAccel = Math.max(maxAccel, filteredAccel);
 
   const now=performance.now();
 
-if(filteredAccel > 0.8 && now - lastStepAt > 400){
+if(filteredAccel > 0.8 && now - lastStepAt > 350){
+  stepPeakDetected = true;
+}
+
+if(stepPeakDetected &&
+   filteredAccel < 0.2 &&
+   now - lastStepAt > 350){
+  stepPeakDetected = false;
   lastStepAt = now;
   handleDetectedStep();
 }
