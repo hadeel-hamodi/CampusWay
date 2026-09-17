@@ -1058,9 +1058,20 @@ function completeNavigation(){
 
 function updateDeviceHeading(e){
   let h=null;
-  if(typeof e.webkitCompassHeading==='number') h=e.webkitCompassHeading;
-  else if(typeof e.alpha==='number') h=(360-e.alpha)%360;
-  if(h!==null && Number.isFinite(h)) deviceHeading=h;
+
+  if(typeof e.webkitCompassHeading==='number'){
+    h=e.webkitCompassHeading;
+  }
+  else if(typeof e.alpha==='number'){
+    h=(360-e.alpha)%360;
+  }
+
+  if(h!==null && Number.isFinite(h)){
+    deviceHeading=h;
+
+    $('status').textContent =
+      `Heading: ${deviceHeading.toFixed(0)}°`;
+  }
 }
 
 function updateDeviceMotion(e){
