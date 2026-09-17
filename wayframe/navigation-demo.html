@@ -361,6 +361,8 @@ let stepThreshold=1.15;
 let detectedSteps=0;
 let stepLength=0.012;
 let deviceHeading=null;
+let minAccel = 0;
+let maxAccel = 0;
 let camera={x:500,y:350,scale:2.5};
 let headingDeg=0;
 let followCamera=true;
@@ -1044,7 +1046,8 @@ function updateDeviceHeading(e){
 function updateDeviceMotion(e){
   sensorEvents++;
 
-  $('status').textContent = `Motion: ${sensorEvents} | accel: ${filteredAccel.toFixed(2)}`;
+  $('status').textContent =
+  `Accel range: ${minAccel.toFixed(2)} to ${maxAccel.toFixed(2)}`;
 
   const a=e.accelerationIncludingGravity || e.acceleration;
   if(!a) return;
@@ -1057,6 +1060,8 @@ function updateDeviceMotion(e){
 
   previousFiltered=filteredAccel;
   filteredAccel=filteredAccel*0.65 + linear*0.35;
+  minAccel = Math.min(minAccel, filteredAccel);
+maxAccel = Math.max(maxAccel, filteredAccel);
 
   const now=performance.now();
 
