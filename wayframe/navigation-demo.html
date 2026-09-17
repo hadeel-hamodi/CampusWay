@@ -364,6 +364,7 @@ let deviceHeading=null;
 let minAccel = 0;
 let maxAccel = 0;
 let stepPeakDetected = false;
+let stepDipDetected=false;
 let camera={x:500,y:350,scale:2.5};
 let headingDeg=0;
 let followCamera=true;
@@ -1084,14 +1085,21 @@ maxAccel = Math.max(maxAccel, filteredAccel);
 
   const now=performance.now();
 
-if(filteredAccel > 0.8 && now - lastStepAt > 350){
+if(!stepPeakDetected &&
+   filteredAccel > 0.8 &&
+   now - lastStepAt > 350){
   stepPeakDetected = true;
 }
 
+if(stepPeakDetected && filteredAccel < -0.4){
+  stepDipDetected = true;
+}
+
 if(stepPeakDetected &&
-   filteredAccel < 0.2 &&
-   now - lastStepAt > 350){
+   stepDipDetected &&
+   filteredAccel > -0.1){
   stepPeakDetected = false;
+  stepDipDetected = false;
   lastStepAt = now;
   handleDetectedStep();
 }
