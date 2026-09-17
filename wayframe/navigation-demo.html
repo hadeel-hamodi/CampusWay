@@ -1066,43 +1066,59 @@ function updateDeviceHeading(e){
 function updateDeviceMotion(e){
   sensorEvents++;
 
-$('status').textContent =
-  `Steps: ${detectedSteps} | Accel: ${minAccel.toFixed(2)} to ${maxAccel.toFixed(2)}`;
-
-  const a=e.accelerationIncludingGravity || e.acceleration;
+  const a = e.accelerationIncludingGravity || e.acceleration;
   if(!a) return;
 
-  const x=Number(a.x)||0, y=Number(a.y)||0, z=Number(a.z)||0;
-  const mag=Math.sqrt(x*x+y*y+z*z);
+  const x = Number(a.x) || 0;
+  const y = Number(a.y) || 0;
+  const z = Number(a.z) || 0;
+  const mag = Math.sqrt(x*x + y*y + z*z);
 
-  gravityMag=gravityMag*0.92 + mag*0.08;
-  const linear=mag-gravityMag;
+  gravityMag = gravityMag * 0.92 + mag * 0.08;
+  const linear = mag - gravityMag;
 
-  previousFiltered=filteredAccel;
-  filteredAccel=filteredAccel*0.65 + linear*0.35;
+  previousFiltered = filteredAccel;
+  filteredAccel = filteredAccel * 0.65 + linear * 0.35;
+
   minAccel = Math.min(minAccel, filteredAccel);
-maxAccel = Math.max(maxAccel, filteredAccel);
+  maxAccel = Math.max(maxAccel, filteredAccel);
 
-  const now=performance.now();
+  const now = performance.now();
 
-if(!stepPeakDetected &&
-   filteredAccel > 0.8 &&
-   now - lastStepAt > 350){
-  stepPeakDetected = true;
-}
+  // Detect a possible step peak.
+  if(!stepPeakDetected && filteredAccel > 0.8){
+    stepPeakDetected = true;
+  }
 
-if(stepPeakDetected && filteredAccel < -0.4){
-  stepDipDetected = true;
-}
+  // Wait for the negative part of the walking motion.
+  if(stepPeakDetected && filteredAccel < -0.4){
+    stepDipDetected = true;
+  }
 
-if(stepPeakDetected &&
-   stepDipDetected &&
-   filteredAccel > -0.1){
-  stepPeakDetected = false;
-  stepDipDetected = false;
-  lastStepAt = now;
-  handleDetectedStep();
-}
+  // A complete peak -> dip -> recovery is a step candidate.
+  if(stepPeakDetected &&
+     stepDipDetected &&
+     filteredAccel > -0.1){
+
+    stepPeakDetected = false;
+    stepDipDetected = false;
+
+    const timeSinceLastStep = now - lastStepAt;
+
+    // Normal walking cadence: about 350 ms to 1000 ms between steps.
+    if(timeSinceLastStep >= 350 && timeSinceLastStep <= 1000){
+      lastStepAt = now;
+      handleDetectedStep();
+    }
+    else if(timeSinceLastStep > 1000){
+      // First candidate starts a new walking sequence,
+      // but does NOT move the user yet.
+      lastStepAt = now;
+    }
+  }
+
+  $('status').textContent =
+    `Steps: ${detectedSteps} | Accel: ${minAccel.toFixed(2)} to ${maxAccel.toFixed(2)}`;
 }
 
 async function requestSensorPermission(){
