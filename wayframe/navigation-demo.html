@@ -1207,6 +1207,9 @@ function updateDeviceHeading(e){
 
     recordOrientation(e.beta,e.gamma);
   }
+  if(navMode === 'sensor' && navigationActive){
+  drawBaseMap();
+}
 }
 
 function updateDeviceMotion(e){
