@@ -340,35 +340,35 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
     padding:8px;
   }
 
-  .route-card{
-    position:absolute;
-    left:8px;
-    right:8px;
-    bottom:8px;
+.route-card{
+  left:10px;
+  right:10px;
+  bottom:10px;
+  padding:9px 12px;
+  gap:6px;
+}
 
-    padding:10px;
-    gap:8px;
+ .route-info strong{
+  font-size:12px;
+}
 
-    flex-wrap:wrap;
-  }
+.route-info span{
+  font-size:10px;
+}
 
-  .route-info{
-    min-width:0;
-    flex:1 1 150px;
-  }
-
-  .route-info strong,
-  .route-info span{
-    overflow-wrap:anywhere;
-  }
+.route-eta{
+  padding:5px 9px;
+  font-size:11px;
+}
 
   #continueIndoorBtn{
-    order:5;
-    width:100% !important;
-    flex-basis:100%;
-    padding:10px 12px !important;
-  }
-
+  order:5;
+  width:100% !important;
+  flex-basis:100%;
+  padding:8px 10px !important;
+  margin-top:2px !important;
+  font-size:11px;
+}
   .route-close{
     position:absolute;
     top:6px;
@@ -523,6 +523,28 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
       </div>
 
       <div id="alertArea"></div>
+
+      <!-- Services Near Me -->
+<div>
+  <span class="panel-label">Services Near Me</span>
+
+  <div class="a11y-toolbar">
+    <button class="a11y-btn" onclick="findNearbyService('restroom')">
+      <span style="font-size:18px;">🚻</span>
+      <span>Restrooms</span>
+    </button>
+
+    <button class="a11y-btn" onclick="findNearbyService('food')">
+      <span style="font-size:18px;">🍽️</span>
+      <span>Food</span>
+    </button>
+
+    <button class="a11y-btn" onclick="findNearbyService('clinic')">
+      <span style="font-size:18px;">🏥</span>
+      <span>Clinic</span>
+    </button>
+  </div>
+</div>
 
 <!-- Favourites -->
       <div>
@@ -731,6 +753,7 @@ let currentProfile = 'general';
 let audioOn = false;
 let customStart = null; // {lat, lng, label}
 let userLocationMarker = null;
+let foodMode = false;
 
 // ═══════════════════════════════════════════
 // LANGUAGE PICKER
@@ -958,35 +981,69 @@ CAMPUS_DATA.buildings.forEach(b=>{
 });
 
 // Restrooms — blue, small
+const restroomMarkers = [];
+
 CAMPUS_DATA.points.restrooms.slice(0,30).forEach(r=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:14px;height:14px;border-radius:50%;background:#0891B2;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
     iconSize:[14,14],iconAnchor:[7,7]});
-  L.marker([r.lat,r.lng],{icon}).addTo(map).bindPopup(`<b>🚻</b> ${r.name}`);
+ const marker = L.marker([r.lat,r.lng],{icon})
+  .addTo(map)
+  .bindPopup(`<b>🚻</b> ${r.name}`);
+
+restroomMarkers.push(marker);
 });
 
 // Gates — amber/orange
+const gateMarkers = [];
+
 CAMPUS_DATA.points.gates.forEach(g=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:18px;height:18px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
-  L.marker([g.lat,g.lng],{icon}).addTo(map).bindPopup(`<b>🚪</b> ${g.name}`);
+const marker = L.marker([g.lat,g.lng],{icon})
+  .addTo(map)
+  .bindPopup(`<b>🚪</b> ${g.name}`);
+
+gateMarkers.push(marker);
 });
 
-// Food — green (these ARE actually food/shops)
+// Food — green
+const foodMarkers = [];
+
 CAMPUS_DATA.points.food.forEach(f=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:14px;height:14px;border-radius:50%;background:#00B09B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
     iconSize:[14,14],iconAnchor:[7,7]});
-  L.marker([f.lat,f.lng],{icon}).addTo(map).bindPopup(`<b>🍽️</b> ${f.name}`);
+  const marker = L.marker([f.lat,f.lng],{icon})
+  .addTo(map)
+  .bindPopup(`
+    <b>🍽️ ${f.name}</b>
+
+    <button
+      class="building-popup-btn"
+      onclick="routeTo('${f.name.replace(/'/g,"\\'")}', ${f.lat}, ${f.lng})"
+    >
+      Navigate here
+    </button>
+  `);
+
+marker.foodData = f;
+foodMarkers.push(marker);
 });
 
 // Clinic — red cross
+const clinicMarkers = [];
+
 CAMPUS_DATA.points.clinic.forEach(c=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:18px;height:18px;border-radius:50%;background:#EF4444;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;">+</div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
-  L.marker([c.lat,c.lng],{icon}).addTo(map).bindPopup(`<b>🏥</b> ${c.name}`);
+const marker = L.marker([c.lat,c.lng],{icon})
+  .addTo(map)
+  .bindPopup(`<b>🏥</b> ${c.name}`);
+
+clinicMarkers.push(marker);
 });
 
 // Stairs & Elevators (mock data)
@@ -1059,6 +1116,161 @@ const DEFAULT_START = CAMPUS_DATA.points.gates[0];
 
 function getStart(){
   return customStart || {lat:DEFAULT_START.lat, lng:DEFAULT_START.lng, label: DEFAULT_START.name};
+}
+
+function restoreServiceMarkers(){
+
+  restroomMarkers.forEach(marker => {
+    if(!map.hasLayer(marker)) marker.addTo(map);
+  });
+
+  clinicMarkers.forEach(marker => {
+    if(!map.hasLayer(marker)) marker.addTo(map);
+  });
+
+  gateMarkers.forEach(marker => {
+    if(!map.hasLayer(marker)) marker.addTo(map);
+  });
+
+  foodMode = false;
+}
+
+function findNearbyService(type){
+
+      if(type !== 'food'){
+    restoreServiceMarkers();
+  }
+
+
+  const start = getStart();
+
+  let services = [];
+
+  if(type === 'restroom'){
+    services = CAMPUS_DATA.points.restrooms;
+  }
+
+ if(type === 'food'){
+  showFoodPlaces();
+  return;
+}
+
+if(type === 'clinic'){
+
+  const clinic = CAMPUS_DATA.points.clinic[0];
+
+  if(!clinic) return;
+
+  routeTo(
+    clinic.name,
+    clinic.lat,
+    clinic.lng
+  );
+
+  return;
+}
+
+  if(!services || !services.length) return;
+
+  let nearest = null;
+  let nearestDistance = Infinity;
+
+  for(const service of services){
+
+    const distance = Math.hypot(
+      service.lat - start.lat,
+      service.lng - start.lng
+    );
+
+    if(distance < nearestDistance){
+      nearestDistance = distance;
+      nearest = service;
+    }
+  }
+
+  if(!nearest) return;
+
+  routeTo(
+    nearest.name,
+    nearest.lat,
+    nearest.lng
+  );
+}
+
+function showFoodPlaces(){
+      closeRoute();
+        if(foodMode){
+
+    restroomMarkers.forEach(marker => marker.addTo(map));
+    clinicMarkers.forEach(marker => marker.addTo(map));
+    gateMarkers.forEach(marker => marker.addTo(map));
+
+    foodMode = false;
+
+    const allLatLngs = CAMPUS_DATA.buildings.map(
+      b => [b.lat, b.lng]
+    );
+
+    map.fitBounds(allLatLngs, {
+      padding:[60,60],
+      maxZoom:16
+    });
+
+    return;
+  }
+
+  foodMode = true;
+restroomMarkers.forEach(marker => {
+  if(map.hasLayer(marker)) map.removeLayer(marker);
+});
+
+clinicMarkers.forEach(marker => {
+  if(map.hasLayer(marker)) map.removeLayer(marker);
+});
+
+gateMarkers.forEach(marker => {
+  if(map.hasLayer(marker)) map.removeLayer(marker);
+});
+
+  if(!foodMarkers.length) return;
+
+  const bounds = [];
+
+  foodMarkers.forEach(marker => {
+
+    const food = marker.foodData;
+
+    const highlightedIcon = L.divIcon({
+      className:'',
+      html:`
+        <div style="
+          width:28px;
+          height:28px;
+          border-radius:50%;
+          background:#00B09B;
+          border:3px solid #fff;
+          box-shadow:0 3px 12px rgba(0,0,0,.35);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:15px;
+        ">🍽️</div>
+      `,
+      iconSize:[28,28],
+      iconAnchor:[14,14]
+    });
+
+    marker.setIcon(highlightedIcon);
+
+    bounds.push([food.lat, food.lng]);
+  });
+
+  if(bounds.length){
+    map.fitBounds(bounds, {
+      padding:[70,70],
+      maxZoom:18
+    });
+  }
 }
 
 function routeTo(name, lat, lng){
