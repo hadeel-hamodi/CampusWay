@@ -61,6 +61,10 @@
 </div>
 
 <div class="value">
+  Rejected candidates: <strong id="rejected">0</strong>
+</div>
+
+<div class="value">
   Walking: <strong id="walking">NO</strong>
 </div>
 
@@ -109,6 +113,11 @@ let maxGamma = -Infinity;
 let isWalking = false;
 let lastConfirmedCandidate = 0;
 
+let orientationSamples = [];
+const ORIENTATION_WINDOW_MS = 500;
+
+let rejectedCandidates = 0;
+
 function $(id){
   return document.getElementById(id);
 }
@@ -144,6 +153,38 @@ async function enableSensors(){
   }
 }
 
+function recordOrientation(beta, gamma){
+  const now = performance.now();
+
+  orientationSamples.push({
+    time: now,
+    beta: beta,
+    gamma: gamma
+  });
+
+  orientationSamples = orientationSamples.filter(
+    sample => now - sample.time <= ORIENTATION_WINDOW_MS
+  );
+}
+
+function orientationIsStable(){
+  if(orientationSamples.length < 3){
+    return true;
+  }
+
+  const betas = orientationSamples.map(s => s.beta);
+  const gammas = orientationSamples.map(s => s.gamma);
+
+  const betaRange =
+    Math.max(...betas) - Math.min(...betas);
+
+  const gammaRange =
+    Math.max(...gammas) - Math.min(...gammas);
+
+  // Temporary test thresholds.
+  return betaRange < 35 && gammaRange < 35;
+}
+
 function updateHeading(e){
   let heading = null;
 
@@ -175,6 +216,12 @@ function updateHeading(e){
     $('gammaRange').textContent =
       `${minGamma.toFixed(1)} to ${maxGamma.toFixed(1)}`;
   }
+
+  if(typeof e.beta === 'number' &&
+   typeof e.gamma === 'number'){
+
+  recordOrientation(e.beta, e.gamma);
+}
 }
 
 function updateMotion(e){
@@ -226,10 +273,15 @@ function detectStep(){
      stepDipDetected &&
      filteredAccel > -0.1){
 
-    stepPeakDetected = false;
-    stepDipDetected = false;
+stepPeakDetected = false;
+stepDipDetected = false;
 
-    addStepCandidate();
+if(orientationIsStable()){
+  addStepCandidate();
+}else{
+  rejectedCandidates++;
+  $('rejected').textContent = rejectedCandidates;
+}
   }
 }
 
