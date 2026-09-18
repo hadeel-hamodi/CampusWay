@@ -265,6 +265,10 @@ button{cursor:pointer;font-weight:700}
       <button id="routeBtn" class="primary">Route</button>
       <button id="autoModeBtn" class="primary">Auto Mode</button>
       <button id="sensorModeBtn" class="secondary">Phone Sensors</button>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:700;">
+      <input id="accessibleRoute" type="checkbox">
+      ♿ Accessible route
+      </label>
       <button id="startBtn" class="secondary" disabled>▶ Start navigation</button>
       <span id="status" class="statusline">Choose a route.</span>
     </div>
@@ -547,17 +551,32 @@ function fillLocationSelect(floorId, selectId, placeholder){
 function buildGraph(){
   const ns=allNodes(),by=new Map(ns.map(n=>[n.id,n])),adj=new Map(ns.map(n=>[n.id,[]]));
   for(const f of Object.values(GRAPH.floors)){
-    for(const c of (f.connections||[])){
-      const a=by.get(c.from),b=by.get(c.to);if(!a||!b)continue;
-      const w=Math.hypot(a.x-b.x,a.y-b.y);
-      adj.get(a.id).push({id:b.id,w,kind:'walk'});
-      adj.get(b.id).push({id:a.id,w,kind:'walk'});
-    }
+for(const c of (f.connections||[])){
+  const a=by.get(c.from),b=by.get(c.to);
+  if(!a||!b)continue;
+
+  const accessible = $('accessibleRoute').checked;
+
+  // Do not allow accessible routes to enter stair nodes.
+  if(accessible && (a.type === 'stairs' || b.type === 'stairs')){
+    continue;
+  }
+
+  const w=Math.hypot(a.x-b.x,a.y-b.y);
+  adj.get(a.id).push({id:b.id,w,kind:'walk'});
+  adj.get(b.id).push({id:a.id,w,kind:'walk'});
+}
   }
   const groups=new Map();
+  const accessible = $('accessibleRoute').checked;
+
   for(const n of ns){
     const c=cid(n);
-    if(!c||!['stairs','elevator'].includes(n.type))continue;
+
+  // Accessible routes must never use stairs.
+  if(accessible && n.type === 'stairs') continue;
+
+  if(!c||!['stairs','elevator'].includes(n.type))continue;
     const k=n.type+':'+c;
     if(!groups.has(k))groups.set(k,new Map());
     const perFloor=groups.get(k);
