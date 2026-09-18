@@ -353,18 +353,30 @@ let progressT=0;
 let navigationActive=false;
 let sensorsEnabled=false;
 let sensorEvents=0;
-let lastStepAt=0;
+
 let gravityMag=9.81;
 let filteredAccel=0;
-let previousFiltered=0;
-let stepThreshold=1.15;
 let detectedSteps=0;
 let stepLength=0.65; // estimated meters per detected step
 let deviceHeading=null;
-let minAccel = 0;
-let maxAccel = 0;
-let stepPeakDetected = false;
+
+let stepPeakDetected=false;
 let stepDipDetected=false;
+
+// Rhythmic walking confirmation
+const stepCandidates=[];
+const CADENCE_MIN=350;
+const CADENCE_MAX=1000;
+const CONFIRM_COUNT=3;
+const WALKING_TIMEOUT=1500;
+
+let isWalking=false;
+let lastConfirmedCandidate=0;
+
+// Rolling orientation stability
+let orientationSamples=[];
+const ORIENTATION_WINDOW_MS=500;
+
 let camera={x:500,y:350,scale:2.5};
 let headingDeg=0;
 let followCamera=true;
@@ -1056,6 +1068,82 @@ function completeNavigation(){
   $('status').textContent='Arrived.';
 }
 
+function recordOrientation(beta,gamma){
+  const now=performance.now();
+
+  orientationSamples.push({
+    time:now,
+    beta:beta,
+    gamma:gamma
+  });
+
+  orientationSamples=orientationSamples.filter(
+    sample=>now-sample.time<=ORIENTATION_WINDOW_MS
+  );
+}
+
+function orientationIsStable(){
+  if(orientationSamples.length<3){
+    return true;
+  }
+
+  const betas=orientationSamples.map(s=>s.beta);
+  const gammas=orientationSamples.map(s=>s.gamma);
+
+  const betaRange=Math.max(...betas)-Math.min(...betas);
+  const gammaRange=Math.max(...gammas)-Math.min(...gammas);
+
+  return betaRange<35 && gammaRange<35;
+}
+
+function addStepCandidate(){
+  const now=performance.now();
+
+  if(stepCandidates.length){
+    const gap=now-stepCandidates[stepCandidates.length-1];
+
+    if(gap<CADENCE_MIN){
+      return;
+    }
+
+    if(gap>CADENCE_MAX){
+      stepCandidates.length=0;
+    }
+  }
+
+  stepCandidates.push(now);
+
+  if(!isWalking){
+    if(stepCandidates.length>=CONFIRM_COUNT){
+      isWalking=true;
+
+      // Count the first confirmed walking sequence too.
+      const confirmedCount=stepCandidates.length;
+
+      for(let i=0;i<confirmedCount;i++){
+        handleDetectedStep();
+      }
+
+      lastConfirmedCandidate=now;
+
+      stepCandidates.splice(
+        0,
+        stepCandidates.length-1
+      );
+    }
+
+    return;
+  }
+
+  handleDetectedStep();
+  lastConfirmedCandidate=now;
+
+  stepCandidates.splice(
+    0,
+    stepCandidates.length-1
+  );
+}
+
 function updateDeviceHeading(e){
   let h=null;
 
@@ -1068,70 +1156,66 @@ function updateDeviceHeading(e){
 
   if(h!==null && Number.isFinite(h)){
     deviceHeading=h;
+  }
 
-    $('status').textContent =
-      `Heading: ${deviceHeading.toFixed(0)}°`;
+  if(typeof e.beta==='number' &&
+     typeof e.gamma==='number'){
+
+    recordOrientation(e.beta,e.gamma);
   }
 }
 
 function updateDeviceMotion(e){
   sensorEvents++;
 
-  const a = e.accelerationIncludingGravity || e.acceleration;
+  const a=e.accelerationIncludingGravity || e.acceleration;
   if(!a) return;
 
-  const x = Number(a.x) || 0;
-  const y = Number(a.y) || 0;
-  const z = Number(a.z) || 0;
-  const mag = Math.sqrt(x*x + y*y + z*z);
+  const x=Number(a.x)||0;
+  const y=Number(a.y)||0;
+  const z=Number(a.z)||0;
 
-  gravityMag = gravityMag * 0.92 + mag * 0.08;
-  const linear = mag - gravityMag;
+  const mag=Math.sqrt(x*x+y*y+z*z);
 
-  previousFiltered = filteredAccel;
-  filteredAccel = filteredAccel * 0.65 + linear * 0.35;
+  gravityMag=gravityMag*0.92+mag*0.08;
 
-  minAccel = Math.min(minAccel, filteredAccel);
-  maxAccel = Math.max(maxAccel, filteredAccel);
+  const linear=mag-gravityMag;
 
-  const now = performance.now();
+  filteredAccel=
+    filteredAccel*0.65+
+    linear*0.35;
 
-  // Detect a possible step peak.
-  if(!stepPeakDetected && filteredAccel > 0.8){
-    stepPeakDetected = true;
+  // Positive peak
+  if(!stepPeakDetected && filteredAccel>0.8){
+    stepPeakDetected=true;
   }
 
-  // Wait for the negative part of the walking motion.
-  if(stepPeakDetected && filteredAccel < -0.4){
-    stepDipDetected = true;
+  // Negative dip
+  if(stepPeakDetected && filteredAccel<-0.4){
+    stepDipDetected=true;
   }
 
-  // A complete peak -> dip -> recovery is a step candidate.
+  // Recovery = complete step candidate
   if(stepPeakDetected &&
      stepDipDetected &&
-     filteredAccel > -0.1){
+     filteredAccel>-0.1){
 
-    stepPeakDetected = false;
-    stepDipDetected = false;
+    stepPeakDetected=false;
+    stepDipDetected=false;
 
-    const timeSinceLastStep = now - lastStepAt;
-
-    // Normal walking cadence: about 350 ms to 1000 ms between steps.
-    if(timeSinceLastStep >= 350 && timeSinceLastStep <= 1000){
-      lastStepAt = now;
-      handleDetectedStep();
-    }
-    else if(timeSinceLastStep > 1000){
-      // First candidate starts a new walking sequence,
-      // but does NOT move the user yet.
-      lastStepAt = now;
+    if(orientationIsStable()){
+      addStepCandidate();
     }
   }
 
-  $('status').textContent =
-    `Steps: ${detectedSteps} | Accel: ${minAccel.toFixed(2)} to ${maxAccel.toFixed(2)}`;
-}
+  // Stop walking state after inactivity.
+  if(isWalking &&
+     performance.now()-lastConfirmedCandidate>WALKING_TIMEOUT){
 
+    isWalking=false;
+    stepCandidates.length=0;
+  }
+}
 async function requestSensorPermission(){
   try{
     if(typeof DeviceMotionEvent!=='undefined' &&
