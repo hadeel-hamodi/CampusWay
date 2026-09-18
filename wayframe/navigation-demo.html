@@ -403,7 +403,7 @@ async function loadGraph(){
   const requestedBuilding = params.get('building');
 
   if(requestedBuilding){
-    const buildingSelect = $('buildingSelect');
+    const buildingSelect = $('building');
 
     if(
       buildingSelect &&
@@ -415,7 +415,7 @@ async function loadGraph(){
     }
   }
 
-  BUILDING = $('buildingSelect').value;
+  BUILDING = $('building').value;
 
   const response = await fetch(
     `../buildings/${BUILDING}/${BUILDING}-indoor-graph.json`
