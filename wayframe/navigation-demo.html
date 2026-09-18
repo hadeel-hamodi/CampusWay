@@ -377,6 +377,12 @@ let lastConfirmedCandidate=0;
 let orientationSamples=[];
 const ORIENTATION_WINDOW_MS=500;
 
+// Smooth visual movement
+let pendingStepDistance=0;
+let movementAnimationFrame=null;
+let lastMovementFrameTime=0;
+const STEP_ANIMATION_MS=340;
+
 let camera={x:500,y:350,scale:2.5};
 let headingDeg=0;
 let followCamera=true;
@@ -1039,11 +1045,49 @@ function advanceAlongRoute(distanceMeters){
   drawBaseMap();
 }
 
+function animateStepMovement(timestamp){
+  if(!navigationActive){
+    pendingStepDistance=0;
+    movementAnimationFrame=null;
+    lastMovementFrameTime=0;
+    return;
+  }
+
+  if(!lastMovementFrameTime){
+    lastMovementFrameTime=timestamp;
+  }
+
+  const elapsed=Math.min(50,timestamp-lastMovementFrameTime);
+  lastMovementFrameTime=timestamp;
+
+  const distancePerMs=stepLength/STEP_ANIMATION_MS;
+  const moveNow=Math.min(pendingStepDistance,distancePerMs*elapsed);
+
+  if(moveNow>0){
+    pendingStepDistance-=moveNow;
+    advanceAlongRoute(moveNow);
+  }
+
+  if(pendingStepDistance>0.001 && navigationActive){
+    movementAnimationFrame=requestAnimationFrame(animateStepMovement);
+  }else{
+    pendingStepDistance=0;
+    movementAnimationFrame=null;
+    lastMovementFrameTime=0;
+  }
+}
+
 function handleDetectedStep(){
   if(!navigationActive) return;
+
   detectedSteps++;
-  advanceAlongRoute(stepLength);
+  pendingStepDistance+=stepLength;
   $('status').textContent=`Navigating — ${detectedSteps} detected steps`;
+
+  if(movementAnimationFrame===null){
+    lastMovementFrameTime=0;
+    movementAnimationFrame=requestAnimationFrame(animateStepMovement);
+  }
 }
 
 function completeNavigation(){
@@ -1277,6 +1321,21 @@ if(navMode === 'sensor' && !sensorsEnabled){
 
   navigationActive=true;
   detectedSteps=0;
+
+  stepCandidates.length=0;
+  isWalking=false;
+  lastConfirmedCandidate=0;
+  stepPeakDetected=false;
+  stepDipDetected=false;
+  orientationSamples.length=0;
+  pendingStepDistance=0;
+  lastMovementFrameTime=0;
+
+  if(movementAnimationFrame!==null){
+    cancelAnimationFrame(movementAnimationFrame);
+    movementAnimationFrame=null;
+  }
+
   $('startBtn').disabled=true;
 
 if(navMode === 'auto'){
