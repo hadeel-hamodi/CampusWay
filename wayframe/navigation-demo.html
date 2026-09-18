@@ -432,6 +432,68 @@ async function loadGraph(){
   populateLocations();
   floorButtons();
   drawBaseMap();
+
+  // Restore an indoor destination selected in the main CampusWay app.
+const savedContext = sessionStorage.getItem('indoorContext');
+
+if(savedContext){
+  try{
+    const context = JSON.parse(savedContext);
+
+    // If arriving from outdoor navigation, start at a building entrance.
+const entrance = allNodes().find(
+  node => node.type === 'entrance'
+);
+
+if(entrance){
+  $('fromFloor').value = entrance.floor;
+
+  fillLocationSelect(
+    entrance.floor,
+    'from',
+    'Choose starting point...'
+  );
+
+  $('from').value = entrance.id;
+}
+
+    if(context.destinationLabel){
+
+      const matchingDestinations = allNodes().filter(
+        node =>
+          node.type === 'room' &&
+          String(node.label).trim().toLowerCase() ===
+          String(context.destinationLabel).trim().toLowerCase()
+      );
+
+  if(matchingDestinations.length){
+
+  const startId = $('from').value;
+
+  const best = bestDestinationNode(
+    startId,
+    matchingDestinations
+  );
+
+  const destination = best.destination;
+
+  if(destination){
+    $('toFloor').value = destination.floor;
+
+    fillLocationSelect(
+      destination.floor,
+      'to',
+      'Choose destination...'
+    );
+
+    $('to').value = destination.id;
+  }
+}
+    }
+  }catch(err){
+    console.warn('Could not restore indoor destination:', err);
+  }
+}
 }
 
 document.getElementById('building').onchange = async () => {
@@ -634,6 +696,48 @@ function dijkstra(start,end){
   const p=[];let c=end;
   while(c!==undefined){p.unshift(c);if(c===start)break;c=prev.get(c)}
   return p[0]===start?p:null;
+}
+
+function bestDestinationNode(startId, destinations){
+  let bestDestination = null;
+  let bestRoute = null;
+  let bestDistance = Infinity;
+
+  for(const destination of destinations){
+    const path = dijkstra(startId, destination.id);
+
+    if(!path) continue;
+
+    let distance = 0;
+
+    for(let i = 0; i < path.length - 1; i++){
+      const a = nodeById(path[i]);
+      const b = nodeById(path[i + 1]);
+
+      if(!a || !b) continue;
+
+      // Vertical transitions already have their own graph cost.
+      if(a.floor !== b.floor){
+        distance += 0.02;
+      }else{
+        distance += Math.hypot(
+          a.x - b.x,
+          a.y - b.y
+        );
+      }
+    }
+
+    if(distance < bestDistance){
+      bestDistance = distance;
+      bestDestination = destination;
+      bestRoute = path;
+    }
+  }
+
+  return {
+    destination: bestDestination,
+    path: bestRoute
+  };
 }
 
 function floorNodes(f){

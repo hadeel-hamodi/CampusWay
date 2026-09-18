@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="app/vendor/leaflet.css" />
 <script src="app/vendor/leaflet.js"></script>
 <script src="app/prototype/data.js"></script>
-<script src="app/madriga-graph.js"></script>
-<script src="app/indoor.js"></script>
+<script src="app/prototype/madriga-graph.js"></script>
+<script src="app/prototype/indoor.js"></script>
 <style>
 :root{
   --navy:#0D1B3E; --navy-2:#142B5E; --teal:#0891B2; --teal-light:#E0F4F9;
@@ -1065,69 +1065,115 @@ const searchSuggestions = document.getElementById('searchSuggestions');
 
 function showSearchSuggestions(filter){
 
-  const q = (filter || '')
-    .trim()
-    .toLowerCase();
+  const q = (filter || '').trim().toLowerCase();
 
-  const matches =
-    CAMPUS_DATA.buildings
-      .filter(building =>
-        !q ||
-        building.name
-          .toLowerCase()
-          .includes(q) ||
-        building.name_he
-          .includes(filter || '')
-      );
+  // Building matches
+  const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
+    !q ||
+    building.name.toLowerCase().includes(q) ||
+    building.name_he.includes(filter || '')
+  );
 
+  // Madriga room matches
+  const roomMatches = [];
 
-  if(!matches.length){
-
-    searchSuggestions.style.display =
-      'none';
-
-    return;
-
+  if(q && typeof MADRIGA_GRAPH !== 'undefined'){
+    for(const [floorKey, floor] of Object.entries(MADRIGA_GRAPH.floors)){
+      for(const node of (floor.nodes || [])){
+        if(
+          node.type === 'room' &&
+          String(node.label).toLowerCase().includes(q)
+        ){
+          roomMatches.push({
+            node,
+            floor: floorKey
+          });
+        }
+      }
+    }
   }
 
+  if(!buildingMatches.length && !roomMatches.length){
+    searchSuggestions.style.display = 'none';
+    return;
+  }
 
-  searchSuggestions.innerHTML =
-    matches
-      .map(building => `
+  const buildingHTML = buildingMatches.map(building => `
+    <div
+      class="suggestion-item"
+      onclick="pickDestination(
+        '${building.name.replace(/'/g,"\\'")}',
+        ${building.lat},
+        ${building.lng}
+      )"
+    >
+      <span>${building.name}</span>
+      <span style="color:var(--mid);font-size:11px;">
+        ${building.name_he}
+      </span>
+    </div>
+  `).join('');
 
-        <div
-          class="suggestion-item"
-          onclick="
-            pickDestination(
-              '${building.name.replace(/'/g,"\\'")}',
-              ${building.lat},
-              ${building.lng}
-            )
-          "
-        >
+        // Show one search result per physical room,
+        // even if that room has entrances on multiple floors.
+        const uniqueRoomMatches = [];
 
-          <span>
-            ${building.name}
-          </span>
+        const seenRoomLabels = new Set();
 
-          <span
-            style="
-              color:var(--mid);
-              font-size:11px;
-            "
-          >
-            ${building.name_he}
-          </span>
+        for(const match of roomMatches){
+        const label = String(match.node.label).trim().toLowerCase();
 
-        </div>
+        if(!seenRoomLabels.has(label)){
+            seenRoomLabels.add(label);
+            uniqueRoomMatches.push(match);
+        }
+        }
+  const roomHTML = uniqueRoomMatches.map(match => `
+    <div
+      class="suggestion-item"
+      onclick="pickIndoorDestination(
+        '${match.node.id}',
+        '${String(match.node.label).replace(/'/g,"\\'")}'
+      )"
+    >
+    <span>Room ${match.node.label}</span>
+    <span style="color:var(--mid);font-size:11px;">
+    Terrace Building
+    </span>
+    </div>
+  `).join('');
 
-      `)
-      .join('');
+  searchSuggestions.innerHTML = buildingHTML + roomHTML;
+  searchSuggestions.style.display = 'block';
+}
 
+function pickIndoorDestination(nodeId, label){
 
-  searchSuggestions.style.display =
-    'block';
+  const terrace = CAMPUS_DATA.buildings.find(
+    building => building.name === 'Terrace Building'
+  );
 
+  if(!terrace) return;
+
+  sessionStorage.setItem(
+    'indoorContext',
+        JSON.stringify({
+        entranceId: null,
+        startNodeId: null,
+        destinationLabel: label
+        })
+   );
+
+  document.getElementById('searchInput').value =
+    `Room ${label} — Terrace Building`;
+
+  searchSuggestions.style.display = 'none';
+
+  routeTo(
+    terrace.name,
+    terrace.lat,
+    terrace.lng
+  );
 }
 
 function pickDestination(name, lat, lng){
