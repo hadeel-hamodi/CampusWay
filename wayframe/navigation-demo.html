@@ -396,7 +396,27 @@ const CAMERA_W=1000, CAMERA_H=700;
 
 const $=id=>document.getElementById(id);
 const svg=$('mapSvg');
+
+
 async function loadGraph(){
+  const params = new URLSearchParams(window.location.search);
+  const requestedBuilding = params.get('building');
+
+  if(requestedBuilding){
+    const buildingSelect = $('buildingSelect');
+
+    if(
+      buildingSelect &&
+      [...buildingSelect.options].some(
+        option => option.value === requestedBuilding
+      )
+    ){
+      buildingSelect.value = requestedBuilding;
+    }
+  }
+
+  BUILDING = $('buildingSelect').value;
+
   const response = await fetch(
     `../buildings/${BUILDING}/${BUILDING}-indoor-graph.json`
   );
@@ -1501,6 +1521,13 @@ $('zoomReset').onclick=()=>{
   $('zoomReset').textContent='100%';
   drawBaseMap();
 };
+// Use accessibility profile selected in the main CampusWay app.
+const savedAccessibilityProfile =
+  sessionStorage.getItem('accessibilityProfile');
+
+if(savedAccessibilityProfile === 'mobility'){
+  $('accessibleRoute').checked = true;
+}
 
 loadGraph();
 </script>

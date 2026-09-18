@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusWay — University of Haifa</title>
+<link rel="stylesheet" href="app/vendor/leaflet.css" />
+<script src="app/vendor/leaflet.js"></script>
+<script src="app/prototype/data.js"></script>
+<script src="app/madriga-graph.js"></script>
+<script src="app/indoor.js"></script>
+<style>
+:root{
+  --navy:#0D1B3E; --navy-2:#142B5E; --teal:#0891B2; --teal-light:#E0F4F9;
+  --mint:#00B09B; --amber:#F59E0B; --amber-bg:#FFFBEB;
+  --ink:#1E293B; --mid:#5B6B82; --line:#DCE7EF;
+  --bg:#F4F9FB; --white:#FFFFFF; --radius:14px;
+  --shadow:0 6px 24px rgba(13,27,62,0.10);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;font-family:'Calibri',-apple-system,'Segoe UI',Arial,sans-serif;color:var(--ink);background:var(--bg);}
+
+/* ── LANGUAGE PICKER SCREEN ── */
+#langScreen{
+  position:fixed;inset:0;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;gap:32px;
+}
+.lang-logo{
+  width:72px;height:72px;border-radius:20px;background:var(--teal);
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;font-weight:800;color:#fff;font-family:'Cambria',Georgia,serif;
+}
+.lang-title{color:#fff;font-size:26px;font-family:'Cambria',Georgia,serif;font-weight:700;text-align:center;}
+.lang-sub{color:#9FC6DD;font-size:13px;text-align:center;margin-top:-20px;}
+.lang-options{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
+.lang-btn{
+  padding:18px 36px;border-radius:14px;border:2px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;font-size:16px;
+  font-family:inherit;transition:.2s;min-width:130px;text-align:center;
+}
+.lang-btn:hover{background:var(--teal);border-color:var(--teal);}
+.lang-btn .flag{font-size:26px;display:block;margin-bottom:6px;}
+
+/* ── MAIN APP (hidden until lang chosen) ── */
+#appWrap{display:none;height:100%;flex-direction:column;}
+#appWrap.visible{display:flex;}
+header{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+  color:#fff;padding:12px 22px;display:flex;align-items:center;
+  justify-content:space-between;box-shadow:var(--shadow);position:relative;z-index:1000;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-mark{
+  width:36px;height:36px;border-radius:10px;background:var(--teal);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;color:#fff;font-family:'Cambria',Georgia,serif;
+}
+.brand-text h1{margin:0;font-size:18px;font-family:'Cambria',Georgia,serif;font-weight:700;}
+.brand-text span{font-size:11px;color:#9FC6DD;}
+.lang-switch-btn{
+  background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;
+}
+.app{display:grid;grid-template-columns:360px 1fr;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--white);border-right:1px solid var(--line);
+  overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;
+}
+.panel-label{
+  font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;
+  color:var(--mid);margin-bottom:7px;display:block;
+}
+
+/* Search */
+.search-row{display:flex;gap:8px;align-items:center;}
+.search-box{
+  flex:1;display:flex;align-items:center;gap:8px;
+  background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:10px 13px;
+}
+.search-box input{border:none;background:transparent;outline:none;font-size:13.5px;width:100%;color:var(--ink);font-family:inherit;}
+.search-box svg{flex-shrink:0;color:var(--mid);}
+.mic-btn{
+  width:42px;height:42px;border-radius:12px;border:1.5px solid var(--line);
+  background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:.15s;color:var(--mid);
+}
+.mic-btn:hover{border-color:var(--teal);color:var(--teal);}
+.mic-btn.listening{background:var(--teal);border-color:var(--teal);color:#fff;animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+
+/* Start location */
+.start-row{display:flex;gap:8px;align-items:center;}
+.start-box{
+  flex:1;display:flex;align-items:center;gap:8px;
+  background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:10px 13px;
+}
+.start-box input{border:none;background:transparent;outline:none;font-size:13px;width:100%;color:var(--ink);font-family:inherit;}
+.gps-btn{
+  width:42px;height:42px;border-radius:12px;border:1.5px solid var(--line);
+  background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:.15s;color:var(--mid);
+}
+.gps-btn:hover{border-color:var(--mint);color:var(--mint);}
+.gps-btn.active{background:var(--mint);border-color:var(--mint);color:#fff;}
+
+/* A11y toolbar */
+.a11y-toolbar{display:flex;gap:8px;}
+.a11y-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:9px 6px;border-radius:11px;border:1.5px solid var(--line);
+  background:var(--white);cursor:pointer;font-family:inherit;transition:.15s;
+}
+.a11y-btn:hover{border-color:var(--teal);}
+.a11y-btn.active{border-color:var(--teal);background:var(--teal-light);}
+.a11y-btn span{font-size:10px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2;}
+
+/* Voice picker — simplified: just 3 options max */
+.voice-row{display:flex;gap:6px;margin-top:6px;}
+.voice-opt{
+  flex:1;padding:6px 4px;border-radius:8px;border:1.5px solid var(--line);
+  background:var(--white);cursor:pointer;font-size:10.5px;font-family:inherit;
+  text-align:center;transition:.15s;color:var(--mid);
+}
+.voice-opt:hover{border-color:var(--teal);}
+.voice-opt.active{border-color:var(--teal);background:var(--teal-light);color:var(--ink);font-weight:700;}
+#voiceArea{display:none;}
+#voiceArea.show{display:block;}
+
+/* Profiles */
+.profiles{display:flex;flex-direction:column;gap:6px;}
+.profile-btn{
+  display:flex;align-items:center;gap:10px;padding:9px 11px;
+  border-radius:11px;border:1.5px solid var(--line);background:var(--white);
+  cursor:pointer;transition:.15s;text-align:left;font-family:inherit;
+}
+.profile-btn:hover{border-color:var(--teal);}
+.profile-btn.active{border-color:var(--teal);background:var(--teal-light);}
+.profile-icon{
+  width:28px;height:28px;border-radius:8px;background:var(--navy);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;
+}
+.profile-btn.active .profile-icon{background:var(--teal);}
+.profile-text strong{display:block;font-size:12px;color:var(--ink);}
+.profile-text small{font-size:10px;color:var(--mid);}
+
+/* Alert */
+.alert-banner{
+  background:var(--amber-bg);border:1.5px solid #FCD9A0;border-radius:12px;
+  padding:11px 13px;display:flex;gap:9px;align-items:flex-start;
+}
+.alert-banner svg{flex-shrink:0;color:var(--amber);margin-top:1px;}
+.alert-banner strong{font-size:11.5px;color:#92400E;display:block;margin-bottom:2px;}
+.alert-banner p{font-size:11px;color:#92400E;margin:0;line-height:1.4;}
+
+/* Buildings list */
+.building-list{display:flex;flex-direction:column;gap:5px;}
+.building-item{
+  padding:9px 11px;border-radius:10px;border:1px solid var(--line);
+  cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:.15s;
+}
+.building-item:hover{background:var(--teal-light);border-color:var(--teal);}
+.building-item .he{color:var(--mid);font-size:10.5px;}
+
+/* Map area */
+.map-wrap{position:relative;overflow:hidden;}
+#map{height:100%;width:100%;}
+.route-card{
+  position:absolute;bottom:16px;left:16px;right:16px;
+  background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:13px 17px;display:none;align-items:center;gap:13px;z-index:900;border:1px solid var(--line);
+}
+.route-card.show{display:flex;}
+.route-dot{width:10px;height:10px;border-radius:50%;background:var(--mint);flex-shrink:0;}
+.route-info{flex:1;}
+.route-info strong{font-size:13px;display:block;}
+.route-info span{font-size:11px;color:var(--mid);}
+.route-eta{background:var(--teal);color:#fff;padding:7px 13px;border-radius:9px;font-size:12px;font-weight:700;white-space:nowrap;}
+.route-close{background:none;border:none;cursor:pointer;color:var(--mid);font-size:18px;line-height:1;padding:2px;}
+.building-popup-btn{
+  margin-top:8px;background:var(--teal);color:#fff;border:none;
+  padding:7px 12px;border-radius:8px;font-size:11.5px;cursor:pointer;font-family:inherit;width:100%;
+}
+.leaflet-popup-content{font-family:inherit;font-size:12.5px;margin:10px 12px;}
+.leaflet-popup-content b{font-size:13px;}
+.legend{
+  position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.95);
+  border-radius:10px;padding:10px 12px;font-size:10.5px;box-shadow:var(--shadow);
+  z-index:900;display:flex;flex-direction:column;gap:5px;
+}
+.legend-row{display:flex;align-items:center;gap:7px;}
+.legend-dot{width:9px;height:9px;border-radius:50%;}
+
+/* ── HIGH CONTRAST ── */
+body.hc{
+  --navy:#000;--navy-2:#000;--teal:#FFD400;--teal-light:#000;--mint:#FFD400;
+  --amber:#FFD400;--amber-bg:#000;--ink:#FFF;--mid:#FFD400;--line:#FFD400;
+  --bg:#000;--white:#000;--shadow:none;
+}
+body.hc .sidebar{border-right:2px solid #FFD400;}
+body.hc .a11y-btn.active,body.hc .profile-btn.active,body.hc .voice-opt.active{background:#FFD400!important;}
+body.hc .a11y-btn.active span,body.hc .a11y-btn.active svg,
+body.hc .profile-btn.active .profile-text strong,body.hc .profile-btn.active .profile-text small,
+body.hc .voice-opt.active{color:#000!important;}
+body.hc .alert-banner strong,body.hc .alert-banner p{color:#FFD400;}
+body.hc .legend{background:#000;border:2px solid #FFD400;color:#FFD400;}
+body.hc .route-info strong,body.hc .route-info span{color:#FFD400;}
+body.hc .brand-mark{background:#FFD400;color:#000;}
+body.hc img[src*="cw2"]{filter: drop-shadow(0 0 3px #FFD400) brightness(1.2);}
+body.hc .brand-text span,body.hc .header-tag{color:#FFD400;}
+body.hc .lang-switch-btn{border-color:#FFD400;color:#FFD400;}
+body.hc #map{filter:contrast(1.2) saturate(0.3);}
+
+/* ── RTL support for Hebrew/Arabic ── */
+html[dir=rtl] .sidebar{border-right:none;border-left:1px solid var(--line);}
+html[dir=rtl] .brand{flex-direction:row-reverse;}
+html[dir=rtl] .alert-banner{flex-direction:row-reverse;}
+html[dir=rtl] .profile-btn{flex-direction:row-reverse;}
+html[dir=rtl] .profile-text{flex:1;text-align:right;}
+html[dir=rtl] .profile-text strong{display:block;text-align:right;}
+html[dir=rtl] .profile-text small{display:block;text-align:right;}
+html[dir=rtl] .building-item{flex-direction:row-reverse;}
+
+@media (max-width: 768px) {
+  .app { display: block; height: calc(100vh - 54px); position: relative; }
+  .sidebar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 60%; border-right: none;
+    border-top: 1px solid var(--line);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(13,27,62,0.15);
+    transform: translateY(calc(100% - 80px));
+    transition: transform 0.3s ease;
+    z-index: 1000; overflow-y: auto;
+  }
+  .sidebar.open { transform: translateY(0); }
+  .map-wrap { height: 100%; }
+  .sidebar::before {
+    content: '';
+    display: block; width: 40px; height: 4px;
+    background: var(--line); border-radius: 2px;
+    margin: 10px auto 14px;
+    cursor: pointer;
+  }
+}
+.suggestions{
+  position:absolute;
+  background:var(--white);
+  border:1.5px solid var(--line);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  z-index:9999;
+  width:100%;
+  max-height:200px;
+  overflow-y:auto;
+  top:100%;
+  left:0;
+}
+.suggestion-item{
+  padding:9px 13px;
+  font-size:12.5px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid var(--line);
+}
+.suggestion-item:last-child{border-bottom:none;}
+.suggestion-item:hover{background:var(--teal-light);}
+.start-row{position:relative;}
+
+@media (min-width: 769px) {
+  .panel-label{ font-size:13px; }
+  .profile-text strong{ font-size:15px; }
+  .profile-text small{ font-size:12.5px; }
+  .building-item{ font-size:14px; padding:11px 13px; }
+  .search-box input{ font-size:15px; }
+  .start-box input{ font-size:15px; }
+  .legend{ font-size:13px; }
+  .legend-dot{ width:12px; height:12px; }
+  .a11y-btn span{ font-size:12px; }
+  .alert-banner strong{ font-size:13px; }
+  .alert-banner p{ font-size:12.5px; }
+  .route-info strong{ font-size:15px; }
+  .route-info span{ font-size:13px; }
+  .route-eta{ font-size:14px; }
+}
+
+@media (max-width: 768px) {
+  .panel-label{ font-size:10.5px !important; }
+  .profile-text strong{ font-size:12px !important; }
+  .profile-text small{ font-size:10px !important; }
+  .legend{ font-size:10.5px !important; }
+}
+
+#lbl-buildings:hover{color:var(--teal);}
+
+</style>
+</head>
+<body>
+
+<!-- ── LANGUAGE PICKER ── -->
+<div id="langScreen">
+<img src="app/vendor/images/cw2.png" style="width:72px;height:72px;border-radius:20px;">
+  <div class="lang-title">CampusWay</div>
+  <div class="lang-sub">University of Haifa · Choose your language</div>
+  <div class="lang-options">
+    <button class="lang-btn" onclick="pickLang('en','ltr')">
+      <span class="flag">EN</span>English
+    </button>
+    <button class="lang-btn" onclick="pickLang('he','rtl')">
+      <span class="flag">HE</span>עברית
+    </button>
+    <button class="lang-btn" onclick="pickLang('ar','rtl')">
+      <span class="flag">AR</span>العربية
+    </button>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="appWrap">
+  <header>
+    <div class="brand">
+      <img src="app/vendor/images/cw2.png" style="width:36px;height:36px;border-radius:10px;">
+      <div class="brand-text">
+        <h1>CampusWay</h1>
+        <span id="headerSub">University of Haifa · Accessible Navigation</span>
+      </div>
+    </div>
+    <button class="lang-switch-btn" onclick="showLangPicker()" id="langSwitchBtn">🌐 Language</button>
+  </header>
+  <div class="app">
+    <aside class="sidebar">
+
+      <!-- Search + mic -->
+      <div>
+        <span class="panel-label" id="lbl-destination">Where do you want to go?</span>
+          <div class="search-row" style="position:relative; flex-wrap:wrap;">
+          <div class="search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input id="searchInput" type="text" autocomplete="off">
+          </div>
+          <div class="suggestions" id="searchSuggestions" style="display:none;"></div>
+          <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Voice search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Start location + GPS -->
+      <div>
+        <span class="panel-label" id="lbl-startfrom">Starting from</span>
+        <div class="start-row" style="position:relative; flex-wrap:wrap;">
+          <div class="start-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            <input id="startInput" type="text" autocomplete="off">
+          </div>
+          <div class="suggestions" id="startSuggestions" style="display:none;"></div>
+          <button class="gps-btn" id="gpsBtn" onclick="toggleGPS()" title="Use my location">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Accessibility toolbar -->
+      <div>
+        <span class="panel-label" id="lbl-display">Display &amp; Audio</span>
+        <div class="a11y-toolbar">
+          <button class="a11y-btn" id="contrastBtn" onclick="toggleContrast()">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"/></svg>
+            <span id="lbl-contrast">High Contrast</span>
+          </button>
+          <button class="a11y-btn" id="audioBtn" onclick="toggleAudio()">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <span id="lbl-audio">Audio Guide</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Profile -->
+      <div>
+        <span class="panel-label" id="lbl-profile">Accessibility Profile</span>
+        <div class="profiles" id="profileList"></div>
+      </div>
+
+      <div id="alertArea"></div>
+
+<!-- Favourites -->
+      <div>
+        <span class="panel-label" id="lbl-favourites">⭐ Favourites</span>
+        <div class="building-list" id="favouriteList">
+          <div id="favEmpty" style="font-size:12px;color:var(--mid);padding:8px 4px;">No saved places yet. Click "Save" on any building.</div>
+        </div>
+      </div>
+
+      <!-- Buildings collapsible -->
+      <div>
+        <span class="panel-label" id="lbl-buildings" onclick="toggleBuildingList()" style="cursor:pointer;display:flex;justify-content:space-between;">
+          <span>Buildings</span><span id="buildingArrow">▼</span>
+        </span>
+        <div class="building-list" id="buildingList" style="display:none;"></div>
+      </div>
+    </aside>
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="legend" id="mapLegend"></div>
+      <div class="route-card" id="routeCard">
+        <div class="route-dot"></div>
+        <div class="route-info">
+          <strong id="routeTitle">Route</strong>
+          <span id="routeSub"></span>
+        </div>
+      <div class="route-eta" id="routeEta">4 min</div>
+
+      <button
+        id="continueIndoorBtn"
+        class="building-popup-btn"
+        style="
+          display:none;
+          width:auto;
+          margin:0;
+          background:#00B09B;
+          white-space:nowrap;
+        "
+        onclick="startIndoorTransition()">
+        Continue indoors →
+      </button>
+
+<button class="route-close" onclick="closeRoute()">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// TRANSLATIONS
+// ═══════════════════════════════════════════
+const T = {
+  en:{
+    destination:'Where do you want to go?',
+    searchPlaceholder:'Search building or room…',
+    startfrom:'Starting from',
+    startPlaceholder:'Enter starting point…',
+    display:'Display & Audio',
+    contrast:'High Contrast',
+    audio:'Audio Guide',
+    profile:'Accessibility Profile',
+    buildings:'Buildings',
+    liveAlert:'Live Alert',
+    navigateHere:'Navigate here',
+    routeFrom:'From',
+    optimizedFor:'Optimized for',
+    gpsActive:'Using your GPS location',
+    currentLocation:'your current location',
+    gpsError:'GPS unavailable — please type a starting point',
+    noMatch:'No match found. Try: Main Building, Eshkol Tower, Rabin Building',
+    audioOn:'Audio guide on. I will read directions aloud.',
+    audioOff:'Audio guide off.',
+    contrastOn:'High contrast mode on.',
+    contrastOff:'High contrast mode off.',
+    voiceListening:'Listening…',
+    voiceNotSupported:'Voice input not supported in this browser.',
+    profiles:[
+      {id:'general', label:'General User',    sub:'Standard fastest route'},
+      {id:'mobility',label:'Mobility',         sub:'Wheelchair / crutches — avoids stairs'},
+      {id:'visual',  label:'Visual Impairment',sub:'Follows tactile guide paths'},
+      {id:'spatial', label:'Spatial / Navigation',sub:'Extra landmarks, simple steps'},
+      {id:'mental',  label:'Mental Health Support',sub:'Routes to quiet space on request'},
+    ],
+    alerts:{
+      mobility:'Elevator in Eshkol Tower reported out of service. Routes will avoid it automatically.',
+      visual:'Tactile guide path active from Carmel Gate to Main Building.',
+      mental:'Quiet zones (libraries, garden) will be suggested near your route.',
+      spatial:'Step-by-step landmarks enabled — fewer turns, simpler directions.',
+    },
+    voices:['US English','UK English','Default'],
+    legendBuilding:'Building', legendRestroom:'Restroom',
+    legendGate:'Gate / Entrance', legendFood:'Food & Shops', legendClinic:'Clinic',
+    minWalk:'min walk',
+    favourites:'Favourites',
+    noFavourites:'No saved places yet. Click "Save" on any building.',
+    saveToFav:'⭐ Save to Favourites',
+    removeFromFav:'Remove',
+    langSwitch:'🌐 Language',
+    legendElevator:'Elevator', legendStairs:'Stairs',
+  },
+  he:{
+    destination:'לאן תרצה ללכת?',
+    searchPlaceholder:'חפש בניין או חדר…',
+    startfrom:'נקודת התחלה',
+    startPlaceholder:'הכנס נקודת מוצא…',
+    display:'תצוגה ושמע',
+    contrast:'ניגודיות גבוהה',
+    audio:'מדריך קולי',
+    profile:'פרופיל נגישות',
+    buildings:'בניינים',
+    liveAlert:'התראה חיה',
+    navigateHere:'נווט לכאן',
+    routeFrom:'מ',
+    optimizedFor:'מותאם ל',
+    gpsActive:'משתמש במיקום ה-GPS שלך',
+    currentLocation:'המיקום הנוכחי שלך',
+    gpsError:'GPS לא זמין — אנא הזן נקודת התחלה',
+    noMatch:'לא נמצא. נסה: בניין ראשי, מגדל אשכול, בניין רבין',
+    audioOn:'מדריך קולי פועל.',
+    audioOff:'מדריך קולי כבוי.',
+    contrastOn:'מצב ניגודיות גבוהה פועל.',
+    contrastOff:'מצב ניגודיות גבוהה כבוי.',
+    voiceListening:'מאזין…',
+    voiceNotSupported:'קלט קולי אינו נתמך בדפדפן זה.',
+    profiles:[
+      {id:'general', label:'משתמש כללי',       sub:'המסלול המהיר ביותר'},
+      {id:'mobility',label:'ניידות',              sub:'כיסא גלגלים / קביים — ללא מדרגות'},
+      {id:'visual',  label:'לקות ראייה',          sub:'עוקב אחרי נתיבי מישוש'},
+      {id:'spatial', label:'ניווט מרחבי',          sub:'ציוני דרך נוספים, הוראות פשוטות'},
+      {id:'mental',  label:'תמיכה נפשית',          sub:'מסלולים לאזורי שקט לפי בקשה'},
+    ],
+    alerts:{
+      mobility:'מעלית במגדל אשכול מדווחת כלא זמינה. המסלולים יעקפו אותה אוטומטית.',
+      visual:'נתיב מישוש פעיל משער הכרמל לבניין הראשי.',
+      mental:'אזורים שקטים (ספריות, גן) יוצעו ליד המסלול שלך.',
+      spatial:'ניווט לפי ציוני דרך פעיל — פחות פניות, הוראות פשוטות.',
+    },
+    voices:['עברית','אנגלית','ברירת מחדל'],
+    legendBuilding:'בניין', legendRestroom:'שירותים',
+    legendGate:'שער / כניסה', legendFood:'מזון וחנויות', legendClinic:'קליניקה',
+    legendElevator:'מעלית', legendStairs:'מדרגות',
+    minWalk:'דק׳ הליכה',
+    favourites:'מועדפים',
+    noFavourites:'אין מקומות שמורים עדיין. לחץ "שמור" על כל בניין.',
+    saveToFav:'⭐ שמור למועדפים',
+    langSwitch:'🌐 שפה',
+    removeFromFav:'הסר',
+  },
+  ar:{
+    destination:'إلى أين تريد الذهاب؟',
+    searchPlaceholder:'ابحث عن مبنى أو غرفة…',
+    startfrom:'نقطة الانطلاق',
+    startPlaceholder:'أدخل نقطة البداية…',
+    display:'العرض والصوت',
+    contrast:'تباين عالٍ',
+    audio:'الدليل الصوتي',
+    profile:'ملف إمكانية الوصول',
+    buildings:'المباني',
+    liveAlert:'تنبيه مباشر',
+    navigateHere:'تنقل إلى هنا',
+    routeFrom:'من',
+    optimizedFor:'مُحسَّن لـ',
+    gpsActive:'يستخدم موقع GPS الخاص بك',
+    currentLocation:'موقعك الحالي',
+    gpsError:'GPS غير متاح — الرجاء إدخال نقطة البداية',
+    noMatch:'لم يُعثر على نتيجة. جرب: المبنى الرئيسي، برج إشكول، مبنى رابين',
+    audioOn:'الدليل الصوتي مفعّل.',
+    audioOff:'الدليل الصوتي معطّل.',
+    contrastOn:'وضع التباين العالي مفعّل.',
+    contrastOff:'وضع التباين العالي معطّل.',
+    voiceListening:'يستمع…',
+    voiceNotSupported:'إدخال الصوت غير مدعوم في هذا المتصفح.',
+    profiles:[
+      {id:'general', label:'مستخدم عام',          sub:'أسرع مسار'},
+      {id:'mobility',label:'إعاقة حركية',           sub:'كرسي متحرك / عكازات — تجنب السلالم'},
+      {id:'visual',  label:'إعاقة بصرية',           sub:'يتبع مسارات اللمس'},
+      {id:'spatial', label:'صعوبة في الملاحة',       sub:'معالم إضافية، خطوات بسيطة'},
+      {id:'mental',  label:'الصحة النفسية',          sub:'مسارات إلى أماكن هادئة عند الطلب'},
+    ],
+    alerts:{
+      mobility:'تم الإبلاغ عن عطل في مصعد برج إشكول. ستتجنب المسارات المصعد تلقائيًا.',
+      visual:'مسار لمسي نشط من بوابة الكرمل إلى المبنى الرئيسي.',
+      mental:'ستُقترح مناطق هادئة (مكتبات، حدائق) بالقرب من مسارك.',
+      spatial:'الملاحة بالمعالم مفعّلة — أقل منعطفات، توجيهات أبسط.',
+    },
+    voices:['عربية','إنجليزية','افتراضي'],
+    legendBuilding:'مبنى', legendRestroom:'دورة مياه',
+    legendGate:'بوابة / مدخل', legendFood:'طعام ومحلات', legendClinic:'عيادة',
+    legendElevator:'مصعد', legendStairs:'سلالم',
+    minWalk:'دقيقة سيرًا',
+    favourites:'المفضلة',
+    noFavourites:'لا توجد أماكن محفوظة بعد. انقر على "حفظ" في أي مبنى.',
+    saveToFav:'⭐ حفظ في المفضلة',
+    langSwitch:'🌐 لغة',
+    removeFromFav:'إزالة',
+  }
+};
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let lang = 'en';
+let t = T.en;
+let currentProfile = 'general';
+let audioOn = false;
+let customStart = null; // {lat, lng, label}
+let userLocationMarker = null;
+
+// ═══════════════════════════════════════════
+// LANGUAGE PICKER
+// ═══════════════════════════════════════════
+function pickLang(l, dir){
+  lang = l;
+  t = T[l];
+  document.documentElement.lang = l;
+  document.documentElement.dir = dir;
+  document.getElementById('langScreen').style.display = 'none';
+  document.getElementById('appWrap').classList.add('visible');
+  applyTranslations();
+  buildProfiles();
+  buildLegend();
+  setTimeout(()=>{ map.invalidateSize(); map.fitBounds(CAMPUS_DATA.buildings.map(b=>[b.lat,b.lng]),{padding:[60,60],maxZoom:16}); }, 100);
+}
+function showLangPicker(){
+  document.getElementById('langScreen').style.display = 'flex';
+  document.getElementById('appWrap').classList.remove('visible');
+}
+
+function applyTranslations(){
+  document.getElementById('lbl-destination').textContent = t.destination;
+  document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+  document.getElementById('lbl-startfrom').textContent = t.startfrom;
+  document.getElementById('startInput').placeholder = t.startPlaceholder;
+  document.getElementById('lbl-display').textContent = t.display;
+  document.getElementById('lbl-contrast').textContent = t.contrast;
+  document.getElementById('lbl-audio').textContent = t.audio;
+  document.getElementById('lbl-profile').textContent = t.profile;
+  document.getElementById('lbl-buildings').querySelector('span:first-child').textContent = t.buildings;
+  document.getElementById('lbl-favourites').textContent = '⭐ ' + t.favourites;
+  document.getElementById('favEmpty').textContent = t.noFavourites;
+  document.getElementById('langSwitchBtn').textContent = t.langSwitch;
+}
+
+// ═══════════════════════════════════════════
+// AUDIO GUIDE
+// ═══════════════════════════════════════════
+
+
+function getVoice(){
+  const voices = window.speechSynthesis.getVoices();
+  const prefix = lang === 'he' ? 'he' : lang === 'ar' ? 'ar' : 'en';
+  return voices.find(v=>v.lang.startsWith(prefix+'-') && /google|natural/i.test(v.name))
+      || voices.find(v=>v.lang.startsWith(prefix))
+      || voices.find(v=>/en-US/i.test(v.lang))
+      || voices.find(v=>/^en/i.test(v.lang))
+      || null;
+}
+
+function hasNativeLangVoice(){
+  if(lang==='en') return true;
+  const voices = window.speechSynthesis.getVoices();
+  const prefix = lang === 'he' ? 'he' : 'ar';
+  return voices.some(v=>v.lang.startsWith(prefix));
+}
+
+function speak(text){
+  if(!audioOn) return;
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.97; utter.pitch = 1;
+  const v = getVoice();
+  if(v){
+    utter.voice = v;
+    // Always set lang to the app language so the engine tries correct phonetics,
+    // even if we're using an English voice as fallback
+    utter.lang = v.lang;
+  } else {
+    utter.lang = 'en-US';
+  }
+  window.speechSynthesis.speak(utter);
+}
+
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged = ()=>{};
+}
+
+function toggleAudio(){
+  audioOn = !audioOn;
+  document.getElementById('audioBtn').classList.toggle('active', audioOn);
+  document.getElementById('voiceArea').classList.toggle('show', audioOn);
+  if(audioOn){ speak(t.audioOn); }
+  else window.speechSynthesis.cancel();
+}
+
+// ═══════════════════════════════════════════
+// HIGH CONTRAST
+// ═══════════════════════════════════════════
+function toggleContrast(){
+  const on = document.body.classList.toggle('hc');
+  document.getElementById('contrastBtn').classList.toggle('active', on);
+  if(typeof map !== 'undefined'){
+    map.getContainer().style.background = on ? '#000' : '#EAF3ED';
+    terrainCircles.forEach(c=>c.setStyle({fillColor: on?'#1A1A1A':'#D9EBDD', fillOpacity: on?0.5:0.6}));
+    buildingPolygons.forEach(p=>p.setStyle({color:on?'#FFD400':'#0D1B3E',fillColor:on?'#FFD400':'#33415C',fillOpacity:on?0.12:0.18,weight:on?2:1.5}));
+  }
+  document.querySelectorAll('.leaflet-marker-icon div').forEach(div => {
+    if(on){
+      div.dataset.origBg = div.style.background;
+      div.dataset.origColor = div.style.color;
+      div.dataset.origText = div.innerHTML;
+      div.style.background = '#FFD400';
+      div.style.color = '#000';
+      const orig = div.dataset.origBg;
+      if(orig.includes('0891B2') || orig.includes('rgb(8, 145, 178)')) div.innerHTML = '🚻';
+      else if(orig.includes('F59E0B') || orig.includes('rgb(245, 158, 11)')) div.innerHTML = '🚪';
+      else if(orig.includes('00B09B') || orig.includes('rgb(0, 176, 155)')) div.innerHTML = '🍽️';
+      else if(orig.includes('EF4444') || orig.includes('rgb(239, 68, 68)')) div.innerHTML = '+';
+      else if(orig.includes('8B5CF6') || orig.includes('rgb(139, 92, 246)')) div.innerHTML = '▲';
+      else if(orig.includes('64748B') || orig.includes('rgb(100, 116, 139)')) div.innerHTML = '≡';
+    } else {
+      div.style.background = div.dataset.origBg || div.style.background;
+      div.style.color = div.dataset.origColor || '#fff';
+      if(div.dataset.origText !== undefined) div.innerHTML = div.dataset.origText;
+    }
+  });
+  buildLegend();
+  speak(on ? t.contrastOn : t.contrastOff);
+}
+
+// ═══════════════════════════════════════════
+// PROFILES
+// ═══════════════════════════════════════════
+const ICONS = {
+  user:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>`,
+  wheelchair:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1.5" fill="currentColor"/><path d="M9 8v5l-3 5M9 13h5l3 5"/><circle cx="9" cy="18" r="3"/></svg>`,
+  eye:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  route:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 4-4V8a4 4 0 0 0-4-4h-1"/></svg>`,
+  brain:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2a3.5 3.5 0 0 0-3.5 3.5v.5A3 3 0 0 0 3 9v1a3 3 0 0 0 1 2.24V14a3.5 3.5 0 0 0 5.5 3.5 3.5 3.5 0 0 0 5.5-3.5v-1.76A3 3 0 0 0 21 10V9a3 3 0 0 0-3-3v-.5A3.5 3.5 0 0 0 14.5 2"/></svg>`
+};
+const ICON_KEYS = ['user','wheelchair','eye','route','brain'];
+
+function buildProfiles(){
+  const el = document.getElementById('profileList');
+  el.innerHTML = '';
+  t.profiles.forEach((p,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'profile-btn'+(p.id==='general'?' active':'');
+    btn.dataset.id = p.id;
+    btn.innerHTML = `<div class="profile-icon">${ICONS[ICON_KEYS[i]]}</div>
+      <div class="profile-text"><strong>${p.label}</strong><small>${p.sub}</small></div>`;
+    btn.onclick=()=>{
+      document.querySelectorAll('.profile-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentProfile = p.id;
+      sessionStorage.setItem('accessibilityProfile', currentProfile);
+      showAlert(p.id);
+      speak(p.label + '. ' + p.sub);
+    };
+    el.appendChild(btn);
+  });
+}
+
+function showAlert(profileId){
+  const area = document.getElementById('alertArea');
+  const msg = t.alerts[profileId];
+  if(!msg){ area.innerHTML=''; return; }
+  area.innerHTML=`<div class="alert-banner">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div><strong>${t.liveAlert}</strong><p>${msg}</p></div>
+  </div>`;
+  speak(t.liveAlert + '. ' + msg);
+}
+
+// ═══════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════
+const center = [32.7615, 35.0195];
+const map = L.map('map',{zoomControl:true,attributionControl:false}).setView(center,16);
+map.getContainer().style.background = '#EAF3ED';
+
+const terrainCircles = [
+  {c:[32.7600,35.0150],r:550},{c:[32.7640,35.0230],r:480},{c:[32.7580,35.0220],r:420}
+].map(tb=> L.circle(tb.c,{radius:tb.r,color:'transparent',fillColor:'#D9EBDD',fillOpacity:0.6}).addTo(map));
+
+const buildingPolygons = [];
+const buildingMarkers = {};
+
+CAMPUS_DATA.buildings.forEach(b=>{
+  if(b.polygon && b.polygon.length>2){
+    const poly = L.polygon(b.polygon,{
+      color:'#0D1B3E',
+      weight:1.5,
+      fillColor:'#33415C',
+      fillOpacity:0.18
+    }).addTo(map);
+
+    buildingPolygons.push(poly);
+  }
+
+  const icon = L.divIcon({
+    className:'',
+    html:`<div style="width:28px;height:28px;border-radius:8px;background:#0D1B3E;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(13,27,62,.35);border:2px solid #fff;">${ICONS.user.replace('15','13').replace('15','13')}</div>`,
+    iconSize:[28,28],
+    iconAnchor:[14,14]
+  });
+
+  const m = L.marker([b.lat,b.lng],{icon}).addTo(map);
+
+  m.buildingData = b;
+
+  m.bindPopup(()=>`
+    <b>${b.name}</b>
+    <br>
+    <span style="color:#5B6B82;">${b.name_he}</span>
+
+    <button
+      class="building-popup-btn"
+      onclick="routeTo('${b.name.replace(/'/g,"\\'")}',${b.lat},${b.lng})">
+      ${t.navigateHere}
+    </button>
+
+    <button
+      class="building-popup-btn"
+      style="background:var(--amber);margin-top:4px;"
+      onclick="toggleFavourite('${b.name.replace(/'/g,"\\'")}',${b.lat},${b.lng});map.closePopup();">
+      ${t.saveToFav}
+    </button>
+  `);
+
+  buildingMarkers[b.name] = m;
+});
+
+// Restrooms — blue, small
+CAMPUS_DATA.points.restrooms.slice(0,30).forEach(r=>{
+  const icon = L.divIcon({className:'',
+    html:`<div style="width:14px;height:14px;border-radius:50%;background:#0891B2;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
+    iconSize:[14,14],iconAnchor:[7,7]});
+  L.marker([r.lat,r.lng],{icon}).addTo(map).bindPopup(`<b>🚻</b> ${r.name}`);
+});
+
+// Gates — amber/orange
+CAMPUS_DATA.points.gates.forEach(g=>{
+  const icon = L.divIcon({className:'',
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
+    iconSize:[18,18],iconAnchor:[9,9]});
+  L.marker([g.lat,g.lng],{icon}).addTo(map).bindPopup(`<b>🚪</b> ${g.name}`);
+});
+
+// Food — green (these ARE actually food/shops)
+CAMPUS_DATA.points.food.forEach(f=>{
+  const icon = L.divIcon({className:'',
+    html:`<div style="width:14px;height:14px;border-radius:50%;background:#00B09B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
+    iconSize:[14,14],iconAnchor:[7,7]});
+  L.marker([f.lat,f.lng],{icon}).addTo(map).bindPopup(`<b>🍽️</b> ${f.name}`);
+});
+
+// Clinic — red cross
+CAMPUS_DATA.points.clinic.forEach(c=>{
+  const icon = L.divIcon({className:'',
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:#EF4444;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;">+</div>`,
+    iconSize:[18,18],iconAnchor:[9,9]});
+  L.marker([c.lat,c.lng],{icon}).addTo(map).bindPopup(`<b>🏥</b> ${c.name}`);
+});
+
+// Stairs & Elevators (mock data)
+const VERTICAL = [
+  // Main Building — Elevator (library, floors 5-6-7)
+  {lat:32.76308, lng:35.01795, type:'elevator', label:'Main Building — Library Elevator (Floors 5–7)', working:true},
+  
+  // Main Building — Stairs 1 (Aguda Cafe, floor 5→6)
+  {lat:32.76275, lng:35.01835, type:'stairs', label:'Main Building — Stairs by Aguda Cafe (Floor 5→6)'},
+  
+  // Main Building — Stairs 2 (above stairs 1, floor 6→7)
+  {lat:32.76278, lng:35.01838, type:'stairs', label:'Main Building — Stairs above Aguda Cafe (Floor 6→7)'},
+  
+  // Main Building — Stairs 3 (floor 6→7)
+  {lat:32.762331, lng:35.019234, type:'stairs', label:'Main Building — Stairs near Entrance / Garden Cafe (Floor 6→7)'},
+];
+
+VERTICAL.forEach(v=>{
+  const isElevator = v.type === 'elevator';
+  const broken = isElevator && !v.working;
+  const bg = broken ? '#EF4444' : isElevator ? '#8B5CF6' : '#64748B';
+  const icon = L.divIcon({className:'',
+    html:`<div style="width:18px;height:18px;border-radius:4px;background:${bg};border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:900;">${isElevator ? '▲' : '≡'}</div>`,
+    iconSize:[18,18],iconAnchor:[9,9]});
+  L.marker([v.lat,v.lng],{icon}).addTo(map)
+    .bindPopup(`<b>${broken ? '🚫 Out of service' : isElevator ? '🛗 Elevator' : '🪜 Stairs'}</b><br>${v.label}`);
+});
+
+function buildLegend(){
+  const isHC = document.body.classList.contains('hc');
+  const dot = (bg, shape, symbol, hcSymbol) => isHC 
+    ? `<span style="width:14px;height:14px;border-radius:${shape};background:#FFD400;display:inline-flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;">${hcSymbol}</span>`
+    : `<span style="width:12px;height:12px;border-radius:${shape};background:${bg};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;">${symbol}</span>`;
+  
+  document.getElementById('mapLegend').innerHTML = `
+    <div class="legend-row">${dot('#0D1B3E','4px','','■')} ${t.legendBuilding}</div>
+    <div class="legend-row">${dot('#0891B2','50%','','🚻')} ${t.legendRestroom}</div>
+    <div class="legend-row">${dot('#F59E0B','50%','','🚪')} ${t.legendGate}</div>
+    <div class="legend-row">${dot('#00B09B','50%','','🍽️')} ${t.legendFood}</div>
+    <div class="legend-row">${dot('#8B5CF6','4px','▲','▲')} ${t.legendElevator}</div>
+    <div class="legend-row">${dot('#64748B','4px','≡','≡')} ${t.legendStairs}</div>
+    <div class="legend-row">${dot('#EF4444','50%','+','+')} ${t.legendClinic}</div>`;
+}
+// Buildings sidebar list
+function buildBuildingList(){
+  const el = document.getElementById('buildingList');
+  el.innerHTML='';
+  CAMPUS_DATA.buildings.forEach(b=>{
+    const item = document.createElement('div');
+    item.className='building-item';
+    item.innerHTML=`<span>${b.name}</span><span class="he">${b.name_he}</span>`;
+    item.onclick=()=>{
+      map.flyTo([b.lat,b.lng],18,{duration:0.8});
+      setTimeout(()=> routeTo(b.name, b.lat, b.lng), 900);
+    };
+    el.appendChild(item);
+  });
+}
+buildBuildingList();
+
+// Auto-fit map to show all buildings
+const allLatLngs = CAMPUS_DATA.buildings.map(b=>[b.lat,b.lng]);
+if(allLatLngs.length) map.fitBounds(allLatLngs, {padding:[60,60], maxZoom:16});
+
+// ═══════════════════════════════════════════
+// ROUTING
+// ═══════════════════════════════════════════
+let routeLine = null;
+const DEFAULT_START = CAMPUS_DATA.points.gates[0];
+
+function getStart(){
+  return customStart || {lat:DEFAULT_START.lat, lng:DEFAULT_START.lng, label: DEFAULT_START.name};
+}
+
+function routeTo(name, lat, lng){
+  if(routeLine) map.removeLayer(routeLine);
+  const start = getStart();
+  const mid = [(start.lat+lat)/2+0.0006, (start.lng+lng)/2-0.0004];
+  // For mobility profile, route visually avoids stairs and goes via elevator
+  let waypoints;
+  if(currentProfile === 'mobility'){
+  const elevator = VERTICAL.find(v => v.type === 'elevator' && v.working);
+  if(elevator){
+    waypoints = [[start.lat,start.lng],[elevator.lat,elevator.lng],[lat,lng]];
+  } else {
+    waypoints = [[start.lat,start.lng],mid,[lat,lng]];
+  }
+  } else {
+  waypoints = [[start.lat,start.lng],mid,[lat,lng]];
+  }
+  routeLine = L.polyline(waypoints,
+    {color:'#0891B2',weight:5,opacity:0.85,dashArray:'1,10',lineCap:'round'}).addTo(map);
+  let offset=0;
+  clearInterval(window._dashAnim);
+  window._dashAnim = setInterval(()=>{ offset=(offset+1)%20; routeLine.setStyle({dashOffset:String(offset)}); },60);
+  map.fitBounds(routeLine.getBounds(),{padding:[80,80]});
+
+  const profile = t.profiles.find(p=>p.id===currentProfile);
+  const R = 6371000;
+  const dLat = (lat - start.lat) * Math.PI / 180;
+  const dLng = (lng - start.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(start.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  const distanceMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const speedMps = currentProfile==='mobility' ? 0.8 : 1.2;
+  const seconds = distanceMeters / speedMps;
+  const etaNum = seconds < 3600 ? Math.round(seconds/60) : Math.round(seconds/3600*10)/10;
+  const startLabel = customStart && customStart.label === '📍 GPS' ? t.currentLocation : start.label;
+  document.getElementById('routeTitle').textContent = `${t.routeFrom} ${startLabel} → ${name}`;
+  document.getElementById('routeSub').textContent = `${t.optimizedFor}: ${profile.label}`;
+  document.getElementById('routeEta').textContent = etaNum + (seconds < 3600 ? ' '+t.minWalk : ' hr');
+  const indoorBtn = document.getElementById('continueIndoorBtn');
+
+  const INDOOR_BUILDINGS = {
+  'Terrace Building': 'madriga',
+  'Main Building': 'main',
+  'Rabin Building': 'rabin',
+  'Student Building': 'student'
+};
+
+if(INDOOR_BUILDINGS[name]){
+  indoorBtn.style.display = 'block';
+  indoorBtn.dataset.building = INDOOR_BUILDINGS[name];
+} else {
+  indoorBtn.style.display = 'none';
+  delete indoorBtn.dataset.building;
+}
+
+  document.getElementById('routeCard').classList.add('show');
+  map.closePopup();
+  speak(`${t.routeFrom} ${startLabel} to ${name}. ${etaNum} ${seconds < 3600 ? t.minWalk : 'hours'}.`);
+}
+
+function closeRoute(){
+  document.getElementById('routeCard').classList.remove('show');
+  if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+  clearInterval(window._dashAnim);
+}
+
+// ═══════════════════════════════════════════
+// GPS / STARTING POINT
+// ═══════════════════════════════════════════
+let gpsMarker = null;
+
+function toggleGPS(){
+  if(document.getElementById('gpsBtn').classList.contains('active')){
+    customStart = null;
+    document.getElementById('startInput').value = '';
+    document.getElementById('gpsBtn').classList.remove('active');
+    if(gpsMarker){ map.removeLayer(gpsMarker); gpsMarker = null; }
+    return;
+  }
+  useGPS_do();
+}
+
+function useGPS_do(){
+  if(!('geolocation' in navigator)){ alert(t.gpsError); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const {latitude:lat, longitude:lng} = pos.coords;
+      customStart = {lat, lng, label:'📍 GPS'};
+      document.getElementById('startInput').value = t.gpsActive;
+      document.getElementById('gpsBtn').classList.add('active');
+      document.getElementById('startInput').disabled = false;
+      if(gpsMarker) map.removeLayer(gpsMarker);
+      gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#0891B2',fillColor:'#0891B2',fillOpacity:0.4,weight:3}).addTo(map);
+      gpsMarker.bindPopup('📍 Your location').openPopup();
+      map.flyTo([lat,lng],17,{duration:0.8});
+      speak(t.gpsActive);
+    },
+    ()=>{
+      speak(t.gpsError);
+      document.getElementById('gpsBtn').classList.remove('active');
+      alert(t.gpsError);
+    }
+  );
+}
+
+const startSuggestions = document.getElementById('startSuggestions');
+
+function showStartSuggestions(filter){
+  const list = CAMPUS_DATA.buildings.filter(b=>
+    !filter || b.name.toLowerCase().includes(filter.toLowerCase()) || b.name_he.includes(filter)
+  );
+  if(!list.length){ startSuggestions.style.display='none'; return; }
+  startSuggestions.innerHTML = list.map(b=>`
+    <div class="suggestion-item" onclick="pickStart('${b.name.replace(/'/g,"\\'")}',${b.lat},${b.lng})">
+      <span>${b.name}</span><span style="color:var(--mid);font-size:11px;">${b.name_he}</span>
+    </div>`).join('');
+  startSuggestions.style.display='block';
+}
+
+function pickStart(name, lat, lng){
+  customStart = {lat, lng, label:name};
+  document.getElementById('startInput').value = name;
+  startSuggestions.style.display = 'none';
+  if(gpsMarker) map.removeLayer(gpsMarker);
+  gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#00B09B',fillColor:'#00B09B',fillOpacity:0.4,weight:3}).addTo(map);
+  gpsMarker.bindPopup('🚩 '+name).openPopup();
+  map.flyTo([lat,lng],17,{duration:0.6});
+  // If there's already an active route, recalculate it from new start
+  if(routeLine){
+    const dest = document.getElementById('routeTitle').textContent.split('→')[1]?.trim();
+    const match = CAMPUS_DATA.buildings.find(b=>b.name === dest);
+    if(match) setTimeout(()=> routeTo(match.name, match.lat, match.lng), 700);
+  }
+}
+
+document.getElementById('startInput').addEventListener('focus', ()=> showStartSuggestions(''));
+document.getElementById('startInput').addEventListener('input', e=> showStartSuggestions(e.target.value));
+document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) startSuggestions.style.display='none'; });
+
+const searchSuggestions = document.getElementById('searchSuggestions');
+
+function showSearchSuggestions(filter){
+
+  const q = (filter || '')
+    .trim()
+    .toLowerCase();
+
+  const matches =
+    CAMPUS_DATA.buildings
+      .filter(building =>
+        !q ||
+        building.name
+          .toLowerCase()
+          .includes(q) ||
+        building.name_he
+          .includes(filter || '')
+      );
+
+
+  if(!matches.length){
+
+    searchSuggestions.style.display =
+      'none';
+
+    return;
+
+  }
+
+
+  searchSuggestions.innerHTML =
+    matches
+      .map(building => `
+
+        <div
+          class="suggestion-item"
+          onclick="
+            pickDestination(
+              '${building.name.replace(/'/g,"\\'")}',
+              ${building.lat},
+              ${building.lng}
+            )
+          "
+        >
+
+          <span>
+            ${building.name}
+          </span>
+
+          <span
+            style="
+              color:var(--mid);
+              font-size:11px;
+            "
+          >
+            ${building.name_he}
+          </span>
+
+        </div>
+
+      `)
+      .join('');
+
+
+  searchSuggestions.style.display =
+    'block';
+
+}
+
+function pickDestination(name, lat, lng){
+  document.getElementById('searchInput').value = name;
+  searchSuggestions.style.display='none';
+  routeTo(name, lat, lng);
+}
+
+document.getElementById('searchInput').addEventListener('focus', ()=> showSearchSuggestions(''));
+document.getElementById('searchInput').addEventListener('input', e=> showSearchSuggestions(e.target.value));
+document.addEventListener('click', e=>{ if(!e.target.closest('.search-row')) searchSuggestions.style.display='none'; });
+
+// ═══════════════════════════════════════════
+// SEARCH + VOICE INPUT
+// ═══════════════════════════════════════════
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter') doSearch(searchInput.value.trim());
+});
+
+function doSearch(q){
+
+  if(!q) return;
+
+
+  const cleanQuery =
+    q
+      .trim()
+      .toLowerCase()
+      .replace(/^room\s+/i, '')
+      .trim();
+
+
+  // ============================================================
+  // 1. FIRST: SEARCH OUTDOOR BUILDINGS
+  // ============================================================
+
+  const buildingMatch =
+    CAMPUS_DATA.buildings.find(
+      b =>
+        b.name
+          .toLowerCase()
+          .includes(q.toLowerCase()) ||
+
+        b.name_he
+          .includes(q)
+    );
+
+
+  if(buildingMatch){
+
+    map.flyTo(
+      [
+        buildingMatch.lat,
+        buildingMatch.lng
+      ],
+      18,
+      {
+        duration:0.8
+      }
+    );
+
+
+    buildingMarkers[
+      buildingMatch.name
+    ]?.openPopup();
+
+
+    routeTo(
+      buildingMatch.name,
+      buildingMatch.lat,
+      buildingMatch.lng
+    );
+
+
+    return;
+  }
+
+
+
+  // ============================================================
+  // 2. THEN: SEARCH INDOOR ROOMS
+  // ============================================================
+
+  let indoorMatch = null;
+
+
+  for(
+    const floorKey
+    of Object.keys(
+      MADRIGA_GRAPH.floors
+    )
+  ){
+
+    const floor =
+      MADRIGA_GRAPH
+        .floors[
+          floorKey
+        ];
+
+
+    const node =
+      floor.nodes.find(
+        n =>
+
+          n.type === 'room' &&
+
+          String(n.label)
+            .trim()
+            .toLowerCase() ===
+            cleanQuery
+      );
+
+
+    if(node){
+
+      indoorMatch = {
+        node,
+        floor:floorKey
+      };
+
+      break;
+    }
+
+  }
+
+
+
+  // ============================================================
+  // 3. FOUND AN INDOOR ROOM
+  // ============================================================
+
+  if(indoorMatch){
+
+    const terrace =
+      CAMPUS_DATA.buildings.find(
+        b =>
+          b.name ===
+          'Terrace Building'
+      );
+
+
+    if(!terrace){
+
+      alert(
+        'Terrace Building could not be found.'
+      );
+
+      return;
+    }
+
+
+    // Remember the final indoor destination.
+      sessionStorage.setItem(
+        'indoorContext',
+        JSON.stringify({
+          entranceId: null,
+          startNodeId: null,
+          destinationNodeId: indoorMatch.node.id
+        })
+      );
+
+
+    // Outdoor part of the journey.
+    routeTo(
+      terrace.name,
+      terrace.lat,
+      terrace.lng
+    );
+
+
+    // Show what the user ACTUALLY searched for.
+    document.getElementById(
+      'searchInput'
+    ).value =
+      `Room ${indoorMatch.node.label} — Terrace Building`;
+
+
+    document.getElementById(
+      'continueIndoorBtn'
+    ).style.display =
+      'block';
+
+
+    return;
+  }
+
+
+
+  // ============================================================
+  // 4. NOTHING FOUND
+  // ============================================================
+
+  alert(
+    'No matching building or room found.'
+  );
+}
+
+// Voice input using Web Speech Recognition
+let recognition = null;
+let micActive = false;
+
+function toggleMic(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){ alert(t.voiceNotSupported); return; }
+  if(micActive){ recognition.stop(); return; }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = lang==='he'?'he-IL': lang==='ar'?'ar-SA':'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = ()=>{
+    micActive=true;
+    document.getElementById('micBtn').classList.add('listening');
+    searchInput.placeholder = t.voiceListening;
+  };
+  recognition.onresult = e=>{
+    const transcript = e.results[0][0].transcript;
+    searchInput.value = transcript;
+    doSearch(transcript);
+  };
+  recognition.onerror = recognition.onend = ()=>{
+    micActive=false;
+    document.getElementById('micBtn').classList.remove('listening');
+    searchInput.placeholder = t.searchPlaceholder;
+  };
+  recognition.start();
+}
+
+if(window.innerWidth <= 768){
+  const sidebar = document.querySelector('.sidebar');
+  sidebar.addEventListener('click', ()=> sidebar.classList.add('open'));
+  document.getElementById('map').addEventListener('click', ()=> sidebar.classList.remove('open'));
+}
+
+let favourites = [];
+
+function toggleBuildingList(){
+  const list = document.getElementById('buildingList');
+  const arrow = document.getElementById('buildingArrow');
+  const isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'flex';
+  arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+function toggleFavourite(name, lat, lng){
+  const idx = favourites.findIndex(f=>f.name===name);
+  if(idx >= 0){
+    favourites.splice(idx, 1);
+  } else {
+    favourites.push({name, lat, lng});
+  }
+  buildFavouriteList();
+}
+
+function buildFavouriteList(){
+  const el = document.getElementById('favouriteList');
+  const empty = document.getElementById('favEmpty');
+  if(!favourites.length){
+    empty.style.display = 'block';
+    el.querySelectorAll('.building-item').forEach(i=>i.remove());
+    return;
+  }
+  empty.style.display = 'none';
+  el.querySelectorAll('.building-item').forEach(i=>i.remove());
+  favourites.forEach(f=>{
+    const item = document.createElement('div');
+    item.className = 'building-item';
+    item.innerHTML = `<span>⭐ ${f.name}</span><span style="color:var(--mid);font-size:11px;cursor:pointer;" onclick="toggleFavourite('${f.name.replace(/'/g,"\\'")}',${f.lat},${f.lng})">✕</span>`;
+    item.onclick = (e)=>{
+      if(e.target.tagName === 'SPAN' && e.target.textContent === '✕') return;
+      map.flyTo([f.lat,f.lng],18,{duration:0.8});
+      setTimeout(()=> routeTo(f.name, f.lat, f.lng), 900);
+    };
+    el.insertBefore(item, empty);
+  });
+}
+
+
+function startIndoorTransition(){
+  const indoorBtn = document.getElementById('continueIndoorBtn');
+  const building = indoorBtn.dataset.building;
+
+  if(!building) return;
+
+  sessionStorage.setItem('indoorBuilding', building);
+
+window.location.href =
+  `wayframe/navigation-demo.html?building=${encodeURIComponent(building)}`;
+}
+
+
+</script>
+
+
+<div
+  id="indoorTransition"
+  style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#0D1B3E;
+    z-index:9999;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+  "
+>
+  <img
+    src="app/vendor/images/cw2.png"
+    style="
+      width:72px;
+      height:72px;
+      border-radius:20px;
+    "
+  >
+
+  <div
+    style="
+      color:white;
+      font-size:18px;
+      font-weight:700;
+    "
+  >
+    CampusWay
+  </div>
+
+  <div
+    style="
+      color:#9FC6DD;
+      font-size:13px;
+    "
+  >
+    Switching to indoor mode...
+  </div>
+</div>
+
+</body>
+</html>
