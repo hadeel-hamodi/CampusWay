@@ -1097,10 +1097,20 @@ function updateTurnInstruction(){
   const a=routeNodes[progressIndex];
   const b=routeNodes[progressIndex+1];
 
-  if(a.floor!==b.floor){
-    $('instruction').textContent=(a.type==='elevator'||b.type==='elevator')?'Take the elevator':'Take the stairs';
-    return;
-  }
+if(a.floor!==b.floor){
+  const method =
+    (a.type === 'elevator' || b.type === 'elevator')
+      ? 'elevator'
+      : 'stairs';
+
+  $('instruction').textContent =
+    `Take the ${method} to Floor ${floorLabel(b.floor)}`;
+
+  $('subInstruction').textContent =
+    `Continue on Floor ${floorLabel(b.floor)}`;
+
+  return;
+}
 
   if(progressIndex>=routeNodes.length-2){
     $('instruction').textContent='Continue to destination';
@@ -1147,14 +1157,33 @@ function advanceAlongRoute(distanceMeters){
     const a=routeNodes[progressIndex];
     const b=routeNodes[progressIndex+1];
 
-    if(a.floor!==b.floor){
-      progressIndex++;
-      progressT=0;
-      activeFloor=b.floor;
-      floorButtons();
-      continue;
-    }
+if(a.floor!==b.floor){
 
+  const method =
+    (a.type === 'elevator' || b.type === 'elevator')
+      ? 'elevator'
+      : 'stairs';
+
+  $('instruction').textContent =
+    `Take the ${method} to Floor ${floorLabel(b.floor)}`;
+
+  $('subInstruction').textContent =
+    `Continue on Floor ${floorLabel(b.floor)}`;
+
+  progressIndex++;
+  progressT=0;
+  activeFloor=b.floor;
+
+  floorButtons();
+  drawBaseMap();
+  updateProgressUI();
+
+    if(navMode === 'auto'){
+    autoFloorPauseUntil = Date.now() + 2000;
+  }
+
+  return;
+}
     const dxMeters=(b.x-a.x)*13.26;
     const dyMeters=(b.y-a.y)*10.12;
     const segLenMeters=Math.hypot(dxMeters,dyMeters);
@@ -1448,6 +1477,7 @@ async function enableSensors(){
 }
 
 let autoTimer = null;
+let autoFloorPauseUntil = 0;
 
 function startAutoDemo(){
   if(autoTimer) clearInterval(autoTimer);
@@ -1456,6 +1486,10 @@ function startAutoDemo(){
     if(!navigationActive){
       clearInterval(autoTimer);
       autoTimer = null;
+      return;
+    }
+
+    if(Date.now() < autoFloorPauseUntil){
       return;
     }
 
