@@ -8,6 +8,7 @@
 <script src="app/vendor/leaflet.js"></script>
 <script src="app/prototype/data.js"></script>
 <script src="app/prototype/madriga-graph.js"></script>
+<script src="app/prototype/main-graph.js"></script>
 <script src="app/prototype/indoor.js"></script>
 <style>
 :root{
@@ -1424,23 +1425,47 @@ function showSearchSuggestions(filter){
   );
 
   // Madriga room matches
-  const roomMatches = [];
+// Indoor room matches
+const roomMatches = [];
 
-  if(q && typeof MADRIGA_GRAPH !== 'undefined'){
-    for(const [floorKey, floor] of Object.entries(MADRIGA_GRAPH.floors)){
+const searchableGraphs = [
+  {
+    graph: typeof MADRIGA_GRAPH !== 'undefined' ? MADRIGA_GRAPH : null,
+    buildingName: 'Terrace Building',
+    buildingKey: 'madriga'
+  },
+  {
+    graph: typeof MAIN_GRAPH !== 'undefined' ? MAIN_GRAPH : null,
+    buildingName: 'Main Building',
+    buildingKey: 'main'
+  }
+];
+
+if(q){
+  for(const item of searchableGraphs){
+
+    if(!item.graph) continue;
+
+    for(const [floorKey, floor] of Object.entries(item.graph.floors)){
+
       for(const node of (floor.nodes || [])){
+
         if(
           node.type === 'room' &&
           String(node.label).toLowerCase().includes(q)
         ){
           roomMatches.push({
             node,
-            floor: floorKey
+            floor: floorKey,
+            buildingName: item.buildingName,
+            buildingKey: item.buildingKey
           });
         }
+
       }
     }
   }
+}
 
   if(!buildingMatches.length && !roomMatches.length){
     searchSuggestions.style.display = 'none';
@@ -1480,14 +1505,15 @@ function showSearchSuggestions(filter){
   const roomHTML = uniqueRoomMatches.map(match => `
     <div
       class="suggestion-item"
-      onclick="pickIndoorDestination(
-        '${match.node.id}',
-        '${String(match.node.label).replace(/'/g,"\\'")}'
-      )"
+onclick="pickIndoorDestination(
+  '${match.node.id}',
+  '${String(match.node.label).replace(/'/g,"\\'")}',
+  '${match.buildingKey}'
+)"
     >
     <span>Room ${match.node.label}</span>
     <span style="color:var(--mid);font-size:11px;">
-    Terrace Building
+    ${match.buildingName}
     </span>
     </div>
   `).join('');
@@ -1495,33 +1521,41 @@ function showSearchSuggestions(filter){
   searchSuggestions.innerHTML = buildingHTML + roomHTML;
   searchSuggestions.style.display = 'block';
 }
+function pickIndoorDestination(nodeId, label, buildingKey){
 
-function pickIndoorDestination(nodeId, label){
+  const buildingNames = {
+    madriga: 'Terrace Building',
+    main: 'Main Building'
+  };
 
-  const terrace = CAMPUS_DATA.buildings.find(
-    building => building.name === 'Terrace Building'
+  const buildingName = buildingNames[buildingKey];
+
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === buildingName
   );
 
-  if(!terrace) return;
+  if(!building) return;
 
   sessionStorage.setItem(
     'indoorContext',
-        JSON.stringify({
-        entranceId: null,
-        startNodeId: null,
-        destinationLabel: label
-        })
-   );
+    JSON.stringify({
+      entranceId: null,
+      startNodeId: null,
+      destinationLabel: label
+    })
+  );
+
+  sessionStorage.setItem('indoorBuilding', buildingKey);
 
   document.getElementById('searchInput').value =
-    `Room ${label} — Terrace Building`;
+    `Room ${label} — ${buildingName}`;
 
   searchSuggestions.style.display = 'none';
 
   routeTo(
-    terrace.name,
-    terrace.lat,
-    terrace.lng
+    building.name,
+    building.lat,
+    building.lng
   );
 }
 
