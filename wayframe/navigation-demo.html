@@ -403,7 +403,103 @@ let panStart={x:0,y:0,cameraX:0,cameraY:0};
 const CAMERA_W=1000, CAMERA_H=700;
 
 const $=id=>document.getElementById(id);
+
 const svg=$('mapSvg');
+
+// Translation layer only. Routing, graph loading and room handoff stay unchanged.
+const INDOOR_T = {
+  en:{campusMap:'← Campus map',building:'BUILDING',startFloor:'START FLOOR',startLocation:'START LOCATION',destinationFloor:'DESTINATION FLOOR',destination:'DESTINATION',route:'Route',autoMode:'Auto Mode',phoneSensors:'Phone Sensors',accessibleRoute:'Accessible route',startNavigation:'▶ Start navigation',chooseRoute:'Choose a route.',floor:'Floor',navigation:'Navigation',noRoute:'No route yet',noRouteHelp:"Choose where you're starting and where you want to go.",livePosition:'Live position',notStarted:'Not started',howWorks:'How this demo works',howWorksText:'Choose a floor first; the location dropdown then contains only rooms and useful destinations from that floor. During navigation, the marker follows the planned route.',chooseDestinationBanner:'Choose a destination',routeAppear:'Your route will appear here.',recenter:'◎ Recenter'},
+  he:{campusMap:'→ מפת הקמפוס',building:'בניין',startFloor:'קומת התחלה',startLocation:'נקודת התחלה',destinationFloor:'קומת יעד',destination:'יעד',route:'מסלול',autoMode:'מצב אוטומטי',phoneSensors:'חיישני הטלפון',accessibleRoute:'מסלול נגיש',startNavigation:'▶ התחל ניווט',chooseRoute:'בחר מסלול.',floor:'קומה',navigation:'ניווט',noRoute:'אין מסלול עדיין',noRouteHelp:'בחר מאיפה להתחיל ולאן ברצונך להגיע.',livePosition:'מיקום נוכחי',notStarted:'טרם התחיל',howWorks:'איך הניווט עובד',howWorksText:'בחר קודם קומה. לאחר מכן יוצגו החדרים והיעדים השימושיים באותה קומה. במהלך הניווט הסמן מתקדם לאורך המסלול המתוכנן.',chooseDestinationBanner:'בחר יעד',routeAppear:'המסלול יופיע כאן.',recenter:'◎ מרכז מחדש'},
+  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا، ثم ستظهر الغرف والوجهات المفيدة الموجودة في ذلك الطابق. أثناء الملاحة يتحرك المؤشر على المسار المحدد.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'}
+};
+
+function indoorLanguage(){
+  for(const key of ['campuswayLanguage','language','lang']){
+    const value=sessionStorage.getItem(key);
+    if(value && INDOOR_T[value]) return value;
+  }
+  return 'en';
+}
+const indoorLang=indoorLanguage();
+const it=key=>(INDOOR_T[indoorLang]||INDOOR_T.en)[key]||INDOOR_T.en[key]||key;
+
+function localizedFloor(f){
+  const n=floorLabel(f);
+  if(indoorLang==='ar') return `الطابق ${n}`;
+  if(indoorLang==='he') return `קומה ${n}`;
+  return `Floor ${n}`;
+}
+
+function localizedNodeLabel(label){
+  const raw=String(label??'');
+  if(indoorLang==='ar'){
+    if(raw.toLowerCase()==='entrance') return 'المدخل';
+    if(raw.toLowerCase()==='elevators') return 'المصاعد';
+  }
+  if(indoorLang==='he'){
+    if(raw.toLowerCase()==='entrance') return 'כניסה';
+    if(raw.toLowerCase()==='elevators') return 'מעליות';
+  }
+  return raw;
+}
+
+function localizedInstruction(en, ar, he){
+  return indoorLang==='ar' ? ar : indoorLang==='he' ? he : en;
+}
+
+function applyIndoorTranslations(){
+  const rtl=indoorLang==='ar'||indoorLang==='he';
+  document.documentElement.lang=indoorLang;
+  document.documentElement.dir=rtl?'rtl':'ltr';
+
+  const set=(selector,key)=>{
+    const el=document.querySelector(selector);
+    if(el) el.textContent=it(key);
+  };
+
+  set('#backToCampusBtn','campusMap');
+  set('label[for="building"]','building');
+  set('label[for="fromFloor"]','startFloor');
+  set('label[for="from"]','startLocation');
+  set('label[for="toFloor"]','destinationFloor');
+  set('label[for="to"]','destination');
+  set('#routeBtn','route');
+  set('#autoModeBtn','autoMode');
+  set('#sensorModeBtn','phoneSensors');
+  set('#startBtn','startNavigation');
+  set('#status','chooseRoute');
+  set('.floorPill strong','floor');
+  set('#recenterBtn','recenter');
+  set('.sidebar h3','navigation');
+  set('#routeCard strong','noRoute');
+  set('#routeCard .muted','noRouteHelp');
+  set('#instruction','chooseDestinationBanner');
+  set('#subInstruction','routeAppear');
+
+  const cards=document.querySelectorAll('.sidebar .card');
+  if(cards[1]){
+    const strong=cards[1].querySelector('strong');
+    if(strong) strong.textContent=it('livePosition');
+    const live=cards[1].querySelector('#livePos');
+    if(live) live.textContent=it('notStarted');
+  }
+  if(cards[2]){
+    const strong=cards[2].querySelector('strong');
+    const muted=cards[2].querySelector('.muted');
+    if(strong) strong.textContent=it('howWorks');
+    if(muted) muted.textContent=it('howWorksText');
+  }
+
+  const access=$('accessibleRoute');
+  if(access && access.parentElement){
+    [...access.parentElement.childNodes].forEach(node=>{
+      if(node.nodeType===Node.TEXT_NODE && node.textContent.trim()){
+        node.textContent=' ♿ '+it('accessibleRoute');
+      }
+    });
+  }
+}
+
 
 
 async function loadGraph(){
@@ -465,39 +561,48 @@ if(entrance){
   $('from').value = entrance.id;
 }
 
-    if(context.destinationLabel){
+    // Restore the room chosen in the main CampusWay app.
+    // Support both current and older saved context formats.
+    let matchingDestinations = [];
 
-      const matchingDestinations = allNodes().filter(
+    if(context.destinationLabel){
+      matchingDestinations = allNodes().filter(
         node =>
           node.type === 'room' &&
           String(node.label).trim().toLowerCase() ===
           String(context.destinationLabel).trim().toLowerCase()
       );
-
-  if(matchingDestinations.length){
-
-  const startId = $('from').value;
-
-  const best = bestDestinationNode(
-    startId,
-    matchingDestinations
-  );
-
-  const destination = best.destination;
-
-  if(destination){
-    $('toFloor').value = destination.floor;
-
-    fillLocationSelect(
-      destination.floor,
-      'to',
-      'Choose destination...'
-    );
-
-    $('to').value = destination.id;
-  }
-}
     }
+
+    if(!matchingDestinations.length && context.destinationNodeId){
+      const savedNode = nodeById(context.destinationNodeId);
+      if(savedNode && savedNode.type === 'room'){
+        matchingDestinations = [savedNode];
+      }
+    }
+
+    if(matchingDestinations.length){
+      const startId = $('from').value;
+      const best = startId
+        ? bestDestinationNode(startId, matchingDestinations)
+        : { destination: matchingDestinations[0] };
+
+      const destination =
+        best.destination || matchingDestinations[0];
+
+      if(destination){
+        $('toFloor').value = destination.floor;
+
+        fillLocationSelect(
+          destination.floor,
+          'to',
+          'Choose destination...'
+        );
+
+        $('to').value = destination.id;
+      }
+    }
+    
   }catch(err){
     console.warn('Could not restore indoor destination:', err);
   }
@@ -1023,20 +1128,20 @@ function describeRoute(){
   const aLabel=a._displayLabel||a.label;
   const bLabel=b._displayLabel||b.label;
   const floors=[...new Set(routeNodes.map(n=>n.floor))];
-  $('routeCard').innerHTML=`<strong>${esc(aLabel)} → ${esc(bLabel)}</strong><div class="muted">${floors.map(f=>'Floor '+floorLabel(f)).join(' → ')}</div>`;
+  $('routeCard').innerHTML=`<strong>${esc(aLabel)} → ${esc(bLabel)}</strong><div class="muted">${floors.map(f=>localizedFloor(f)).join(' → ')}</div>`;
 
-  const steps=[`Start at ${aLabel} on Floor ${floorLabel(a.floor)}`];
+  const steps=[localizedInstruction(`Start at ${aLabel} on Floor ${floorLabel(a.floor)}`,`ابدأ من ${localizedNodeLabel(aLabel)} في ${localizedFloor(a.floor)}`,`התחל ב-${localizedNodeLabel(aLabel)} ב${localizedFloor(a.floor)}`)];
   for(let i=1;i<routeNodes.length;i++){
     const p=routeNodes[i-1],n=routeNodes[i];
     if(p.floor!==n.floor){
       const method=(p.type==='elevator'||n.type==='elevator')?'elevator':'stairs';
-      steps.push(`Take the ${method} to Floor ${floorLabel(n.floor)}`);
+      steps.push(localizedInstruction(`Take the ${method} to Floor ${floorLabel(n.floor)}`,`استخدم ${method==='elevator'?'المصعد':'الدرج'} إلى ${localizedFloor(n.floor)}`,`עלה ב${method==='elevator'?'מעלית':'מדרגות'} אל ${localizedFloor(n.floor)}`));
     }
   }
-  steps.push(`Arrive at ${bLabel}`);
+  steps.push(localizedInstruction(`Arrive at ${bLabel}`,`وصل إلى ${localizedNodeLabel(bLabel)}`,`הגע אל ${localizedNodeLabel(bLabel)}`));
   $('steps').innerHTML=steps.map(s=>`<div class="step"><div class="dot"></div><div>${esc(s)}</div></div>`).join('');
-  $('instruction').textContent='Follow the highlighted route';
-  $('subInstruction').textContent=`Destination: ${bLabel}`;
+  $('instruction').textContent=localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','עקוב אחר המסלול המסומן');
+  $('subInstruction').textContent=localizedInstruction(`Destination: ${bLabel}`,`الوجهة: ${localizedNodeLabel(bLabel)}`,`יעד: ${localizedNodeLabel(bLabel)}`);
   $('eta').textContent='Demo';
 }
 
@@ -1086,7 +1191,7 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
   followNode(routeNodes[0]);
   headingDeg=currentHeading();
   $('startBtn').disabled=false;
-  $('status').textContent='Route ready.';
+  $('status').textContent=localizedInstruction('Route ready.','المسار جاهز.','המסלול מוכן.');
   describeRoute();floorButtons();drawBaseMap();updateProgressUI();
 }
 
@@ -1143,7 +1248,7 @@ function updateProgressUI(){
 
   const cur=currentInterpolated();
   if(cur){
-    $('livePos').textContent=`Floor ${floorLabel(cur.floor)} — moving toward ${routeNodes[Math.min(progressIndex+1,routeNodes.length-1)].label}`;
+    $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — moving toward ${routeNodes[Math.min(progressIndex+1,routeNodes.length-1)].label}`,`${localizedFloor(cur.floor)} — متجه نحو ${localizedNodeLabel(routeNodes[Math.min(progressIndex+1,routeNodes.length-1)].label)}`,`${localizedFloor(cur.floor)} — מתקדם לכיוון ${localizedNodeLabel(routeNodes[Math.min(progressIndex+1,routeNodes.length-1)].label)}`);
   }
 }
 
@@ -1283,10 +1388,10 @@ function completeNavigation(){
   updateProgressUI();
 
   const destLabel=dest._displayLabel||dest.label;
-  $('instruction').textContent='You have arrived';
+  $('instruction').textContent=localizedInstruction('You have arrived','لقد وصلت','הגעת ליעד');
   $('subInstruction').textContent=destLabel;
-  $('eta').textContent='Arrived';
-  $('livePos').textContent=`Floor ${floorLabel(dest.floor)} — ${destLabel}`;
+  $('eta').textContent=localizedInstruction('Arrived','وصلت','הגעת');
+  $('livePos').textContent=`${localizedFloor(dest.floor)} — ${localizedNodeLabel(destLabel)}`;
   $('progressBar').style.width='100%';
   $('startBtn').disabled=true;
   $('status').textContent='Arrived.';
@@ -1675,6 +1780,7 @@ if(savedAccessibilityProfile === 'mobility'){
   $('accessibleRoute').checked = true;
 }
 
+applyIndoorTranslations();
 loadGraph();
 </script>
 </body>
