@@ -9,6 +9,13 @@
 <script src="app/prototype/data.js"></script>
 <script src="app/prototype/madriga-graph.js"></script>
 <script src="app/prototype/main-graph.js"></script>
+<script src="app/prototype/rabin-graph.js"></script>
+<script src="app/prototype/student-graph.js"></script>
+
+<!-- Not mapped/exported yet -->
+<!-- <script src="app/prototype/education-graph.js"></script> -->
+<!-- <script src="app/prototype/multi-purpose-graph.js"></script> -->
+
 <script src="app/prototype/indoor.js"></script>
 <style>
 :root{
@@ -1316,7 +1323,7 @@ function routeTo(name, lat, lng){
   'Terrace Building': 'madriga',
   'Main Building': 'main',
   'Rabin Building': 'rabin',
-  'Student Building': 'student'
+  'Student House': 'student'
 };
 
 if(INDOOR_BUILDINGS[name]){
@@ -1438,7 +1445,29 @@ const searchableGraphs = [
     graph: typeof MAIN_GRAPH !== 'undefined' ? MAIN_GRAPH : null,
     buildingName: 'Main Building',
     buildingKey: 'main'
+  },
+  {
+    graph: typeof RABIN_GRAPH !== 'undefined' ? RABIN_GRAPH : null,
+    buildingName: 'Rabin Building',
+    buildingKey: 'rabin'
+  },
+  {
+    graph: typeof STUDENT_GRAPH !== 'undefined' ? STUDENT_GRAPH : null,
+    buildingName: 'Student House',
+    buildingKey: 'student'
   }
+
+  // Add these when their graphs are ready:
+  // {
+  //   graph: EDUCATION_GRAPH,
+  //   buildingName: 'Education Building',
+  //   buildingKey: 'education'
+  // },
+  // {
+  //   graph: MULTI_PURPOSE_GRAPH,
+  //   buildingName: 'Multi-Purpose Building',
+  //   buildingKey: 'multi-purpose'
+  // }
 ];
 
 if(q){
@@ -1521,12 +1550,16 @@ onclick="pickIndoorDestination(
   searchSuggestions.innerHTML = buildingHTML + roomHTML;
   searchSuggestions.style.display = 'block';
 }
+
+
 function pickIndoorDestination(nodeId, label, buildingKey){
 
-  const buildingNames = {
-    madriga: 'Terrace Building',
-    main: 'Main Building'
-  };
+const buildingNames = {
+  madriga: 'Terrace Building',
+  main: 'Main Building',
+  rabin: 'Rabin Building',
+  student: 'Student House'
+};
 
   const buildingName = buildingNames[buildingKey];
 
