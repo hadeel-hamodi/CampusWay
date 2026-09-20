@@ -1190,10 +1190,123 @@ function restoreServiceMarkers(){
   foodMode = false;
 }
 
+function findNearbyIndoorService(type){
+
+  const start = getStart();
+
+  const indoorGraphs = [
+    {
+      graph: typeof MADRIGA_GRAPH !== 'undefined' ? MADRIGA_GRAPH : null,
+      buildingName: 'Terrace Building',
+      buildingKey: 'madriga'
+    },
+    {
+      graph: typeof MAIN_GRAPH !== 'undefined' ? MAIN_GRAPH : null,
+      buildingName: 'Main Building',
+      buildingKey: 'main'
+    },
+    {
+      graph: typeof RABIN_GRAPH !== 'undefined' ? RABIN_GRAPH : null,
+      buildingName: 'Rabin Building',
+      buildingKey: 'rabin'
+    },
+    {
+      graph: typeof STUDENT_GRAPH !== 'undefined' ? STUDENT_GRAPH : null,
+      buildingName: 'Student House',
+      buildingKey: 'student'
+    }
+  ];
+
+  const matches = [];
+
+  for(const item of indoorGraphs){
+
+    if(!item.graph) continue;
+
+    const building = CAMPUS_DATA.buildings.find(
+      b => b.name === item.buildingName
+    );
+
+    if(!building) continue;
+
+    for(const [floorKey, floor] of Object.entries(item.graph.floors)){
+
+      for(const node of (floor.nodes || [])){
+
+        if(node.type === type){
+
+          matches.push({
+            node,
+            floor: floorKey,
+            building,
+            buildingKey: item.buildingKey,
+            distance: Math.hypot(
+              building.lat - start.lat,
+              building.lng - start.lng
+            )
+          });
+
+        }
+      }
+    }
+  }
+
+  if(!matches.length){
+    alert(`No ${type} has been mapped yet.`);
+    return;
+  }
+
+  matches.sort((a,b) => a.distance - b.distance);
+
+  const nearest = matches[0];
+
+  routeToIndoorService(nearest);
+}
+
+function routeToIndoorService(match){
+
+  const label =
+    String(match.node.label || match.node.type).trim();
+
+  sessionStorage.setItem(
+    'indoorContext',
+    JSON.stringify({
+      entranceId: null,
+      startNodeId: null,
+      destinationLabel: label
+    })
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    match.buildingKey
+  );
+
+  document.getElementById('searchInput').value =
+    `${label} — ${localizedBuildingName(match.building)}`;
+
+  searchSuggestions.style.display = 'none';
+
+  routeTo(
+    match.building.name,
+    match.building.lat,
+    match.building.lng
+  );
+}
+
 function findNearbyService(type){
 
-      if(type !== 'food'){
+  if(type !== 'food'){
     restoreServiceMarkers();
+  }
+
+  if(
+    type === 'gym' ||
+    type === 'library' ||
+    type === 'landmark'
+  ){
+    findNearbyIndoorService(type);
+    return;
   }
 
 
@@ -1528,7 +1641,7 @@ if(q){
       for(const node of (floor.nodes || [])){
 
         if(
-          node.type === 'room' &&
+          ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
           String(node.label).toLowerCase().includes(q)
         ){
           roomMatches.push({
@@ -1579,21 +1692,39 @@ if(q){
             uniqueRoomMatches.push(match);
         }
         }
-  const roomHTML = uniqueRoomMatches.map(match => `
+ const roomHTML = uniqueRoomMatches.map(match => {
+
+  const typeLabels = {
+    room: t.room,
+    gym: t.serviceGym,
+    library: t.serviceLibrary,
+    landmark: t.serviceLandmarks
+  };
+
+  const typeLabel = typeLabels[match.node.type] || '';
+
+  return `
     <div
       class="suggestion-item"
-onclick="pickIndoorDestination(
-  '${match.node.id}',
-  '${String(match.node.label).replace(/'/g,"\\'")}',
-  '${match.buildingKey}'
-)"
+      onclick="pickIndoorDestination(
+        '${match.node.id}',
+        '${String(match.node.label).replace(/'/g,"\\'")}',
+        '${match.buildingKey}'
+      )"
     >
-    <span>${t.room} ${match.node.label}</span>
-    <span style="color:var(--mid);font-size:11px;">
-    ${localizedBuildingNameByEnglishName(match.buildingName)}
-    </span>
+      <span>
+        ${match.node.type === 'room'
+          ? `${typeLabel} ${match.node.label}`
+          : match.node.label}
+      </span>
+
+      <span style="color:var(--mid);font-size:11px;">
+        ${localizedBuildingNameByEnglishName(match.buildingName)}
+        · ${match.floor.replace('floorminus1','-1').replace('floor','')}
+      </span>
     </div>
-  `).join('');
+  `;
+}).join('');
 
   searchSuggestions.innerHTML = buildingHTML + roomHTML;
   searchSuggestions.style.display = 'block';

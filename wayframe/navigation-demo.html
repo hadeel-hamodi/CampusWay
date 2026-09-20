@@ -564,22 +564,25 @@ if(entrance){
     // Restore the room chosen in the main CampusWay app.
     // Support both current and older saved context formats.
     let matchingDestinations = [];
+if(context.destinationLabel){
+  matchingDestinations = allNodes().filter(
+    node =>
+      ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
+      String(node.label).trim().toLowerCase() ===
+      String(context.destinationLabel).trim().toLowerCase()
+  );
+}
 
-    if(context.destinationLabel){
-      matchingDestinations = allNodes().filter(
-        node =>
-          node.type === 'room' &&
-          String(node.label).trim().toLowerCase() ===
-          String(context.destinationLabel).trim().toLowerCase()
-      );
-    }
+if(!matchingDestinations.length && context.destinationNodeId){
+  const savedNode = nodeById(context.destinationNodeId);
 
-    if(!matchingDestinations.length && context.destinationNodeId){
-      const savedNode = nodeById(context.destinationNodeId);
-      if(savedNode && savedNode.type === 'room'){
-        matchingDestinations = [savedNode];
-      }
-    }
+  if(
+    savedNode &&
+    ['room', 'gym', 'library', 'landmark'].includes(savedNode.type)
+  ){
+    matchingDestinations = [savedNode];
+  }
+}
 
     if(matchingDestinations.length){
       const startId = $('from').value;
@@ -669,7 +672,9 @@ function userFacingLocationsForFloor(floorId){
   if(!GRAPH.floors[floorId]) return [];
 
   const result=(GRAPH.floors[floorId].nodes||[])
-    .filter(n=>['room','entrance','restroom','landmark'].includes(n.type))
+.filter(n =>
+  ['room', 'entrance', 'restroom', 'landmark', 'gym', 'library'].includes(n.type)
+)
     .sort((a,b)=>{
       const priority={room:0,restroom:1,entrance:2,landmark:3};
       return (priority[a.type]??9)-(priority[b.type]??9) ||
