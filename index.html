@@ -552,6 +552,23 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
       <span id="lbl-service-clinic">Clinic</span>
     </button>
   </div>
+
+  <div class="a11y-toolbar" style="margin-top:8px;">
+  <button class="a11y-btn" onclick="findNearbyService('gym')">
+    <span style="font-size:18px;">🏋️</span>
+    <span id="lbl-service-gym">Gym</span>
+  </button>
+
+  <button class="a11y-btn" onclick="findNearbyService('library')">
+    <span style="font-size:18px;">📚</span>
+    <span id="lbl-service-library">Library</span>
+  </button>
+
+  <button class="a11y-btn" onclick="findNearbyService('landmark')">
+    <span style="font-size:18px;">📍</span>
+    <span id="lbl-service-landmarks">Landmarks</span>
+  </button>
+</div>
 </div>
 
 <!-- Favourites -->
@@ -653,7 +670,7 @@ const T = {
     removeFromFav:'Remove',
     langSwitch:'🌐 Language',
     legendElevator:'Elevator', legendStairs:'Stairs',
-    servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic',
+    servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks',
     continueIndoors:'Continue indoors →', switchingIndoor:'Switching to indoor mode...', room:'Room',
     yourLocation:'Your location', hour:'hr', hours:'hours', noBuildingOrRoom:'No matching building or room found.',
   },
@@ -704,7 +721,7 @@ const T = {
     saveToFav:'⭐ שמור למועדפים',
     langSwitch:'🌐 שפה',
     removeFromFav:'הסר',
-    servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה',
+    servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון',
     continueIndoors:'המשך לניווט בתוך הבניין ←', switchingIndoor:'עובר למצב ניווט בתוך הבניין...', room:'חדר',
     yourLocation:'המיקום שלך', hour:'שעה', hours:'שעות', noBuildingOrRoom:'לא נמצא בניין או חדר תואם.',
   },
@@ -755,7 +772,7 @@ const T = {
     saveToFav:'⭐ حفظ في المفضلة',
     langSwitch:'🌐 لغة',
     removeFromFav:'إزالة',
-    servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة',
+    servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم',
     continueIndoors:'تابع إلى الداخل ←', switchingIndoor:'جارٍ الانتقال إلى وضع الملاحة داخل المبنى...', room:'غرفة',
     yourLocation:'موقعك', hour:'ساعة', hours:'ساعات', noBuildingOrRoom:'لم يتم العثور على مبنى أو غرفة مطابقة.',
   }
@@ -821,6 +838,9 @@ function applyTranslations(){
   document.getElementById('lbl-service-restrooms').textContent = t.serviceRestrooms;
   document.getElementById('lbl-service-food').textContent = t.serviceFood;
   document.getElementById('lbl-service-clinic').textContent = t.serviceClinic;
+  document.getElementById('lbl-service-gym').textContent = t.serviceGym;
+  document.getElementById('lbl-service-library').textContent = t.serviceLibrary;
+  document.getElementById('lbl-service-landmarks').textContent = t.serviceLandmarks;
   document.getElementById('lbl-continue-indoor').textContent = t.continueIndoors;
   document.getElementById('lbl-switching-indoor').textContent = t.switchingIndoor;
 }
