@@ -544,10 +544,24 @@ if(savedContext){
   try{
     const context = JSON.parse(savedContext);
 
-    // If arriving from outdoor navigation, start at a building entrance.
-const entrance = allNodes().find(
-  node => node.type === 'entrance'
-);
+// If arriving from outdoor navigation, use the exact entrance
+// selected by the outdoor route. Until entrance mapping is added,
+// fall back to the first mapped entrance like before.
+let entrance = null;
+
+if(context.entranceId){
+  const savedEntrance = nodeById(context.entranceId);
+
+  if(savedEntrance && savedEntrance.type === 'entrance'){
+    entrance = savedEntrance;
+  }
+}
+
+if(!entrance){
+  entrance = allNodes().find(
+    node => node.type === 'entrance'
+  );
+}
 
 if(entrance){
   $('fromFloor').value = entrance.floor;

@@ -1692,6 +1692,32 @@ if(q){
             uniqueRoomMatches.push(match);
         }
         }
+
+      // Rank search results by relevance:
+// exact match → starts with query → contains query
+uniqueRoomMatches.sort((a, b) => {
+  const query = q.trim().toLowerCase();
+
+  const aLabel = String(a.node.label).trim().toLowerCase();
+  const bLabel = String(b.node.label).trim().toLowerCase();
+
+  const rank = label => {
+    if(label === query) return 0;
+    if(label.startsWith(query)) return 1;
+    return 2;
+  };
+
+  const rankDifference = rank(aLabel) - rank(bLabel);
+
+  if(rankDifference !== 0){
+    return rankDifference;
+  }
+
+  return aLabel.localeCompare(bLabel, undefined, {
+    numeric: true
+  });
+});
+
  const roomHTML = uniqueRoomMatches.map(match => {
 
   const typeLabels = {
