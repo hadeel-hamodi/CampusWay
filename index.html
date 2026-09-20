@@ -1504,11 +1504,13 @@ routeLine = L.polyline(
   map.fitBounds(routeLine.getBounds(),{padding:[80,80]});
 
   const profile = t.profiles.find(p=>p.id===currentProfile);
-  const R = 6371000;
-  const dLat = (lat - start.lat) * Math.PI / 180;
-  const dLng = (lng - start.lng) * Math.PI / 180;
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(start.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
-  const distanceMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+const distanceMeters =
+  outdoorResult && outdoorResult.distance > 0
+    ? outdoorResult.distance
+    : CampusOutdoorRouting.distance(
+        [start.lat, start.lng],
+        [lat, lng]
+      );
   const speedMps = currentProfile==='mobility' ? 0.8 : 1.2;
   const seconds = distanceMeters / speedMps;
   const etaNum = seconds < 3600 ? Math.round(seconds/60) : Math.round(seconds/3600*10)/10;
