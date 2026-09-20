@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="app/vendor/leaflet.css" />
 <script src="app/vendor/leaflet.js"></script>
 <script src="app/prototype/data.js"></script>
+<script src="app/prototype/outdoor-routing.js"></script>
 <script src="app/prototype/madriga-graph.js"></script>
 <script src="app/prototype/main-graph.js"></script>
 <script src="app/prototype/rabin-graph.js"></script>
@@ -1441,24 +1442,62 @@ gateMarkers.forEach(marker => {
   }
 }
 
-function routeTo(name, lat, lng){
-  if(routeLine) map.removeLayer(routeLine);
-  const start = getStart();
-  const mid = [(start.lat+lat)/2+0.0006, (start.lng+lng)/2-0.0004];
-  // For mobility profile, route visually avoids stairs and goes via elevator
-  let waypoints;
-  if(currentProfile === 'mobility'){
-  const elevator = VERTICAL.find(v => v.type === 'elevator' && v.working);
-  if(elevator){
-    waypoints = [[start.lat,start.lng],[elevator.lat,elevator.lng],[lat,lng]];
-  } else {
-    waypoints = [[start.lat,start.lng],mid,[lat,lng]];
+async function routeTo(name, lat, lng){
+if(routeLine) map.removeLayer(routeLine);
+
+const start = getStart();
+
+let outdoorResult = null;
+
+try{
+  outdoorResult = await CampusOutdoorRouting.route(
+    start.lat,
+    start.lng,
+    lat,
+    lng
+  );
+}catch(error){
+  console.error('Outdoor routing failed:', error);
+}
+
+let waypoints;
+
+if(outdoorResult && outdoorResult.coordinates.length > 1){
+
+  // Real OSM pedestrian route
+  waypoints = outdoorResult.coordinates;
+
+}else{
+
+  // Temporary fallback for disconnected/missing OSM paths.
+  // This keeps CampusWay usable until we repair the campus graph.
+  const mid = [
+    (start.lat + lat) / 2 + 0.0006,
+    (start.lng + lng) / 2 - 0.0004
+  ];
+
+  waypoints = [
+    [start.lat, start.lng],
+    mid,
+    [lat, lng]
+  ];
+
+  console.warn(
+    'No connected OSM walking route found. Using temporary fallback.'
+  );
+}
+
+routeLine = L.polyline(
+  waypoints,
+  {
+    color:'#0891B2',
+    weight:5,
+    opacity:0.85,
+    dashArray:'1,10',
+    lineCap:'round'
   }
-  } else {
-  waypoints = [[start.lat,start.lng],mid,[lat,lng]];
-  }
-  routeLine = L.polyline(waypoints,
-    {color:'#0891B2',weight:5,opacity:0.85,dashArray:'1,10',lineCap:'round'}).addTo(map);
+).addTo(map);
+
   let offset=0;
   clearInterval(window._dashAnim);
   window._dashAnim = setInterval(()=>{ offset=(offset+1)%20; routeLine.setStyle({dashOffset:String(offset)}); },60);
