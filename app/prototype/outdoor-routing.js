@@ -25,6 +25,13 @@ const CampusOutdoorRouting = (() => {
   let loaded = false;
   let loadingPromise = null;
 
+  // --------------------------------------------------
+// CampusWay outdoor graph corrections
+// --------------------------------------------------
+
+// Verified missing walkway connections can be added here.
+// Keep this empty until a connection has been confirmed.
+const CAMPUS_CORRECTIONS = [];
 
   // --------------------------------------------------
   // Distance between two GPS coordinates in meters
@@ -100,6 +107,39 @@ const CampusOutdoorRouting = (() => {
     });
   }
 
+  // --------------------------------------------------
+// Apply verified CampusWay corrections to OSM graph
+// --------------------------------------------------
+
+function applyCampusCorrections(){
+
+  for(const correction of CAMPUS_CORRECTIONS){
+
+    const {
+      fromNode,
+      toNode,
+      type = 'footway'
+    } = correction;
+
+    if(
+      !coordinates.has(fromNode) ||
+      !coordinates.has(toNode)
+    ){
+      console.warn(
+        'CampusWay correction references missing OSM node:',
+        correction
+      );
+
+      continue;
+    }
+
+    addEdge(
+      fromNode,
+      toNode,
+      type
+    );
+  }
+}
 
   // --------------------------------------------------
   // Find closest OSM routing node
@@ -134,7 +174,7 @@ const CampusOutdoorRouting = (() => {
   // Dijkstra
   // --------------------------------------------------
 
-  function shortestPath(start, end) {
+ function shortestPath(start, end) {
 
     const distances = new Map();
     const previous = new Map();
@@ -176,12 +216,12 @@ const CampusOutdoorRouting = (() => {
       }
 
       unvisited.delete(current);
+for(const edge of graph.get(current) || []){
 
-      for(const edge of graph.get(current) || []){
+  if(!unvisited.has(edge.node)){
+    continue;
+  }
 
-        if(!unvisited.has(edge.node)){
-          continue;
-        }
 
         const alt =
           currentDistance +
@@ -363,6 +403,8 @@ out skel qt;
             }
           });
 
+          applyCampusCorrections();
+          
           loaded = true;
 
           console.log(
@@ -390,12 +432,12 @@ out skel qt;
   // Public route function
   // --------------------------------------------------
 
-  async function route(
-    startLat,
-    startLng,
-    endLat,
-    endLng
-  ){
+async function route(
+  startLat,
+  startLng,
+  endLat,
+  endLng
+){
 
     await load();
 
@@ -418,11 +460,11 @@ out skel qt;
       return null;
     }
 
-    const result =
-      shortestPath(
-        startNode,
-        endNode
-      );
+const result =
+  shortestPath(
+    startNode,
+    endNode
+  );
 
     if(!result){
       return null;
