@@ -1,0 +1,25 @@
+{
+  "name": "CampusWay - University of Haifa Accessible Navigation",
+  "short_name": "CampusWay",
+  "description": "Accessible indoor and outdoor campus navigation for the University of Haifa.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EAF3ED",
+  "theme_color": "#0D1B3E",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "app/vendor/images/cw2.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app/vendor/images/cw2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

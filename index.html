@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CampusWay — University of Haifa</title>
 <link rel="stylesheet" href="app/vendor/leaflet.css" />
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0D1B3E">
 <script src="app/vendor/leaflet.js"></script>
 <script src="app/prototype/data.js"></script>
 <script src="app/prototype/outdoor-routing.js"></script>
@@ -2227,6 +2229,29 @@ window.location.href =
     <span id="lbl-switching-indoor">Switching to indoor mode...</span>
   </div>
 </div>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .then(registration => {
+        console.log(
+          'CampusWay service worker registered:',
+          registration.scope
+        );
+      })
+      .catch(error => {
+        console.error(
+          'CampusWay service worker registration failed:',
+          error
+        );
+      });
+
+  });
+}
+</script>
 
 </body>
 </html>
