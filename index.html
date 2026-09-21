@@ -984,6 +984,61 @@ const center = [32.7615, 35.0195];
 const map = L.map('map',{zoomControl:true,attributionControl:false}).setView(center,16);
 map.getContainer().style.background = '#EAF3ED';
 
+
+
+async function showOutdoorDebugGraph(){
+
+  await CampusOutdoorRouting.load();
+
+  const debugGraph =
+    CampusOutdoorRouting.getDebugGraph();
+
+  const drawnEdges = new Set();
+
+  debugGraph.forEach(node => {
+
+    node.connections.forEach(connection => {
+
+      const key = [
+        node.id,
+        connection.node
+      ].sort().join('-');
+
+      if(drawnEdges.has(key)){
+        return;
+      }
+
+      drawnEdges.add(key);
+
+      const other =
+        CampusOutdoorRouting.inspectNode(
+          connection.node
+        );
+
+      if(!other.coordinate){
+        return;
+      }
+
+      L.polyline(
+        [
+          node.coordinate,
+          other.coordinate
+        ],
+        {
+          color: '#ff0000',
+          weight: 3,
+          opacity: 0.8
+        }
+      ).addTo(map);
+    });
+  });
+
+  console.log(
+    `Debug overlay: ${drawnEdges.size} OSM connections drawn`
+  );
+}
+
+
 const terrainCircles = [
   {c:[32.7600,35.0150],r:550},{c:[32.7640,35.0230],r:480},{c:[32.7580,35.0220],r:420}
 ].map(tb=> L.circle(tb.c,{radius:tb.r,color:'transparent',fillColor:'#D9EBDD',fillOpacity:0.6}).addTo(map));
@@ -1450,12 +1505,12 @@ const start = getStart();
 let outdoorResult = null;
 
 try{
-  outdoorResult = await CampusOutdoorRouting.route(
-    start.lat,
-    start.lng,
-    lat,
-    lng
-  );
+outdoorResult = await CampusOutdoorRouting.route(
+  start.lat,
+  start.lng,
+  lat,
+  lng
+);
 }catch(error){
   console.error('Outdoor routing failed:', error);
 }

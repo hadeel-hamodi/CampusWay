@@ -31,7 +31,13 @@ const CampusOutdoorRouting = (() => {
 
 // Verified missing walkway connections can be added here.
 // Keep this empty until a connection has been confirmed.
-const CAMPUS_CORRECTIONS = [];
+const CAMPUS_CORRECTIONS = [
+  {
+    fromNode: 2102963372,
+    toNode: 1446999286,
+    type: 'footway'
+  }
+];
 
   // --------------------------------------------------
   // Distance between two GPS coordinates in meters
@@ -107,11 +113,173 @@ const CAMPUS_CORRECTIONS = [];
     });
   }
 
+function removeEdge(aId, bId){
+
+  if(graph.has(aId)){
+    graph.set(
+      aId,
+      graph.get(aId).filter(
+        edge => edge.node !== bId
+      )
+    );
+  }
+
+  if(graph.has(bId)){
+    graph.set(
+      bId,
+      graph.get(bId).filter(
+        edge => edge.node !== aId
+      )
+    );
+  }
+}
+  
+  
+  function addCampusNode(id, lat, lng){
+
+  coordinates.set(
+    id,
+    [lat, lng]
+  );
+
+  if(!graph.has(id)){
+    graph.set(id, []);
+  }
+}
+
+function findClosestEdge(lat, lng){
+
+  const point = [lat, lng];
+
+  let best = null;
+  let bestDistance = Infinity;
+
+  const checked = new Set();
+
+  for(const [nodeA, edges] of graph.entries()){
+
+    const a = coordinates.get(nodeA);
+    if(!a) continue;
+
+  for(const edge of edges){
+
+  const nodeB = edge.node;
+
+  // Ignore CampusWay custom correction edges.
+  // We only want to find the original OSM path underneath the point.
+  if(
+    String(nodeA).startsWith('campus_') ||
+    String(nodeB).startsWith('campus_')
+  ){
+    continue;
+  }
+
+      const key = [String(nodeA), String(nodeB)]
+        .sort()
+        .join('-');
+
+      if(checked.has(key)){
+        continue;
+      }
+
+      checked.add(key);
+
+      const b = coordinates.get(nodeB);
+      if(!b) continue;
+
+      // Approximate locally as a flat plane.
+      const x = point[1];
+      const y = point[0];
+
+      const x1 = a[1];
+      const y1 = a[0];
+
+      const x2 = b[1];
+      const y2 = b[0];
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+
+      const lengthSquared =
+        dx * dx + dy * dy;
+
+      if(lengthSquared === 0){
+        continue;
+      }
+
+      let t =
+        ((x - x1) * dx +
+         (y - y1) * dy) /
+        lengthSquared;
+
+      t = Math.max(0, Math.min(1, t));
+
+      const projected = [
+        y1 + t * dy,
+        x1 + t * dx
+      ];
+
+      const d =
+        distance(point, projected);
+
+      if(d < bestDistance){
+
+        bestDistance = d;
+
+        best = {
+          nodeA,
+          nodeB,
+          coordinateA: a,
+          coordinateB: b,
+          projectedCoordinate: projected,
+          distanceMeters: d,
+          type: edge.type
+        };
+      }
+    }
+  }
+
+  return best;
+}
+
   // --------------------------------------------------
 // Apply verified CampusWay corrections to OSM graph
 // --------------------------------------------------
 
 function applyCampusCorrections(){
+
+   addCampusNode(
+  'campus_crossing_1',
+  32.75965118924193,
+  35.020708607441215
+);
+
+// Split the existing OSM segment at the exact
+// CampusWay crossing point.
+removeEdge(
+  1447013833,
+  1447013832
+);
+
+addEdge(
+  1447013833,
+  'campus_crossing_1',
+  'service'
+);
+
+addEdge(
+  'campus_crossing_1',
+  1447013832,
+  'service'
+);
+
+// CampusWay pedestrian crossing
+addEdge(
+  1446999294,
+  'campus_crossing_1',
+  'footway'
+);
+
 
   for(const correction of CAMPUS_CORRECTIONS){
 
@@ -169,6 +337,113 @@ function applyCampusCorrections(){
     return best;
   }
 
+  function inspectNearestNode(lat, lon){
+
+  const node = nearestNode(lat, lon);
+
+  if(node === null){
+    return null;
+  }
+
+  const result = {
+    node,
+    coordinate: coordinates.get(node),
+    distanceMeters: distance(
+      [lat, lon],
+      coordinates.get(node)
+    ),
+    connections: graph.get(node) || []
+  };
+
+  console.log('Nearest outdoor routing node:', result);
+
+  return result;
+}
+
+  function connectedComponent(startNode){
+
+  const visited = new Set();
+  const queue = [startNode];
+
+  while(queue.length){
+
+    const current = queue.shift();
+
+    if(visited.has(current)){
+      continue;
+    }
+
+    visited.add(current);
+
+    for(const edge of graph.get(current) || []){
+
+      if(!visited.has(edge.node)){
+        queue.push(edge.node);
+      }
+    }
+  }
+
+  return visited;
+}
+function getDebugGraph(){
+
+  const nodes = [];
+
+  for(const [id, coord] of coordinates.entries()){
+
+    if(!graph.has(id)){
+      continue;
+    }
+
+    nodes.push({
+      id,
+      coordinate: coord,
+      connections: graph.get(id).map(edge => ({
+        node: edge.node,
+        type: edge.type
+      }))
+    });
+  }
+
+  return nodes;
+}
+
+function closestNodesBetweenComponents(componentA, componentB){
+
+  let best = null;
+  let bestDistance = Infinity;
+
+  for(const nodeA of componentA){
+
+    const coordA = coordinates.get(nodeA);
+
+    if(!coordA) continue;
+
+    for(const nodeB of componentB){
+
+      const coordB = coordinates.get(nodeB);
+
+      if(!coordB) continue;
+
+      const d = distance(coordA, coordB);
+
+      if(d < bestDistance){
+
+        bestDistance = d;
+
+        best = {
+          nodeA,
+          coordinateA: coordA,
+          nodeB,
+          coordinateB: coordB,
+          distanceMeters: d
+        };
+      }
+    }
+  }
+
+  return best;
+}
 
   // --------------------------------------------------
   // Dijkstra
@@ -404,7 +679,7 @@ out skel qt;
           });
 
           applyCampusCorrections();
-          
+
           loaded = true;
 
           console.log(
@@ -466,9 +741,37 @@ const result =
     endNode
   );
 
-    if(!result){
-      return null;
+if(!result){
+
+  const startComponent =
+    connectedComponent(startNode);
+
+  const endComponent =
+    connectedComponent(endNode);
+
+    const closestGap =
+  closestNodesBetweenComponents(
+    startComponent,
+    endComponent
+  );
+
+  console.warn(
+    'No connected OSM route found',
+    {
+      startNode,
+      startCoordinate: coordinates.get(startNode),
+      startComponentSize: startComponent.size,
+
+      endNode,
+      endCoordinate: coordinates.get(endNode),
+      endComponentSize: endComponent.size,
+    
+      closestGap
     }
+  );
+
+  return null;
+}
 
     const routeCoordinates = [
       [startLat, startLng],
@@ -495,11 +798,23 @@ const result =
   // Public API
   // --------------------------------------------------
 
-  return {
-    load,
-    route,
-    distance,
-    isLoaded: () => loaded
-  };
+return {
+ load,
+  route,
+  distance,
+  inspectNearestNode,
+  getDebugGraph,
+  findClosestEdge,
+
+  inspectNode: function(nodeId){
+    return {
+      node: nodeId,
+      coordinate: coordinates.get(nodeId),
+      connections: graph.get(nodeId) || []
+    };
+  },
+
+  isLoaded: () => loaded
+};
 
 })();
