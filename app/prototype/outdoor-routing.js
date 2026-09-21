@@ -24,6 +24,8 @@ const CampusOutdoorRouting = (() => {
 
   let loaded = false;
   let loadingPromise = null;
+  
+  let rawOsmData = null;
 
   // --------------------------------------------------
 // CampusWay outdoor graph corrections
@@ -587,45 +589,24 @@ for(const edge of graph.get(current) || []){
       return loadingPromise;
     }
 
-    const query = `
-[out:json][timeout:25];
-
-(
-  way["highway"~"^(footway|path|pedestrian|steps|living_street)$"]
-    (${BOUNDS.south},${BOUNDS.west},${BOUNDS.north},${BOUNDS.east});
-
-  way["highway"="service"]["foot"!~"^(no|private)$"]
-    (${BOUNDS.south},${BOUNDS.west},${BOUNDS.north},${BOUNDS.east});
-
-  way["highway"="residential"]["foot"!~"^(no|private)$"]
-    (${BOUNDS.south},${BOUNDS.west},${BOUNDS.north},${BOUNDS.east});
-);
-
-out body;
->;
-out skel qt;
-`;
-
-    const url =
-      'https://overpass-api.de/api/interpreter?data=' +
-      encodeURIComponent(query);
-
-    loadingPromise =
-      fetch(url)
+loadingPromise =
+  fetch('app/prototype/campus-osm.json')
 
         .then(response => {
 
-          if(!response.ok){
-            throw new Error(
-              'Overpass returned HTTP ' +
-              response.status
-            );
-          }
+      if(!response.ok){
+        throw new Error(
+          'Local campus OSM data returned HTTP ' +
+          response.status
+        );
+      }
 
           return response.json();
         })
 
         .then(data => {
+
+          rawOsmData = data;
 
           graph.clear();
           coordinates.clear();
@@ -799,12 +780,13 @@ if(!result){
   // --------------------------------------------------
 
 return {
- load,
+  load,
   route,
   distance,
   inspectNearestNode,
   getDebugGraph,
   findClosestEdge,
+  getRawOsmData: () => rawOsmData,
 
   inspectNode: function(nodeId){
     return {
