@@ -957,14 +957,14 @@ function floorPlanUrls(building, floorId){
   ];
 }
 
-async function loadFloorPlan(building, floorId){
+async function resolveFloorPlanUrl(building, floorId){
   const cacheKey=`${building}:${floorId}`;
   if(!floorPlanMarkupCache.has(cacheKey)){
     floorPlanMarkupCache.set(cacheKey, (async()=>{
       for(const url of floorPlanUrls(building, floorId)){
         try{
           const response=await fetch(url);
-          if(response.ok) return await response.text();
+          if(response.ok) return url;
         }catch(_error){
           // A missing floor plan is optional; the navigation graph remains usable.
         }
@@ -976,32 +976,23 @@ async function loadFloorPlan(building, floorId){
 }
 
 function addFloorPlanBackground(world, building, floorId){
-  loadFloorPlan(building, floorId).then(markup=>{
-    if(!markup || BUILDING!==building || activeFloor!==floorId || !world.isConnected) return;
+  resolveFloorPlanUrl(building, floorId).then(url=>{
+    if(!url || BUILDING!==building || activeFloor!==floorId || !world.isConnected) return;
 
-    const parsed=new DOMParser().parseFromString(markup, 'image/svg+xml');
-    const source=parsed.documentElement;
-    if(source.nodeName.toLowerCase()!=='svg' || parsed.querySelector('parsererror')) return;
-
-    const floorPlan=document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const floorPlan=document.createElementNS('http://www.w3.org/2000/svg', 'image');
     floorPlan.setAttribute('id', 'floor-plan-background');
     floorPlan.setAttribute('x', '80');
     floorPlan.setAttribute('y', '55');
     floorPlan.setAttribute('width', '840');
     floorPlan.setAttribute('height', '570');
-    floorPlan.setAttribute('viewBox', source.getAttribute('viewBox') || `0 0 ${source.getAttribute('width') || 1} ${source.getAttribute('height') || 1}`);
     floorPlan.setAttribute('preserveAspectRatio', 'none');
     floorPlan.setAttribute('pointer-events', 'none');
     floorPlan.setAttribute('aria-hidden', 'true');
-    floorPlan.setAttribute('opacity', '0.82');
-
-    [...source.childNodes].forEach(node=>{
-      floorPlan.appendChild(document.importNode(node, true));
-    });
+    floorPlan.setAttribute('href', url);
+    floorPlan.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
     world.insertBefore(floorPlan, world.firstChild);
   }).catch(()=>{});
 }
-
 function drawBaseMap(){
   svg.innerHTML='';
   svg.setAttribute('viewBox',cameraViewBox());
