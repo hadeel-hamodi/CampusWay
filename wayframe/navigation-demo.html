@@ -1013,7 +1013,7 @@ async function loadFloorPlan(building, floorId){
 
           if(response.ok) return {sourceUrl:url, markup:await response.text()};
 
-          console.error('[Indoor floor plan] Fetch failed', {
+          console.warn('[Indoor floor plan] Candidate unavailable', {
             building,
             floorId,
             url,
