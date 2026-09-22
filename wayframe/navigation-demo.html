@@ -949,26 +949,57 @@ function createWorldGroup(){
 }
 
 function floorPlanUrls(building, floorId){
-  const base=`../buildings/${building}/floors/`;
   const floorNumber=floorId.replace(/^floor/, '');
-  return [
-    `${base}${floorId}.svg`,
-    `${base}${floorNumber}-Model.svg`
-  ];
+  const repositoryRoot=new URL('../', window.location.href);
+  const filenames=[`${floorId}.svg`, `${floorNumber}-Model.svg`];
+
+  return filenames.map(filename=>
+    new URL(`buildings/${building}/floors/${filename}`, repositoryRoot).href
+  );
 }
 
-async function resolveFloorPlanUrl(building, floorId){
+async function loadFloorPlan(building, floorId){
   const cacheKey=`${building}:${floorId}`;
   if(!floorPlanMarkupCache.has(cacheKey)){
     floorPlanMarkupCache.set(cacheKey, (async()=>{
       for(const url of floorPlanUrls(building, floorId)){
+        console.log('[Indoor floor plan] Loading', {building, floorId, url});
         try{
           const response=await fetch(url);
-          if(response.ok) return url;
-        }catch(_error){
-          // A missing floor plan is optional; the navigation graph remains usable.
+          console.log('[Indoor floor plan] Fetch status', {
+            url,
+            status:response.status,
+            ok:response.ok
+          });
+
+          if(!response.ok){
+            console.error('[Indoor floor plan] Fetch failed', {
+              building,
+              floorId,
+              url,
+              status:response.status
+            });
+            continue;
+          }
+
+          return {
+            sourceUrl:url,
+            objectUrl:URL.createObjectURL(await response.blob())
+          };
+        }catch(error){
+          console.error('[Indoor floor plan] Request error', {
+            building,
+            floorId,
+            url,
+            error
+          });
         }
       }
+
+      console.error('[Indoor floor plan] No SVG found for floor', {
+        building,
+        floorId
+      });
       return null;
     })());
   }
@@ -976,22 +1007,55 @@ async function resolveFloorPlanUrl(building, floorId){
 }
 
 function addFloorPlanBackground(world, building, floorId){
-  resolveFloorPlanUrl(building, floorId).then(url=>{
-    if(!url || BUILDING!==building || activeFloor!==floorId || !world.isConnected) return;
+  loadFloorPlan(building, floorId).then(plan=>{
+    if(!plan || BUILDING!==building || activeFloor!==floorId || !world.isConnected) return;
+
+    const background=document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    background.setAttribute('id', 'floorBackground');
+    background.setAttribute('x', '80');
+    background.setAttribute('y', '55');
+    background.setAttribute('width', '840');
+    background.setAttribute('height', '570');
+    background.setAttribute('viewBox', '0 0 840 570');
+    background.setAttribute('pointer-events', 'none');
+    background.setAttribute('aria-hidden', 'true');
 
     const floorPlan=document.createElementNS('http://www.w3.org/2000/svg', 'image');
     floorPlan.setAttribute('id', 'floor-plan-background');
-    floorPlan.setAttribute('x', '80');
-    floorPlan.setAttribute('y', '55');
-    floorPlan.setAttribute('width', '840');
-    floorPlan.setAttribute('height', '570');
+    floorPlan.setAttribute('x', '0');
+    floorPlan.setAttribute('y', '0');
+    floorPlan.setAttribute('width', '100%');
+    floorPlan.setAttribute('height', '100%');
     floorPlan.setAttribute('preserveAspectRatio', 'none');
     floorPlan.setAttribute('pointer-events', 'none');
-    floorPlan.setAttribute('aria-hidden', 'true');
-    floorPlan.setAttribute('href', url);
-    floorPlan.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
-    world.insertBefore(floorPlan, world.firstChild);
-  }).catch(()=>{});
+    floorPlan.setAttribute('opacity', '1');
+    floorPlan.dataset.sourceUrl=plan.sourceUrl;
+    floorPlan.addEventListener('load', ()=>{
+      console.log('[Indoor floor plan] Rendered', {
+        building,
+        floorId,
+        url:plan.sourceUrl
+      });
+    }, {once:true});
+    floorPlan.addEventListener('error', ()=>{
+      console.error('[Indoor floor plan] SVG image failed to render', {
+        building,
+        floorId,
+        url:plan.sourceUrl
+      });
+    }, {once:true});
+    floorPlan.setAttribute('href', plan.objectUrl);
+    floorPlan.setAttributeNS('http://www.w3.org/1999/xlink', 'href', plan.objectUrl);
+
+    background.appendChild(floorPlan);
+    world.insertBefore(background, world.firstChild);
+  }).catch(error=>{
+    console.error('[Indoor floor plan] Unexpected renderer error', {
+      building,
+      floorId,
+      error
+    });
+  });
 }
 function drawBaseMap(){
   svg.innerHTML='';
