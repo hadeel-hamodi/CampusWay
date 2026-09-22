@@ -989,7 +989,6 @@ async function loadFloorPlan(building,floorId){
 async function addFloorPlanBackground(world, building, floorId) {
   if (!world || !world.isConnected) return;
 
-  // إزالة أي خلفية سابقة لمنع تداخل الطبقات عند تبديل الطوابق
   const oldBg = world.querySelector('#floorBackground');
   if (oldBg) oldBg.remove();
 
@@ -997,7 +996,6 @@ async function addFloorPlanBackground(world, building, floorId) {
   const f = String(floorId).trim();
   const fNum = f.replace(/[^0-9-]/g, '');
 
-  // تجميع كل احتمالات أسماء الملفات لكل المباني (Main, Rabin, Madriga, Education, Multi-purpose)
   const candidates = [
     `floor${f}.svg`,
     `floor${fNum}.svg`,
@@ -1025,7 +1023,6 @@ async function addFloorPlanBackground(world, building, floorId) {
   let svgText = null;
   let loadedUrl = null;
 
-  // تجربة المسارات حتى العثور على ملف الـ SVG الصحيح للمبنى
   for (const base of baseDirs) {
     for (const file of uniqueFiles) {
       const url = base + file;
@@ -1066,30 +1063,27 @@ async function addFloorPlanBackground(world, building, floorId) {
     background.setAttribute('pointer-events', 'none');
     background.setAttribute('aria-hidden', 'true');
 
-    // إدراج الـ SVG الحقيقي مباشرة لضمان ظهور الخطوط دون مشاكل الصور المؤقتة
-    const nestedSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    nestedSvg.setAttribute('id', 'floor-plan-background');
-    nestedSvg.setAttribute('x', '80');
-    nestedSvg.setAttribute('y', '55');
-    nestedSvg.setAttribute('width', '840');
-    nestedSvg.setAttribute('height', '570');
-    nestedSvg.setAttribute('preserveAspectRatio', 'none');
-    nestedSvg.setAttribute('pointer-events', 'none');
+    // تلوين خطوط الأوتوكاد الباهتة لتظهر بوضوح تحت الممرات
+    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = `
+      #floorBackground path, #floorBackground line, #floorBackground polyline, #floorBackground polygon {
+        stroke: #94a3b8 !important;
+        stroke-width: 1.5px !important;
+      }
+      #floorBackground text {
+        fill: #475569 !important;
+        font-weight: bold !important;
+      }
+    `;
+    background.appendChild(styleEl);
 
-    const viewBox = svgEl.getAttribute('viewBox');
-    if (viewBox) {
-      nestedSvg.setAttribute('viewBox', viewBox);
-    } else {
-      const w = parseFloat(svgEl.getAttribute('width')) || 840;
-      const h = parseFloat(svgEl.getAttribute('height')) || 570;
-      nestedSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    }
-
+    // نقل جميع عناصر الرسمة المعمارية مع الحفاظ على مقاييسها الطبيعية
+    const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     while (svgEl.firstChild) {
-      nestedSvg.appendChild(document.importNode(svgEl.firstChild, true));
+      contentGroup.appendChild(document.importNode(svgEl.firstChild, true));
     }
 
-    background.appendChild(nestedSvg);
+    background.appendChild(contentGroup);
     world.insertBefore(background, world.firstChild);
     console.log('[Indoor floor plan] Loaded & rendered:', loadedUrl);
   } catch (err) {
