@@ -339,6 +339,7 @@ button{cursor:pointer;font-weight:700}
 <script>
 let GRAPH = null;
 let BUILDING = 'madriga';
+let initialBuildingQueryApplied=false;
 
 
 
@@ -357,6 +358,25 @@ const ORDER = [
   'floor700'
 ];
 
+const FLOOR_PLAN_FLOORS={
+  madriga:['floorminus1','floor0','floor1','floor2','floor3','floor4'],
+  education:['floor0','floor1','floor2','floor3','floor4','floor5','floor6'],
+  main:['floor500','floor600','floor700'],
+  'multi-purpose':['floorminus1','floor0','floor1','floor2'],
+  rabin:['floor5','floor6','floor7'],
+  student:['floor0','floor1','floor2','floor3','floor4']
+};
+
+function floorPlanOnlyGraph(building){
+  return {
+    floors:Object.fromEntries(
+      (FLOOR_PLAN_FLOORS[building] || []).map(floorId=>[
+        floorId,
+        {nodes:[],connections:[]}
+      ])
+    )
+  };
+}
 let routePath=[];
 let routeNodes=[];
 let activeFloor='floor1';
@@ -507,7 +527,7 @@ async function loadGraph(){
   const params = new URLSearchParams(window.location.search);
   const requestedBuilding = params.get('building');
 
-  if(requestedBuilding){
+  if(!initialBuildingQueryApplied && requestedBuilding){
     const buildingSelect = $('building');
 
     if(
@@ -520,18 +540,27 @@ async function loadGraph(){
     }
   }
 
+  initialBuildingQueryApplied=true;
   BUILDING = $('building').value;
 
-  const response = await fetch(
-    `../buildings/${BUILDING}/${BUILDING}-indoor-graph.json`
+  const graphUrl=new URL(
+    `../buildings/${BUILDING}/${BUILDING}-indoor-graph.json`,
+    window.location.href
   );
+  const response=await fetch(graphUrl);
 
-  if(!response.ok){
+  if(response.ok){
+    GRAPH=await response.json();
+  }else if(FLOOR_PLAN_FLOORS[BUILDING]){
+    console.warn('[Indoor floor plan] Graph unavailable; showing floor-plan-only view', {
+      building:BUILDING,
+      url:graphUrl.href,
+      status:response.status
+    });
+    GRAPH=floorPlanOnlyGraph(BUILDING);
+  }else{
     throw new Error(`Could not load ${BUILDING} indoor graph`);
   }
-
-  GRAPH = await response.json();
-
   activeFloor = Object.keys(GRAPH.floors)[0] || 'floor1';
 
   populateLocations();
@@ -948,147 +977,116 @@ function createWorldGroup(){
   return g;
 }
 
+const FLOOR_MAP_BOUNDS={x:80,y:55,width:840,height:570};
+
 function floorPlanUrls(building, floorId){
-  const rawFloor=String(floorId).replace(/^floor/,'');
-  const floor=rawFloor==='minus1' ? '-1' : rawFloor;
-  const candidates=[
-    `floor${floor}.svg`,
-    `${floor}00-Model.svg`,
-    `${floor}-Model.svg`,
-    `${floor}.svg`
+  const floorNumber=floorId === 'floorminus1'
+    ? '-1'
+    : floorId.replace(/^floor/, '');
+  const repositoryRoot=new URL('../', window.location.href);
+  const filenames=[
+    `${floorId}.svg`,
+    `floor${floorNumber}.svg`,
+    `${floorNumber}-Model.svg`,
+    `${floorNumber}.svg`,
+    `Floor${floorNumber}.svg`
   ];
-  if(floor==='-1') candidates.push('floorminus1.svg');
-  if(/^\d+00$/.test(floor)) candidates.unshift(`${floor}-Model.svg`);
-  return [...new Set(candidates)].map(filename=>
-    new URL(`../buildings/${building}/floors/${filename}`,window.location.href).href
+
+  return [...new Set(filenames)].map(filename=>
+    new URL(`buildings/${building}/floors/${filename}`, repositoryRoot).href
   );
 }
 
-async function loadFloorPlan(building,floorId){
+async function loadFloorPlan(building, floorId){
   const cacheKey=`${building}:${floorId}`;
   if(!floorPlanMarkupCache.has(cacheKey)){
-    floorPlanMarkupCache.set(cacheKey,(async()=>{
-      for(const url of floorPlanUrls(building,floorId)){
+    floorPlanMarkupCache.set(cacheKey, (async()=>{
+      for(const url of floorPlanUrls(building, floorId)){
+        console.log('[Indoor floor plan] Loading', {building, floorId, url});
         try{
-          const response=await fetch(url,{cache:'no-cache'});
-          if(!response.ok) continue;
-          const objectUrl=URL.createObjectURL(await response.blob());
-          console.log('[Indoor floor plan] Loaded:',url);
-          return {sourceUrl:url,objectUrl};
+          const response=await fetch(url);
+          console.log('[Indoor floor plan] Fetch status', {
+            url,
+            status:response.status,
+            ok:response.ok
+          });
+
+          if(response.ok) return {sourceUrl:url, markup:await response.text()};
+
+          console.error('[Indoor floor plan] Fetch failed', {
+            building,
+            floorId,
+            url,
+            status:response.status
+          });
         }catch(error){
-          console.warn('[Indoor floor plan] Candidate failed:',url,error);
+          console.error('[Indoor floor plan] Request error', {
+            building,
+            floorId,
+            url,
+            error
+          });
         }
       }
-      console.warn('[Indoor floor plan] No SVG found for floor:',{building,floorId});
+
+      console.error('[Indoor floor plan] No SVG found for floor', {
+        building,
+        floorId
+      });
       return null;
     })());
   }
   return floorPlanMarkupCache.get(cacheKey);
 }
 
-async function addFloorPlanBackground(world, building, floorId) {
-  if (!world || !world.isConnected) return;
+function addFloorPlanBackground(world, building, floorId){
+  loadFloorPlan(building, floorId).then(plan=>{
+    if(!plan || BUILDING!==building || activeFloor!==floorId || !world.isConnected) return;
 
-  const oldBg = world.querySelector('#floorBackground');
-  if (oldBg) oldBg.remove();
-
-  const b = String(building).toLowerCase().trim();
-  const f = String(floorId).trim();
-  const fNum = f.replace(/[^0-9-]/g, '');
-
-  const candidates = [
-    `floor${f}.svg`,
-    `floor${fNum}.svg`,
-    `${f}-Model.svg`,
-    `${fNum}-Model.svg`,
-    `${f}00-Model.svg`,
-    `${fNum}00-Model.svg`,
-    `floor${fNum}00.svg`,
-    `${f}.svg`,
-    `${fNum}.svg`,
-    `Floor${f}.svg`
-  ];
-
-  if (f === '-1' || fNum === '-1' || f.includes('minus')) {
-    candidates.unshift('floorminus1.svg', 'floor-1.svg', '-1.svg');
-  }
-
-  const uniqueFiles = Array.from(new Set(candidates.filter(Boolean)));
-  const baseDirs = [
-    `../buildings/${b}/floors/`,
-    `./buildings/${b}/floors/`,
-    `buildings/${b}/floors/`
-  ];
-
-  let svgText = null;
-  let loadedUrl = null;
-
-  for (const base of baseDirs) {
-    for (const file of uniqueFiles) {
-      const url = base + file;
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          const text = await res.text();
-          if (text && text.includes('<svg')) {
-            svgText = text;
-            loadedUrl = url;
-            break;
-          }
-        }
-      } catch (e) {}
+    const parsed=new DOMParser().parseFromString(plan.markup, 'image/svg+xml');
+    const source=parsed.documentElement;
+    if(source.nodeName.toLowerCase()!=='svg' || parsed.querySelector('parsererror')){
+      console.error('[Indoor floor plan] SVG could not be parsed', {
+        building,
+        floorId,
+        url:plan.sourceUrl
+      });
+      return;
     }
-    if (svgText) break;
-  }
 
-  if (!svgText) {
-    console.warn('[Indoor floor plan] SVG not found for:', { building, floorId, tried: uniqueFiles });
-    return;
-  }
-
-  if ((typeof BUILDING !== 'undefined' && BUILDING !== building) ||
-      (typeof activeFloor !== 'undefined' && activeFloor !== floorId) ||
-      !world.isConnected) {
-    return;
-  }
-
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svgText, 'image/svg+xml');
-    const svgEl = doc.querySelector('svg');
-    if (!svgEl) return;
-
-    const background = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const background=document.createElementNS('http://www.w3.org/2000/svg', 'g');
     background.setAttribute('id', 'floorBackground');
     background.setAttribute('pointer-events', 'none');
     background.setAttribute('aria-hidden', 'true');
+    background.setAttribute('opacity', '1');
 
-    // تلوين خطوط الأوتوكاد الباهتة لتظهر بوضوح تحت الممرات
-    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    styleEl.textContent = `
-      #floorBackground path, #floorBackground line, #floorBackground polyline, #floorBackground polygon {
-        stroke: #94a3b8 !important;
-        stroke-width: 1.5px !important;
-      }
-      #floorBackground text {
-        fill: #475569 !important;
-        font-weight: bold !important;
-      }
-    `;
-    background.appendChild(styleEl);
+    // Keep the source SVG root and viewBox intact while mapping it to the
+    // same normalized space used by mapPoint() for corridors and nodes.
+    const floorPlan=document.importNode(source, true);
+    floorPlan.setAttribute('id', 'floor-plan-background');
+    floorPlan.setAttribute('x', String(FLOOR_MAP_BOUNDS.x));
+    floorPlan.setAttribute('y', String(FLOOR_MAP_BOUNDS.y));
+    floorPlan.setAttribute('width', String(FLOOR_MAP_BOUNDS.width));
+    floorPlan.setAttribute('height', String(FLOOR_MAP_BOUNDS.height));
+    floorPlan.setAttribute('preserveAspectRatio', 'none');
+    floorPlan.setAttribute('pointer-events', 'none');
+    floorPlan.setAttribute('opacity', '1');
+    floorPlan.dataset.sourceUrl=plan.sourceUrl;
 
-    // نقل جميع عناصر الرسمة المعمارية مع الحفاظ على مقاييسها الطبيعية
-    const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    while (svgEl.firstChild) {
-      contentGroup.appendChild(document.importNode(svgEl.firstChild, true));
-    }
-
-    background.appendChild(contentGroup);
+    background.appendChild(floorPlan);
     world.insertBefore(background, world.firstChild);
-    console.log('[Indoor floor plan] Loaded & rendered:', loadedUrl);
-  } catch (err) {
-    console.error('[Indoor floor plan] Render error:', err);
-  }
+    console.log('[Indoor floor plan] Rendered', {
+      building,
+      floorId,
+      url:plan.sourceUrl
+    });
+  }).catch(error=>{
+    console.error('[Indoor floor plan] Unexpected renderer error', {
+      building,
+      floorId,
+      error
+    });
+  });
 }
 function drawBaseMap(){
   svg.innerHTML='';
