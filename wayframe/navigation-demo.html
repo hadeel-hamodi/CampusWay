@@ -986,31 +986,115 @@ async function loadFloorPlan(building,floorId){
   return floorPlanMarkupCache.get(cacheKey);
 }
 
-function addFloorPlanBackground(world,building,floorId){
-  loadFloorPlan(building,floorId).then(plan=>{
-    if(!plan||BUILDING!==building||activeFloor!==floorId||!world.isConnected)return;
-    const background=document.createElementNS('http://www.w3.org/2000/svg','g');
-    background.setAttribute('id','floorBackground');
-    background.setAttribute('pointer-events','none');
-    background.setAttribute('aria-hidden','true');
+async function addFloorPlanBackground(world, building, floorId) {
+  if (!world || !world.isConnected) return;
 
-    const floorPlan=document.createElementNS('http://www.w3.org/2000/svg','image');
-    floorPlan.setAttribute('id','floor-plan-background');
-    floorPlan.setAttribute('x','80');
-    floorPlan.setAttribute('y','55');
-    floorPlan.setAttribute('width','840');
-    floorPlan.setAttribute('height','570');
-    floorPlan.setAttribute('preserveAspectRatio','none');
-    floorPlan.setAttribute('pointer-events','none');
-    floorPlan.setAttribute('href',plan.objectUrl);
-    floorPlan.setAttributeNS('http://www.w3.org/1999/xlink','href',plan.objectUrl);
-    floorPlan.addEventListener('error',()=>console.warn('[Indoor floor plan] SVG image failed to render:',plan.sourceUrl),{once:true});
+  // إزالة أي خلفية سابقة لمنع تداخل الطبقات عند تبديل الطوابق
+  const oldBg = world.querySelector('#floorBackground');
+  if (oldBg) oldBg.remove();
 
-    background.appendChild(floorPlan);
-    world.insertBefore(background,world.firstChild);
-  }).catch(error=>{
-    console.warn('[Indoor floor plan] Renderer skipped floor:',{building,floorId,error});
-  });
+  const b = String(building).toLowerCase().trim();
+  const f = String(floorId).trim();
+  const fNum = f.replace(/[^0-9-]/g, '');
+
+  // تجميع كل احتمالات أسماء الملفات لكل المباني (Main, Rabin, Madriga, Education, Multi-purpose)
+  const candidates = [
+    `floor${f}.svg`,
+    `floor${fNum}.svg`,
+    `${f}-Model.svg`,
+    `${fNum}-Model.svg`,
+    `${f}00-Model.svg`,
+    `${fNum}00-Model.svg`,
+    `floor${fNum}00.svg`,
+    `${f}.svg`,
+    `${fNum}.svg`,
+    `Floor${f}.svg`
+  ];
+
+  if (f === '-1' || fNum === '-1' || f.includes('minus')) {
+    candidates.unshift('floorminus1.svg', 'floor-1.svg', '-1.svg');
+  }
+
+  const uniqueFiles = Array.from(new Set(candidates.filter(Boolean)));
+  const baseDirs = [
+    `../buildings/${b}/floors/`,
+    `./buildings/${b}/floors/`,
+    `buildings/${b}/floors/`
+  ];
+
+  let svgText = null;
+  let loadedUrl = null;
+
+  // تجربة المسارات حتى العثور على ملف الـ SVG الصحيح للمبنى
+  for (const base of baseDirs) {
+    for (const file of uniqueFiles) {
+      const url = base + file;
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text.includes('<svg')) {
+            svgText = text;
+            loadedUrl = url;
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+    if (svgText) break;
+  }
+
+  if (!svgText) {
+    console.warn('[Indoor floor plan] SVG not found for:', { building, floorId, tried: uniqueFiles });
+    return;
+  }
+
+  if ((typeof BUILDING !== 'undefined' && BUILDING !== building) ||
+      (typeof activeFloor !== 'undefined' && activeFloor !== floorId) ||
+      !world.isConnected) {
+    return;
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+    const svgEl = doc.querySelector('svg');
+    if (!svgEl) return;
+
+    const background = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    background.setAttribute('id', 'floorBackground');
+    background.setAttribute('pointer-events', 'none');
+    background.setAttribute('aria-hidden', 'true');
+
+    // إدراج الـ SVG الحقيقي مباشرة لضمان ظهور الخطوط دون مشاكل الصور المؤقتة
+    const nestedSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    nestedSvg.setAttribute('id', 'floor-plan-background');
+    nestedSvg.setAttribute('x', '80');
+    nestedSvg.setAttribute('y', '55');
+    nestedSvg.setAttribute('width', '840');
+    nestedSvg.setAttribute('height', '570');
+    nestedSvg.setAttribute('preserveAspectRatio', 'none');
+    nestedSvg.setAttribute('pointer-events', 'none');
+
+    const viewBox = svgEl.getAttribute('viewBox');
+    if (viewBox) {
+      nestedSvg.setAttribute('viewBox', viewBox);
+    } else {
+      const w = parseFloat(svgEl.getAttribute('width')) || 840;
+      const h = parseFloat(svgEl.getAttribute('height')) || 570;
+      nestedSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    }
+
+    while (svgEl.firstChild) {
+      nestedSvg.appendChild(document.importNode(svgEl.firstChild, true));
+    }
+
+    background.appendChild(nestedSvg);
+    world.insertBefore(background, world.firstChild);
+    console.log('[Indoor floor plan] Loaded & rendered:', loadedUrl);
+  } catch (err) {
+    console.error('[Indoor floor plan] Render error:', err);
+  }
 }
 function drawBaseMap(){
   svg.innerHTML='';
