@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v4-search';
+const CACHE_NAME = 'campusway-v5-steps';
 
 const APP_FILES = [
   './',
@@ -22,7 +22,9 @@ const APP_FILES = [
     './buildings/rabin/rabin-indoor-graph.json',
     './buildings/student/student-indoor-graph.json',
 
-  './wayframe/navigation-demo.html'
+  './wayframe/navigation-demo.html',
+  './wayframe/step-detector.js',
+  './wayframe/sensor-test.html'
 ];
 
 self.addEventListener('install', event => {
@@ -65,3 +67,4 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+

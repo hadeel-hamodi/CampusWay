@@ -38,6 +38,8 @@
 <h1>CampusWay Sensor Test</h1>
 
 <button id="enableBtn">Enable Sensors</button>
+<button id="resetBtn">Reset count</button>
+<p>Use the same phone position as during navigation. Compare the counter with 20 actual steps, then try slower walking with pauses. Also check that using the phone while standing still does not add steps. Counts are estimates.</p>
 
 <div class="value">
   Heading: <strong id="heading">--</strong>°
@@ -85,44 +87,20 @@
 </div>
 <div id="log">Sensors not enabled.</div>
 
+<script src="step-detector.js"></script>
 <script>
-let gravityMag = 9.81;
-let filteredAccel = 0;
-
-let minAccel = 0;
-let maxAccel = 0;
-
-let stepPeakDetected = false;
-let stepDipDetected = false;
-
-let detectedSteps = 0;
-let candidateCount = 0;
-
-const stepCandidates = [];
-
-const CADENCE_MIN = 350;
-const CADENCE_MAX = 1000;
-const CONFIRM_COUNT = 3;
-const WALKING_TIMEOUT = 1500;
-
-let minBeta = Infinity;
-let maxBeta = -Infinity;
-let minGamma = Infinity;
-let maxGamma = -Infinity;
-
-let isWalking = false;
-let lastConfirmedCandidate = 0;
-
-let orientationSamples = [];
-const ORIENTATION_WINDOW_MS = 500;
-
-let rejectedCandidates = 0;
+const stepDetector = new CampusStepDetector();
+let sensorsEnabled = false;
+let minAccel = 0, maxAccel = 0;
+let minBeta = Infinity, maxBeta = -Infinity;
+let minGamma = Infinity, maxGamma = -Infinity;
 
 function $(id){
   return document.getElementById(id);
 }
 
 async function enableSensors(){
+  if(sensorsEnabled) return;
   try{
     if(typeof DeviceMotionEvent !== 'undefined' &&
        typeof DeviceMotionEvent.requestPermission === 'function'){
@@ -142,6 +120,8 @@ async function enableSensors(){
       }
     }
 
+    stepDetector.reset();
+    sensorsEnabled = true;
     window.addEventListener('devicemotion', updateMotion);
     window.addEventListener('deviceorientation', updateHeading, true);
 
@@ -151,38 +131,6 @@ async function enableSensors(){
   }catch(err){
     $('log').textContent = err.message || 'Could not enable sensors.';
   }
-}
-
-function recordOrientation(beta, gamma){
-  const now = performance.now();
-
-  orientationSamples.push({
-    time: now,
-    beta: beta,
-    gamma: gamma
-  });
-
-  orientationSamples = orientationSamples.filter(
-    sample => now - sample.time <= ORIENTATION_WINDOW_MS
-  );
-}
-
-function orientationIsStable(){
-  if(orientationSamples.length < 3){
-    return true;
-  }
-
-  const betas = orientationSamples.map(s => s.beta);
-  const gammas = orientationSamples.map(s => s.gamma);
-
-  const betaRange =
-    Math.max(...betas) - Math.min(...betas);
-
-  const gammaRange =
-    Math.max(...gammas) - Math.min(...gammas);
-
-  // Temporary test thresholds.
-  return betaRange < 35 && gammaRange < 35;
 }
 
 function updateHeading(e){
@@ -220,122 +168,48 @@ function updateHeading(e){
   if(typeof e.beta === 'number' &&
    typeof e.gamma === 'number'){
 
-  recordOrientation(e.beta, e.gamma);
+  stepDetector.updateOrientation(e);
 }
+}
+
+function showReading(reading){
+  $('accel').textContent = reading.valid ? reading.filteredAccel.toFixed(2) : '--';
+  $('steps').textContent = reading.totalSteps;
+  $('candidates').textContent = reading.candidates;
+  $('rejected').textContent = reading.rejected;
+  $('walking').textContent = reading.isWalking ? 'YES' : 'NO';
 }
 
 function updateMotion(e){
-  const a = e.accelerationIncludingGravity || e.acceleration;
-  if(!a) return;
-
-  const x = Number(a.x) || 0;
-  const y = Number(a.y) || 0;
-  const z = Number(a.z) || 0;
-
-  const magnitude = Math.sqrt(x*x + y*y + z*z);
-
-  gravityMag = gravityMag * 0.92 + magnitude * 0.08;
-
-  const linear = magnitude - gravityMag;
-
-  filteredAccel =
-    filteredAccel * 0.65 +
-    linear * 0.35;
-
-  minAccel = Math.min(minAccel, filteredAccel);
-  maxAccel = Math.max(maxAccel, filteredAccel);
-
-  $('accel').textContent = filteredAccel.toFixed(2);
-
-  $('range').textContent =
-    `${minAccel.toFixed(2)} to ${maxAccel.toFixed(2)}`;
-
-  detectStep();
-  if(isWalking &&
-   performance.now() - lastConfirmedCandidate > WALKING_TIMEOUT){
-
-  isWalking = false;
-  stepCandidates.length = 0;
-  $('walking').textContent = 'NO';
-}
-}
-
-function detectStep(){
-  if(!stepPeakDetected && filteredAccel > 0.8){
-    stepPeakDetected = true;
-  }
-
-  if(stepPeakDetected && filteredAccel < -0.4){
-    stepDipDetected = true;
-  }
-
-  if(stepPeakDetected &&
-     stepDipDetected &&
-     filteredAccel > -0.1){
-
-stepPeakDetected = false;
-stepDipDetected = false;
-
-if(orientationIsStable()){
-  addStepCandidate();
-}else{
-  rejectedCandidates++;
-  $('rejected').textContent = rejectedCandidates;
-}
-  }
-}
-
-function addStepCandidate(){
-  const now = performance.now();
-
-  candidateCount++;
-  $('candidates').textContent = candidateCount;
-
-  // If the previous candidate was too recent,
-  // ignore this one as part of the walking rhythm.
-  if(stepCandidates.length){
-    const gap = now - stepCandidates[stepCandidates.length - 1];
-
-    if(gap < CADENCE_MIN){
-      return;
-    }
-
-    // Long pause = start a new possible walking sequence.
-    if(gap > CADENCE_MAX){
-      stepCandidates.length = 0;
-    }
-  }
-
-  stepCandidates.push(now);
-
-  // We need 3 rhythmic candidates before declaring walking.
-  if(!isWalking){
-    if(stepCandidates.length >= CONFIRM_COUNT){
-      isWalking = true;
-      $('walking').textContent = 'YES';
-
-      // These candidates represent real steps too,
-      // so don't throw away the first two.
-      detectedSteps += stepCandidates.length;
-      $('steps').textContent = detectedSteps;
-
-      lastConfirmedCandidate = now;
-
-      // Keep the latest candidate as the beginning
-      // of the continuing cadence.
-      stepCandidates.splice(0, stepCandidates.length - 1);
-    }
-
+  if(!sensorsEnabled) return;
+  const reading = stepDetector.updateMotion(e);
+  showReading(reading);
+  if(!reading.valid){
+    $('log').textContent = 'Motion reading unavailable. No steps counted from missing sensor data.';
     return;
   }
-
-  // Already walking: each valid rhythmic candidate is a step.
-  detectedSteps++;
-  $('steps').textContent = detectedSteps;
-  lastConfirmedCandidate = now;
-
-  stepCandidates.splice(0, stepCandidates.length - 1);
+  minAccel = Math.min(minAccel, reading.filteredAccel);
+  maxAccel = Math.max(maxAccel, reading.filteredAccel);
+  $('range').textContent = minAccel.toFixed(2) + ' to ' + maxAccel.toFixed(2);
+  $('log').textContent = 'Sensors enabled. Compare the counter with your actual steps.';
 }
+
+$('resetBtn').onclick = () => {
+  stepDetector.reset();
+  minAccel = maxAccel = 0;
+  minBeta = minGamma = Infinity;
+  maxBeta = maxGamma = -Infinity;
+  showReading(stepDetector.snapshot());
+  $('range').textContent = '0.00 to 0.00';
+  for(const id of ['beta', 'gamma', 'betaRange', 'gammaRange']) $(id).textContent = '--';
+};
+
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){
+    stepDetector.pause();
+    showReading(stepDetector.snapshot());
+  }
+});
 
 $('enableBtn').onclick = enableSensors;
 </script>

@@ -336,6 +336,7 @@ button{cursor:pointer;font-weight:700}
   </div>
 </div>
 
+<script src="step-detector.js"></script>
 <script>
 let GRAPH = null;
 let BUILDING = 'madriga';
@@ -386,28 +387,12 @@ let navigationActive=false;
 let sensorsEnabled=false;
 let sensorEvents=0;
 
-let gravityMag=9.81;
-let filteredAccel=0;
 let detectedSteps=0;
 let stepLength=0.65; // estimated meters per detected step
 let deviceHeading=null;
-
-let stepPeakDetected=false;
-let stepDipDetected=false;
-
-// Rhythmic walking confirmation
-const stepCandidates=[];
-const CADENCE_MIN=350;
-const CADENCE_MAX=1000;
-const CONFIRM_COUNT=2;
-const WALKING_TIMEOUT=1500;
-
-let isWalking=false;
-let lastConfirmedCandidate=0;
-
-// Rolling orientation stability
-let orientationSamples=[];
-const ORIENTATION_WINDOW_MS=500;
+const stepDetector=new CampusStepDetector();
+let navigationStartToken=0;
+let motionUnavailable=false;
 
 // Smooth visual movement
 let pendingStepDistance=0;
@@ -657,6 +642,7 @@ if(!matchingDestinations.length && context.destinationNodeId){
 }
 
 document.getElementById('building').onchange = async () => {
+stopNavigationMotion();
 BUILDING = document.getElementById('building').value;
   
 routePath = [];
@@ -1323,6 +1309,7 @@ function route(){
   const p=dijkstra(a,b);
   if(!p){$('status').textContent='No route found.';return}
 
+  stopNavigationMotion();
   routePath=p;
   routeNodes=p.map(nodeById).filter(Boolean);
 
@@ -1346,7 +1333,7 @@ for(let i = 0; i < routeNodes.length - 1; i++){
 console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
   activeFloor=routeNodes[0].floor;
-  progressIndex=0;progressT=0;animating=false;
+  progressIndex=0;progressT=0;
   followCamera=true;
   $('recenterBtn').style.display='none';
   followNode(routeNodes[0]);
@@ -1492,7 +1479,7 @@ if(a.floor!==b.floor){
 }
 
 function animateStepMovement(timestamp){
-  if(!navigationActive){
+  if(!navigationActive || navMode !== 'sensor'){
     pendingStepDistance=0;
     movementAnimationFrame=null;
     lastMovementFrameTime=0;
@@ -1524,7 +1511,7 @@ function animateStepMovement(timestamp){
 }
 
 function handleDetectedStep(){
-  if(!navigationActive) return;
+  if(!navigationActive || navMode !== 'sensor') return;
 
   detectedSteps++;
   pendingStepDistance+=stepLength;
@@ -1537,7 +1524,7 @@ function handleDetectedStep(){
 }
 
 function completeNavigation(){
-  navigationActive=false;
+  stopNavigationMotion();
   progressIndex=routeNodes.length-1;
   progressT=0;
 
@@ -1558,82 +1545,6 @@ function completeNavigation(){
   $('status').textContent='Arrived.';
 }
 
-function recordOrientation(beta,gamma){
-  const now=performance.now();
-
-  orientationSamples.push({
-    time:now,
-    beta:beta,
-    gamma:gamma
-  });
-
-  orientationSamples=orientationSamples.filter(
-    sample=>now-sample.time<=ORIENTATION_WINDOW_MS
-  );
-}
-
-function orientationIsStable(){
-  if(orientationSamples.length<3){
-    return true;
-  }
-
-  const betas=orientationSamples.map(s=>s.beta);
-  const gammas=orientationSamples.map(s=>s.gamma);
-
-  const betaRange=Math.max(...betas)-Math.min(...betas);
-  const gammaRange=Math.max(...gammas)-Math.min(...gammas);
-
-  return betaRange<35 && gammaRange<35;
-}
-
-function addStepCandidate(){
-  const now=performance.now();
-
-  if(stepCandidates.length){
-    const gap=now-stepCandidates[stepCandidates.length-1];
-
-    if(gap<CADENCE_MIN){
-      return;
-    }
-
-    if(gap>CADENCE_MAX){
-      stepCandidates.length=0;
-    }
-  }
-
-  stepCandidates.push(now);
-
-  if(!isWalking){
-    if(stepCandidates.length>=CONFIRM_COUNT){
-      isWalking=true;
-
-      // Count the first confirmed walking sequence too.
-      const confirmedCount=stepCandidates.length;
-
-      for(let i=0;i<confirmedCount;i++){
-        handleDetectedStep();
-      }
-
-      lastConfirmedCandidate=now;
-
-      stepCandidates.splice(
-        0,
-        stepCandidates.length-1
-      );
-    }
-
-    return;
-  }
-
-  handleDetectedStep();
-  lastConfirmedCandidate=now;
-
-  stepCandidates.splice(
-    0,
-    stepCandidates.length-1
-  );
-}
-
 function updateDeviceHeading(e){
   let h=null;
 
@@ -1651,7 +1562,7 @@ function updateDeviceHeading(e){
   if(typeof e.beta==='number' &&
      typeof e.gamma==='number'){
 
-    recordOrientation(e.beta,e.gamma);
+    stepDetector.updateOrientation(e);
   }
   if(navMode === 'sensor' && navigationActive){
   drawBaseMap();
@@ -1660,56 +1571,24 @@ function updateDeviceHeading(e){
 
 function updateDeviceMotion(e){
   sensorEvents++;
-
-  const a=e.accelerationIncludingGravity || e.acceleration;
-  if(!a) return;
-
-  const x=Number(a.x)||0;
-  const y=Number(a.y)||0;
-  const z=Number(a.z)||0;
-
-  const mag=Math.sqrt(x*x+y*y+z*z);
-
-  gravityMag=gravityMag*0.92+mag*0.08;
-
-  const linear=mag-gravityMag;
-
-  filteredAccel=
-    filteredAccel*0.65+
-    linear*0.35;
-
-  // Positive peak
-  if(!stepPeakDetected && filteredAccel>0.8){
-    stepPeakDetected=true;
+  if(!navigationActive || navMode !== 'sensor') return;
+  const reading=stepDetector.updateMotion(e);
+  if(!reading.valid){
+    motionUnavailable=true;
+    $('status').textContent=localizedInstruction(
+      'Motion readings unavailable. Keep this page open and check sensor access.',
+      'قراءات الحركة غير متاحة. أبقِ الصفحة مفتوحة وتحقق من إذن الحساسات.',
+      'נתוני תנועה אינם זמינים. השאר את הדף פתוח ובדוק הרשאה לחיישנים.');
+    return;
   }
-
-  // Negative dip
-  if(stepPeakDetected && filteredAccel<-0.4){
-    stepDipDetected=true;
+  if(motionUnavailable){
+    motionUnavailable=false;
+    $('status').textContent=localizedInstruction('Motion readings restored. Start walking.', 'عادت قراءات الحركة. ابدأ المشي.', 'נתוני התנועה חזרו. התחל ללכת.');
   }
-
-  // Recovery = complete step candidate
-  if(stepPeakDetected &&
-     stepDipDetected &&
-     filteredAccel>-0.1){
-
-    stepPeakDetected=false;
-    stepDipDetected=false;
-
-    if(orientationIsStable()){
-      addStepCandidate();
-    }
-  }
-
-  // Stop walking state after inactivity.
-  if(isWalking &&
-     performance.now()-lastConfirmedCandidate>WALKING_TIMEOUT){
-
-    isWalking=false;
-    stepCandidates.length=0;
-  }
+  for(let i=0;i<reading.stepsAdded;i++) handleDetectedStep();
 }
-async function requestSensorPermission(){
+
+async function requestSensorPermission(requestToken){
   try{
     if(typeof DeviceMotionEvent!=='undefined' &&
        typeof DeviceMotionEvent.requestPermission==='function'){
@@ -1724,22 +1603,23 @@ async function requestSensorPermission(){
     }
     return true;
   }catch(err){
-    $('status').textContent=err.message || 'Sensor permission was not granted.';
+    if(requestToken === navigationStartToken){
+      $('status').textContent=err.message || 'Sensor permission was not granted.';
+    }
     return false;
   }
 }
 
-async function enableSensors(){
+async function enableSensors(requestToken){
   if(sensorsEnabled) return;
 
-  const ok=await requestSensorPermission();
+  const ok=await requestSensorPermission(requestToken);
   if(!ok) return;
 
   window.addEventListener('devicemotion',updateDeviceMotion);
   window.addEventListener('deviceorientation',updateDeviceHeading,true);
 
   sensorsEnabled=true;
-  $('status').textContent='Sensors enabled. Choose a route.';
 }
 
 let autoTimer = null;
@@ -1749,7 +1629,7 @@ function startAutoDemo(){
   if(autoTimer) clearInterval(autoTimer);
 
   autoTimer = setInterval(() => {
-    if(!navigationActive){
+    if(!navigationActive || navMode !== 'auto'){
       clearInterval(autoTimer);
       autoTimer = null;
       return;
@@ -1763,45 +1643,50 @@ function startAutoDemo(){
   }, 80);
 }
 
-function startNavigation(){
-  if(!routeNodes.length) return;
-
-if(navMode === 'sensor' && !sensorsEnabled){
-  enableSensors().then(() => {
-    if(sensorsEnabled) startNavigation();
-  });
-  return;
-}
-
-  navigationActive=true;
-  detectedSteps=0;
-
-  stepCandidates.length=0;
-  isWalking=false;
-  lastConfirmedCandidate=0;
-  stepPeakDetected=false;
-  stepDipDetected=false;
-  orientationSamples.length=0;
+function stopNavigationMotion(){
+  navigationStartToken++;
+  navigationActive=false;
+  if(autoTimer !== null) clearInterval(autoTimer);
+  autoTimer=null;
+  autoFloorPauseUntil=0;
+  if(movementAnimationFrame !== null) cancelAnimationFrame(movementAnimationFrame);
+  movementAnimationFrame=null;
   pendingStepDistance=0;
   lastMovementFrameTime=0;
+  stepDetector.reset();
+  detectedSteps=0;
+  motionUnavailable=false;
+}
 
-  if(movementAnimationFrame!==null){
-    cancelAnimationFrame(movementAnimationFrame);
-    movementAnimationFrame=null;
-  }
-
+async function startNavigation(){
+  if(navigationActive || routeNodes.length<2 || progressIndex>=routeNodes.length-1) return;
+  const requestedMode=navMode;
+  const requestedRoute=routeNodes;
+  const token=++navigationStartToken;
   $('startBtn').disabled=true;
 
-if(navMode === 'auto'){
-  followCamera = false;
-  $('status').textContent='Auto navigation running.';
-  $('instruction').textContent='Navigation started';
-  startAutoDemo();
+  if(requestedMode === 'sensor' && !sensorsEnabled){
+    await enableSensors(token);
+    // Permission may finish after a route, building or mode change.
+    if(token !== navigationStartToken || requestedMode !== navMode || requestedRoute !== routeNodes) return;
+    if(!sensorsEnabled){
+      $('startBtn').disabled=false;
+      return;
+    }
+  }
+
+  stopNavigationMotion();
+  navigationActive=true;
+  $('startBtn').disabled=true;
+  if(navMode === 'auto'){
+    followCamera=false;
+    $('status').textContent='Auto navigation running.';
+    $('instruction').textContent='Navigation started';
+    startAutoDemo();
   }else{
     $('status').textContent='Walk normally — CampusWay will move when steps are detected.';
     $('instruction').textContent='Start walking';
   }
-
   updateTurnInstruction();
 }
 
@@ -1815,17 +1700,19 @@ $('toFloor').onchange=()=>{
 
 let navMode = 'auto';
 
-$('autoModeBtn').onclick = () => {
-  navMode = 'auto';
-  $('autoModeBtn').className = 'primary';
-  $('sensorModeBtn').className = 'secondary';
-};
+function setNavigationMode(mode){
+  if(navMode === mode) return;
+  stopNavigationMotion();
+  navMode=mode;
+  $('autoModeBtn').className=mode==='auto'?'primary':'secondary';
+  $('sensorModeBtn').className=mode==='sensor'?'primary':'secondary';
+  $('startBtn').disabled=routeNodes.length<2 || progressIndex>=routeNodes.length-1;
+  $('status').textContent=localizedInstruction('Press Start navigation to use this mode.', 'اضغط ابدأ الملاحة لاستخدام هذا الوضع.', 'לחץ התחל ניווט כדי להשתמש במצב זה.');
+  drawBaseMap();
+}
 
-$('sensorModeBtn').onclick = () => {
-  navMode = 'sensor';
-  $('sensorModeBtn').className = 'primary';
-  $('autoModeBtn').className = 'secondary';
-};
+$('autoModeBtn').onclick=()=>setNavigationMode('auto');
+$('sensorModeBtn').onclick=()=>setNavigationMode('sensor');
 
 $('routeBtn').onclick=route;
 $('swap').onclick=()=>{
