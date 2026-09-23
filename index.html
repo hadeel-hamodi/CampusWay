@@ -1685,82 +1685,75 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) star
 
 const searchSuggestions = document.getElementById('searchSuggestions');
 
-function showSearchSuggestions(filter){
+function normalizeDestinationQuery(value){
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^(?:room|غرفة|חדר)\s+/i, '')
+    .trim();
+}
 
-  const q = (filter || '').trim().toLowerCase();
-
-  // Building matches
+function getDestinationMatches(filter){
+  const query = normalizeDestinationQuery(filter);
   const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
-    !q ||
-    building.name.toLowerCase().includes(q) ||
-    building.name_he.includes(filter || '')
+    !query ||
+    building.name.toLowerCase().includes(query) ||
+    (building.name_he || '').toLowerCase().includes(query)
   );
 
-  // Madriga room matches
-// Indoor room matches
-const roomMatches = [];
+  const searchableGraphs = [
+    { graph: typeof MADRIGA_GRAPH !== 'undefined' ? MADRIGA_GRAPH : null,
+      buildingName: 'Terrace Building', buildingKey: 'madriga' },
+    { graph: typeof MAIN_GRAPH !== 'undefined' ? MAIN_GRAPH : null,
+      buildingName: 'Main Building', buildingKey: 'main' },
+    { graph: typeof RABIN_GRAPH !== 'undefined' ? RABIN_GRAPH : null,
+      buildingName: 'Rabin Building', buildingKey: 'rabin' },
+    { graph: typeof STUDENT_GRAPH !== 'undefined' ? STUDENT_GRAPH : null,
+      buildingName: 'Student House', buildingKey: 'student' }
+  ];
 
-const searchableGraphs = [
-  {
-    graph: typeof MADRIGA_GRAPH !== 'undefined' ? MADRIGA_GRAPH : null,
-    buildingName: 'Terrace Building',
-    buildingKey: 'madriga'
-  },
-  {
-    graph: typeof MAIN_GRAPH !== 'undefined' ? MAIN_GRAPH : null,
-    buildingName: 'Main Building',
-    buildingKey: 'main'
-  },
-  {
-    graph: typeof RABIN_GRAPH !== 'undefined' ? RABIN_GRAPH : null,
-    buildingName: 'Rabin Building',
-    buildingKey: 'rabin'
-  },
-  {
-    graph: typeof STUDENT_GRAPH !== 'undefined' ? STUDENT_GRAPH : null,
-    buildingName: 'Student House',
-    buildingKey: 'student'
-  }
+  const roomMatches = [];
+  const seenDestinations = new Set();
+  if(query){
+    for(const item of searchableGraphs){
+      if(!item.graph) continue;
+      for(const [floorKey, floor] of Object.entries(item.graph.floors)){
+        for(const node of (floor.nodes || [])){
+          const label = String(node.label || '').trim().toLowerCase();
+          if(
+            !['room', 'gym', 'library', 'landmark'].includes(node.type) ||
+            !label.includes(query)
+          ) continue;
 
-  // Add these when their graphs are ready:
-  // {
-  //   graph: EDUCATION_GRAPH,
-  //   buildingName: 'Education Building',
-  //   buildingKey: 'education'
-  // },
-  // {
-  //   graph: MULTI_PURPOSE_GRAPH,
-  //   buildingName: 'Multi-Purpose Building',
-  //   buildingKey: 'multi-purpose'
-  // }
-];
-
-if(q){
-  for(const item of searchableGraphs){
-
-    if(!item.graph) continue;
-
-    for(const [floorKey, floor] of Object.entries(item.graph.floors)){
-
-      for(const node of (floor.nodes || [])){
-
-        if(
-          ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
-          String(node.label).toLowerCase().includes(q)
-        ){
+          // Multiple doors to the same destination remain one result.
+          // Equal room numbers in different buildings remain separate choices.
+          const key = JSON.stringify([item.buildingKey, node.type, label]);
+          if(seenDestinations.has(key)) continue;
+          seenDestinations.add(key);
           roomMatches.push({
-            node,
-            floor: floorKey,
-            buildingName: item.buildingName,
-            buildingKey: item.buildingKey
+            node, floor: floorKey,
+            buildingName: item.buildingName, buildingKey: item.buildingKey
           });
         }
-
       }
     }
   }
+
+  const rank = label => label === query ? 0 : label.startsWith(query) ? 1 : 2;
+  roomMatches.sort((a, b) => {
+    const aLabel = String(a.node.label).trim().toLowerCase();
+    const bLabel = String(b.node.label).trim().toLowerCase();
+    return rank(aLabel) - rank(bLabel) ||
+      aLabel.localeCompare(bLabel, undefined, { numeric: true });
+  });
+
+  return { query, buildingMatches, roomMatches };
 }
 
+let selectedSearchDestination = null;
+
+function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
+  const { buildingMatches, roomMatches } = matches;
   if(!buildingMatches.length && !roomMatches.length){
     searchSuggestions.style.display = 'none';
     return;
@@ -1782,47 +1775,7 @@ if(q){
     </div>
   `).join('');
 
-        // Show one search result per physical room,
-        // even if that room has entrances on multiple floors.
-        const uniqueRoomMatches = [];
-
-        const seenRoomLabels = new Set();
-
-        for(const match of roomMatches){
-        const label = String(match.node.label).trim().toLowerCase();
-
-        if(!seenRoomLabels.has(label)){
-            seenRoomLabels.add(label);
-            uniqueRoomMatches.push(match);
-        }
-        }
-
-      // Rank search results by relevance:
-// exact match → starts with query → contains query
-uniqueRoomMatches.sort((a, b) => {
-  const query = q.trim().toLowerCase();
-
-  const aLabel = String(a.node.label).trim().toLowerCase();
-  const bLabel = String(b.node.label).trim().toLowerCase();
-
-  const rank = label => {
-    if(label === query) return 0;
-    if(label.startsWith(query)) return 1;
-    return 2;
-  };
-
-  const rankDifference = rank(aLabel) - rank(bLabel);
-
-  if(rankDifference !== 0){
-    return rankDifference;
-  }
-
-  return aLabel.localeCompare(bLabel, undefined, {
-    numeric: true
-  });
-});
-
- const roomHTML = uniqueRoomMatches.map(match => {
+ const roomHTML = roomMatches.map(match => {
 
   const typeLabels = {
     room: t.room,
@@ -1891,6 +1844,10 @@ const buildingNames = {
 
   document.getElementById('searchInput').value =
     `${t.room} ${label} — ${localizedBuildingName(building)}`;
+  selectedSearchDestination = {
+    kind: 'room', nodeId, label, buildingKey,
+    displayValue: document.getElementById('searchInput').value
+  };
 
   searchSuggestions.style.display = 'none';
 
@@ -1903,12 +1860,17 @@ const buildingNames = {
 
 function pickDestination(name, lat, lng){
   document.getElementById('searchInput').value = name;
+  selectedSearchDestination = { kind: 'building', name, lat, lng, displayValue: name };
+  sessionStorage.removeItem('indoorContext');
   searchSuggestions.style.display='none';
   routeTo(name, lat, lng);
 }
 
 document.getElementById('searchInput').addEventListener('focus', ()=> showSearchSuggestions(''));
-document.getElementById('searchInput').addEventListener('input', e=> showSearchSuggestions(e.target.value));
+document.getElementById('searchInput').addEventListener('input', e=>{
+  selectedSearchDestination = null;
+  showSearchSuggestions(e.target.value);
+});
 document.addEventListener('click', e=>{ if(!e.target.closest('.search-row')) searchSuggestions.style.display='none'; });
 
 // ═══════════════════════════════════════════
@@ -1916,183 +1878,60 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.search-row')) sea
 // ═══════════════════════════════════════════
 const searchInput = document.getElementById('searchInput');
 searchInput.addEventListener('keydown', e=>{
-  if(e.key==='Enter') doSearch(searchInput.value.trim());
+  if(e.key==='Enter'){
+    e.preventDefault();
+    doSearch(searchInput.value.trim());
+  }
 });
 
 function doSearch(q){
+  if(!String(q || '').trim()) return;
 
-  if(!q) return;
-
-
-  const cleanQuery =
-    q
-      .trim()
-      .toLowerCase()
-      .replace(/^room\s+/i, '')
-      .trim();
-
-
-  // ============================================================
-  // 1. FIRST: SEARCH OUTDOOR BUILDINGS
-  // ============================================================
-
-  const buildingMatch =
-    CAMPUS_DATA.buildings.find(
-      b =>
-        b.name
-          .toLowerCase()
-          .includes(q.toLowerCase()) ||
-
-        b.name_he
-          .includes(q)
-    );
-
-
-  if(buildingMatch){
-
-    map.flyTo(
-      [
-        buildingMatch.lat,
-        buildingMatch.lng
-      ],
-      18,
-      {
-        duration:0.8
-      }
-    );
-
-
-    buildingMarkers[
-      buildingMatch.name
-    ]?.openPopup();
-
-
-    routeTo(
-      buildingMatch.name,
-      buildingMatch.lat,
-      buildingMatch.lng
-    );
-
-
+  // The field displays a formatted label after a suggestion is selected.
+  if(selectedSearchDestination &&
+     String(q).trim() === selectedSearchDestination.displayValue){
+    const selected = selectedSearchDestination;
+    if(selected.kind === 'room'){
+      pickIndoorDestination(selected.nodeId, selected.label, selected.buildingKey);
+    }else{
+      pickDestination(selected.name, selected.lat, selected.lng);
+    }
     return;
   }
 
+  const matches = getDestinationMatches(q);
+  const exactBuildings = matches.buildingMatches.filter(building =>
+    building.name.trim().toLowerCase() === matches.query ||
+    (building.name_he || '').trim().toLowerCase() === matches.query
+  );
+  const exactRooms = matches.roomMatches.filter(match =>
+    String(match.node.label).trim().toLowerCase() === matches.query
+  );
+  const exactCount = exactBuildings.length + exactRooms.length;
 
-
-  // ============================================================
-  // 2. THEN: SEARCH INDOOR ROOMS
-  // ============================================================
-
-  let indoorMatch = null;
-
-
-  for(
-    const floorKey
-    of Object.keys(
-      MADRIGA_GRAPH.floors
-    )
-  ){
-
-    const floor =
-      MADRIGA_GRAPH
-        .floors[
-          floorKey
-        ];
-
-
-    const node =
-      floor.nodes.find(
-        n =>
-
-          n.type === 'room' &&
-
-          String(n.label)
-            .trim()
-            .toLowerCase() ===
-            cleanQuery
-      );
-
-
-    if(node){
-
-      indoorMatch = {
-        node,
-        floor:floorKey
-      };
-
-      break;
+  if(exactCount === 1){
+    if(exactBuildings.length){
+      const building = exactBuildings[0];
+      pickDestination(building.name, building.lat, building.lng);
+    }else{
+      const match = exactRooms[0];
+      pickIndoorDestination(match.node.id, match.node.label, match.buildingKey);
     }
-
-  }
-
-
-
-  // ============================================================
-  // 3. FOUND AN INDOOR ROOM
-  // ============================================================
-
-  if(indoorMatch){
-
-    const terrace =
-      CAMPUS_DATA.buildings.find(
-        b =>
-          b.name ===
-          'Terrace Building'
-      );
-
-
-    if(!terrace){
-
-      alert(
-        'Terrace Building could not be found.'
-      );
-
-      return;
-    }
-
-
-    // Remember the final indoor destination.
-      sessionStorage.setItem(
-        'indoorContext',
-        JSON.stringify({
-          entranceId: null,
-          startNodeId: null,
-          destinationNodeId: indoorMatch.node.id
-        })
-      );
-
-
-    // Outdoor part of the journey.
-    routeTo(
-      terrace.name,
-      terrace.lat,
-      terrace.lng
-    );
-
-
-    // Show what the user ACTUALLY searched for.
-    document.getElementById(
-      'searchInput'
-    ).value =
-      `${t.room} ${indoorMatch.node.label} — Terrace Building`;
-
-
-    document.getElementById(
-      'continueIndoorBtn'
-    ).style.display =
-      'block';
-
-
     return;
   }
 
-
-
-  // ============================================================
-  // 4. NOTHING FOUND
-  // ============================================================
-
-  alert(t.noBuildingOrRoom);
+  if(exactCount > 1){
+    showSearchSuggestions(q, {
+      buildingMatches: exactBuildings,
+      roomMatches: exactRooms
+    });
+  }else if(matches.buildingMatches.length || matches.roomMatches.length){
+    // Partial names/numbers need an explicit choice, even with one suggestion.
+    showSearchSuggestions(q, matches);
+  }else{
+    searchSuggestions.style.display = 'none';
+    alert(t.noBuildingOrRoom);
+  }
 }
 
 // Voice input using Web Speech Recognition
