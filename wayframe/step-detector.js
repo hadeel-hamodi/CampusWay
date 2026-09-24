@@ -54,12 +54,14 @@
     clearRhythm(){
       this.isWalking = false;
       this.pendingCandidates = 0;
+      this.pendingTimes = [];
       this.lastCandidateTime = null;
     }
 
-    snapshot(stepsAdded = 0){
+    snapshot(stepsAdded = 0, stepTimes = []){
       return {
         stepsAdded,
+        stepTimes: stepTimes.slice(),
         totalSteps: this.totalSteps,
         candidates: this.candidates,
         rejected: this.rejected,
@@ -88,35 +90,38 @@
       });
     }
 
-    confirmCandidate(now){
+    confirmCandidate(now, stepTime){
       this.candidates++;
       if(!this.orientationIsStable(now)){
         this.rejected++;
         this.clearSequence();
-        return 0;
+        return [];
       }
 
       if(this.lastCandidateTime !== null){
         const gap = now - this.lastCandidateTime;
         if(gap < SETTINGS.minStepGap){
           this.rejected++;
-          return 0;
+          return [];
         }
         if(gap > SETTINGS.maxStepGap) this.clearSequence();
       }
       this.lastCandidateTime = now;
       if(this.isWalking){
         this.totalSteps++;
-        return 1;
+        return [stepTime];
       }
 
       this.pendingCandidates++;
-      if(this.pendingCandidates < SETTINGS.confirmationCount) return 0;
+      this.pendingTimes.push(stepTime);
+      if(this.pendingCandidates < SETTINGS.confirmationCount) return [];
       this.isWalking = true;
       const count = this.pendingCandidates;
+      const times = this.pendingTimes.slice();
       this.pendingCandidates = 0;
+      this.pendingTimes = [];
       this.totalSteps += count;
-      return count;
+      return times;
     }
 
     updateMotion(event, now = performance.now()){
@@ -175,8 +180,10 @@
       }else if(this.phase === 'peak' && this.filteredAccel < SETTINGS.dip){
         this.phase = 'dip';
       }else if(this.phase === 'dip' && this.filteredAccel > SETTINGS.recovery){
+        const stepTime = this.cycleStarted;
         this.clearCycle();
-        return this.snapshot(this.confirmCandidate(now));
+        const times = this.confirmCandidate(now, stepTime);
+        return this.snapshot(times.length, times);
       }
       return this.snapshot();
     }

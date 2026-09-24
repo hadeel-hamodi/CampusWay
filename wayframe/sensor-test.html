@@ -70,6 +70,18 @@
   Walking: <strong id="walking">NO</strong>
 </div>
 
+<section aria-labelledby="directionTitle">
+  <h2 id="directionTitle">Turnaround test (optional)</h2>
+  <p>Hold the phone in portrait with its top pointing toward your walking direction. Keep it steady, then set the forward direction. Walk 5 steps, turn around with the phone, and walk 3 steps back: the net count should be about 2. Turning while standing still should not change the counts.</p>
+  <p>This estimates direction from the phone. It does not detect walking backward while the phone still points forward.</p>
+  <button id="calibrateBtn" disabled>Set forward direction</button>
+  <p id="directionStatus" role="status">Enable sensors to try the turnaround test.</p>
+  <div class="value">Forward steps: <strong id="forwardSteps">0</strong></div>
+  <div class="value">Backward steps: <strong id="backwardSteps">0</strong></div>
+  <div class="value">Unclassified steps: <strong id="unknownSteps">0</strong></div>
+  <div class="value">Net steps from start: <strong id="netSteps">0</strong></div>
+</section>
+
 <div class="value">
   Beta: <strong id="beta">--</strong>°
 </div>
@@ -88,9 +100,13 @@
 <div id="log">Sensors not enabled.</div>
 
 <script src="step-detector.js"></script>
+<script src="heading-tracker.js"></script>
 <script>
 const stepDetector = new CampusStepDetector();
+const headingTracker = new CampusHeadingTracker();
+const directionCandidates = [{direction: 1, bearing: 0}, {direction: -1, bearing: 180}];
 let sensorsEnabled = false;
+let forwardSteps = 0, backwardSteps = 0, unknownSteps = 0;
 let minAccel = 0, maxAccel = 0;
 let minBeta = Infinity, maxBeta = -Infinity;
 let minGamma = Infinity, maxGamma = -Infinity;
@@ -127,6 +143,8 @@ async function enableSensors(){
 
     $('log').textContent = 'Sensors enabled.';
     $('enableBtn').disabled = true;
+    $('calibrateBtn').disabled = false;
+    showDirectionStatus();
 
   }catch(err){
     $('log').textContent = err.message || 'Could not enable sensors.';
@@ -134,6 +152,10 @@ async function enableSensors(){
 }
 
 function updateHeading(e){
+  const now = performance.now();
+  const screenAngle = window.screen?.orientation?.angle ?? window.orientation ?? 0;
+  headingTracker.update(e, now, screenAngle);
+  showDirectionStatus(now);
   let heading = null;
 
   if(typeof e.webkitCompassHeading === 'number'){
@@ -180,10 +202,41 @@ function showReading(reading){
   $('walking').textContent = reading.isWalking ? 'YES' : 'NO';
 }
 
+function showDirectionStatus(now = performance.now()){
+  let message = 'Enable sensors to try the turnaround test.';
+  if(sensorsEnabled){
+    message = !headingTracker.isCalibrated
+      ? 'Hold the phone steady in portrait, point it forward, and set the forward direction. Recalibrate if the phone position or orientation reference changes.'
+      : headingTracker.mapHeading(now) === null
+        ? 'Waiting for a steady heading. Unclear steps do not change the net count.'
+        : 'Forward direction set. Keep the phone pointing where you walk. Reset count keeps this direction; setting it again starts a new test.';
+  }
+  if($('directionStatus').textContent !== message) $('directionStatus').textContent = message;
+}
+
+function showDirectionCounts(){
+  $('forwardSteps').textContent = forwardSteps;
+  $('backwardSteps').textContent = backwardSteps;
+  $('unknownSteps').textContent = unknownSteps;
+  $('netSteps').textContent = forwardSteps - backwardSteps;
+}
+
+function recordDirections(stepTimes){
+  for(const stepTime of stepTimes || []){
+    const result = headingTracker.classify(stepTime, directionCandidates);
+    if(result.direction === 1) forwardSteps++;
+    else if(result.direction === -1) backwardSteps++;
+    else unknownSteps++;
+  }
+  showDirectionCounts();
+  showDirectionStatus();
+}
+
 function updateMotion(e){
   if(!sensorsEnabled) return;
   const reading = stepDetector.updateMotion(e);
   showReading(reading);
+  recordDirections(reading.stepTimes);
   if(!reading.valid){
     $('log').textContent = 'Motion reading unavailable. No steps counted from missing sensor data.';
     return;
@@ -194,21 +247,42 @@ function updateMotion(e){
   $('log').textContent = 'Sensors enabled. Compare the counter with your actual steps.';
 }
 
-$('resetBtn').onclick = () => {
+function resetCount(){
   stepDetector.reset();
+  forwardSteps = backwardSteps = unknownSteps = 0;
+  showDirectionCounts();
+  showDirectionStatus();
   minAccel = maxAccel = 0;
   minBeta = minGamma = Infinity;
   maxBeta = maxGamma = -Infinity;
   showReading(stepDetector.snapshot());
   $('range').textContent = '0.00 to 0.00';
   for(const id of ['beta', 'gamma', 'betaRange', 'gammaRange']) $(id).textContent = '--';
+}
+
+$('resetBtn').onclick = resetCount;
+
+$('calibrateBtn').onclick = () => {
+  if(!sensorsEnabled) return;
+  if(!headingTracker.calibrate(0, performance.now())){
+    $('directionStatus').textContent = 'Direction not ready. Hold the phone steady in portrait, point it forward, and try again.';
+    return;
+  }
+  resetCount();
 };
 
 document.addEventListener('visibilitychange', () => {
   if(document.hidden){
     stepDetector.pause();
+    headingTracker.invalidate();
+    showDirectionStatus();
     showReading(stepDetector.snapshot());
   }
+});
+
+window.addEventListener('orientationchange', () => {
+  headingTracker.invalidate();
+  showDirectionStatus();
 });
 
 $('enableBtn').onclick = enableSensors;

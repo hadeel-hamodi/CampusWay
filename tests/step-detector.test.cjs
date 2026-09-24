@@ -45,6 +45,23 @@ function assertFreshSignal(state) {
   assert.equal(state.valid, false);
 }
 
+test('confirmed batches retain individual original movement times for heading lookup', () => {
+  const {states, starts} = walkingTrace(900, 3);
+  const reports=states.filter(state=>state.stepsAdded);
+  assert.equal(reports[0].stepsAdded,2);
+  assert.equal(reports[0].stepTimes.length,2);
+  assert.ok(reports[0].stepTimes[0]<reports[0].stepTimes[1]);
+  const times=reports.flatMap(state=>state.stepTimes);
+  assert.equal(times.length,3);
+  times.forEach((time,index)=>{
+    assert.ok(time>=starts[index] && time<starts[index]+pulseWidth);
+  });
+  for(const report of reports){
+    assert.equal(report.stepTimes.length,report.stepsAdded);
+    assert.ok(report.stepTimes.every(time=>time<report.time));
+  }
+});
+
 test('stationary sensor noise does not produce steps', () => {
   const detector = new CampusStepDetector();
   feed(detector, {
