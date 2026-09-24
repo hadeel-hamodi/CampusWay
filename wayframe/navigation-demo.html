@@ -405,6 +405,7 @@ const stepDetector=new CampusStepDetector();
 const headingTracker=new CampusHeadingTracker();
 let lastTravelDirection=1;
 let sensorFloorBoundary=false;
+let sensorHeadingPaused=false;
 let navigationStartToken=0;
 let motionUnavailable=false;
 
@@ -471,9 +472,9 @@ function localizedInstruction(en, ar, he){
 function applyIndoorTranslations(){
   $('directionTitle').textContent=localizedInstruction('Set your starting direction','ثبّت اتجاه البداية','קבע כיוון התחלתי');
   $('directionHelp').textContent=localizedInstruction(
-    'Press Start, then point the top of your phone along the route in the direction shown below. Hold it steady in portrait, slightly tilted, and set the direction. Keep it facing your walking direction. Turning around can move the marker back; walking backwards without turning is not supported. Position is estimated on this floor; leaving the route is not detected.',
-    'اضغط ابدأ، ثم وجّه أعلى الهاتف مع المسار بالاتجاه الموضّح أدناه. أمسكه بالطول ومائلًا قليلًا، وثبّته للحظة قبل تثبيت الاتجاه. أبقِه باتجاه مشيك. يمكنك اللف والمشي للرجوع؛ المشي للخلف دون لف غير مدعوم. الموقع تقديري على هذا الطابق، ولا يكشف الخروج عن المسار.',
-    'לחץ התחל ואז כוון את קצה הטלפון לאורך המסלול בכיוון שמוצג למטה. החזק אותו יציב לאורך, בהטיה קלה, וקבע כיוון. השאר אותו בכיוון ההליכה. ניתן להסתובב ולחזור; הליכה לאחור בלי להסתובב אינה נתמכת. המיקום משוער בקומה זו; סטייה מהמסלול אינה מזוהה.');
+    'Press Start, point the top of your phone along the route in the direction shown below, and set the initial direction. Keep the phone generally facing your walk; ordinary changes in tilt do not need a new setup. Unclear readings pause position updates, which resume automatically when usable readings return. Turning around can move the marker back; walking backwards without turning is not supported. Position is estimated on this floor; leaving the route is not detected.',
+    'اضغط ابدأ، ووجّه أعلى الهاتف مع المسار بالاتجاه الموضّح أدناه، وثبّت اتجاه البداية. أبقِ الهاتف باتجاه مشيك عمومًا؛ تغيّر الميلان العادي لا يتطلب تثبيتًا جديدًا. عند عدم وضوح القراءة، يتوقف تحديث الموقع مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. يمكنك اللف والمشي للرجوع؛ المشي للخلف دون لف غير مدعوم. الموقع تقديري على هذا الطابق، ولا يكشف الخروج عن المسار.',
+    'לחץ התחל, כוון את קצה הטלפון לאורך המסלול בכיוון שמוצג למטה וקבע כיוון התחלתי. שמור את הטלפון בכיוון ההליכה באופן כללי; שינויי הטיה רגילים אינם דורשים הגדרה מחדש. קריאות לא ברורות משהות את עדכון המיקום, שמתחדש אוטומטית כשחוזרות קריאות תקינות. ניתן להסתובב ולחזור; הליכה לאחור בלי להסתובב אינה נתמכת. המיקום משוער בקומה זו; סטייה מהמסלול אינה מזוהה.');
   $('calibrateBtn').textContent=localizedInstruction('Set direction and start','ثبّت الاتجاه وابدأ','קבע כיוון והתחל');
   const rtl=indoorLang==='ar'||indoorLang==='he';
   document.documentElement.lang=indoorLang;
@@ -1586,7 +1587,7 @@ function animateStepMovement(timestamp){
 }
 
 function heldDirectionMessage(){
-  $('status').textContent=localizedInstruction('Direction unclear — position update paused. Keep the phone facing your walk.','الاتجاه غير واضح — تحديث الموقع متوقف. أبقِ الهاتف باتجاه مشيك.','הכיוון אינו ברור — עדכון המיקום מושהה. שמור את הטלפון בכיוון ההליכה.');
+  $('status').textContent=localizedInstruction('Direction unclear — position updates paused temporarily. They resume automatically when readings are usable. Keep the phone facing your walk.','الاتجاه غير واضح — تحديث الموقع متوقف مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. أبقِ الهاتف باتجاه مشيك.','הכיוון אינו ברור — עדכון המיקום מושהה זמנית ויתחדש אוטומטית כשהקריאות יהיו תקינות. שמור את הטלפון בכיוון ההליכה.');
 }
 
 function handleDetectedStep(stepTime){
@@ -1663,12 +1664,28 @@ function requireDirectionCalibration(){
   updateDirectionControls();
 }
 
+function updateSensorDirectionStatus(now=performance.now()){
+  if(!navigationActive || navMode !== 'sensor' || motionUnavailable) return;
+  if(headingTracker.mapHeading(now) === null){
+    sensorHeadingPaused=true;
+    heldDirectionMessage();
+  }else if(sensorHeadingPaused){
+    sensorHeadingPaused=false;
+    if(sensorFloorBoundary){ showFloorBoundary(); return; }
+    $('status').textContent=localizedInstruction(
+      'Direction readings restored — position updates resume automatically with your next clear steps.',
+      'عادت قراءات الاتجاه — يستأنف تحديث الموقع تلقائيًا مع خطواتك التالية ذات الاتجاه الواضح.',
+      'נתוני הכיוון חזרו — עדכון המיקום יתחדש אוטומטית בצעדים הבאים שכיוונם ברור.');
+  }
+}
+
 function updateDeviceHeading(e){
   const now=performance.now();
   headingTracker.update(e,now,screenOrientationAngle());
   stepDetector.updateOrientation(e,now);
   if(navMode === 'sensor' && navigationActive){
     if(!headingTracker.isCalibrated){ requireDirectionCalibration(); return; }
+    updateSensorDirectionStatus(now);
     drawBaseMap();
   }
 }
@@ -1706,6 +1723,7 @@ function updateDeviceMotion(e){
     $('status').textContent=localizedInstruction('Motion readings restored. Start walking.', 'عادت قراءات الحركة. ابدأ المشي.', 'נתוני התנועה חזרו. התחל ללכת.');
   }
   for(const stepTime of reading.stepTimes) handleDetectedStep(stepTime);
+  updateSensorDirectionStatus();
 }
 
 async function requestSensorPermission(requestToken){
@@ -1778,6 +1796,7 @@ function stopNavigationMotion(resetHeading=true){
   detectedSteps=0;
   motionUnavailable=false;
   sensorFloorBoundary=false;
+  sensorHeadingPaused=false;
   lastTravelDirection=1;
   if(resetHeading){ headingTracker.reset(); deviceHeading=null; }
   updateDirectionControls();

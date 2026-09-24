@@ -178,12 +178,49 @@ test('denied permission leaves Start available without motion',async()=>{
   assert.equal(h.run('navigationActive'),false);assert.equal(h.element('startBtn').disabled,false);assert.equal(h.timers.size,0);assert.equal(h.frames.size,0);
 });
 
-test('background, screen rotation or posture change cancels movement for recalibration',async()=>{
-  for(const reason of ['hidden','screen','posture']){
+test('background, screen rotation or reference change cancels movement for recalibration',async()=>{
+  for(const reason of ['hidden','screen','reference','source']){
     const h=harness();await startSensor(h);h.stable(450,800,0);h.injectSteps(800,[750]);
-    if(reason==='hidden'){h.document.hidden=true;h.listeners.get('visibilitychange')();}if(reason==='screen')h.listeners.get('orientationchange')();if(reason==='posture')h.orient(850,0,{beta:80});
+    if(reason==='hidden'){h.document.hidden=true;h.listeners.get('visibilitychange')();}if(reason==='screen')h.listeners.get('orientationchange')();
+    if(reason==='reference')h.orient(850,0,{absolute:true});if(reason==='source')h.orient(850,0,{webkitCompassHeading:0});
     assert.equal(h.run('navigationActive'),false,reason);assert.equal(h.frames.size,0);assert.equal(h.run('headingTracker.isCalibrated'),false);assert.equal(h.element('calibrateBtn').disabled,false);near(travelled(h),0);
   }
+});
+
+test('temporary tilt pauses new steps and resumes forward or reverse without restarting navigation',async()=>{
+  for(const bearing of [0,180]){
+    const h=harness();await startSensor(h);h.stable(450,1200,0);h.injectSteps(1200,[750,1150]);h.drain();
+    const before=travelled(h),count=h.run('detectedSteps');near(before,1.3);
+    h.stable(2000,2400,bearing,{beta:80});
+    assert.equal(h.run('headingTracker.isCalibrated'),true,'tilt must preserve the reference');
+    assert.equal(h.run('navigationActive'),true,'temporary pause must not require Start');
+    assert.equal(h.element('calibrateBtn').disabled,true);
+    assert.match(h.element('status').textContent,/paused/i);
+    assert.match(h.element('status').textContent,/automatic/i);
+    h.injectSteps(2400,[2150,2350]);h.drain();near(travelled(h),before);
+    assert.equal(h.run('detectedSteps'),count+2,'raw step count must not reset');
+    h.stable(2450,2850,bearing);
+    assert.equal(h.run('navigationActive'),true);assert.equal(h.frames.size,0);
+    assert.doesNotMatch(h.element('status').textContent,/paused/i);
+    near(travelled(h),before,'uncertain steps are not replayed when heading recovers');
+    h.injectSteps(2850,[2800]);h.drain();near(travelled(h),before+(bearing===0?0.65:-0.65));
+    assert.equal(h.run('detectedSteps'),count+3);
+  }
+});
+
+test('comfortable changes from the calibrated tilt still permit navigation',async()=>{
+  const h=harness();await startSensor(h);h.stable(450,850,0,{beta:60,gamma:35});
+  assert.equal(h.run('headingTracker.isCalibrated'),true);assert.equal(h.run('navigationActive'),true);
+  h.injectSteps(850,[800]);h.drain();near(travelled(h),0.65);
+});
+
+test('missing heading recovers automatically and stale readings show a temporary pause',async()=>{
+  const h=harness();await startSensor(h);h.stable(450,800,0);h.injectSteps(800,[750]);h.drain();
+  const before=travelled(h);
+  h.injectSteps(1800,[1750]);assert.match(h.element('status').textContent,/paused/i);near(travelled(h),before);
+  h.orient(1850,0,{alpha:null});h.injectSteps(1900,[1875]);assert.equal(h.run('headingTracker.isCalibrated'),true);near(travelled(h),before);
+  h.stable(1950,2350,0);assert.doesNotMatch(h.element('status').textContent,/paused/i);
+  h.injectSteps(2350,[2300]);h.drain();near(travelled(h),before+0.65);
 });
 
 test('diagnostic reset clears totals without registering listeners again',async()=>{

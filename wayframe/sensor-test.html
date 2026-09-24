@@ -72,7 +72,7 @@
 
 <section aria-labelledby="directionTitle">
   <h2 id="directionTitle">Turnaround test (optional)</h2>
-  <p>Hold the phone in portrait with its top pointing toward your walking direction. Keep it steady, then set the forward direction. Walk 5 steps, turn around with the phone, and walk 3 steps back: the net count should be about 2. Turning while standing still should not change the counts.</p>
+  <p>Point the top of the phone toward your walking direction and set the initial forward direction. Keep it generally facing your walk. Ordinary tilt changes keep this setup; unclear readings pause direction tracking and it resumes automatically when usable readings return. Walk 5 steps, turn around with the phone, and walk 3 steps back: the net count should be about 2. Turning while standing still should not change the counts.</p>
   <p>This estimates direction from the phone. It does not detect walking backward while the phone still points forward.</p>
   <button id="calibrateBtn" disabled>Set forward direction</button>
   <p id="directionStatus" role="status">Enable sensors to try the turnaround test.</p>
@@ -206,10 +206,10 @@ function showDirectionStatus(now = performance.now()){
   let message = 'Enable sensors to try the turnaround test.';
   if(sensorsEnabled){
     message = !headingTracker.isCalibrated
-      ? 'Hold the phone steady in portrait, point it forward, and set the forward direction. Recalibrate if the phone position or orientation reference changes.'
+      ? 'Point the phone forward and set the initial direction. Recalibrate if this prompt returns after an interruption or sensor reference change. Ordinary tilt changes do not need a new setup.'
       : headingTracker.mapHeading(now) === null
-        ? 'Waiting for a steady heading. Unclear steps do not change the net count.'
-        : 'Forward direction set. Keep the phone pointing where you walk. Reset count keeps this direction; setting it again starts a new test.';
+        ? 'Direction tracking paused temporarily. It resumes automatically when usable readings return. Your starting direction and counts are kept; unclear steps do not change the net count.'
+        : 'Forward direction set. Keep the phone generally facing your walk. Ordinary tilt changes keep this direction. Reset count keeps it too; setting it again starts a new test.';
   }
   if($('directionStatus').textContent !== message) $('directionStatus').textContent = message;
 }

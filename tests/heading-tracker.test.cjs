@@ -183,16 +183,100 @@ test('screen rotation requires new calibration even when rotated back', () => {
   assert.equal(tracker.calibrate(0, 700), true);
 });
 
-test('landscape, unsuitable posture, and large posture changes fail closed', () => {
-  for(const extra of [{ beta: -1 }, { beta: 71 }, { gamma: 46 }, { beta: 60 }, { gamma: 31 }]){
+test('unsuitable posture pauses direction without discarding the original calibration', () => {
+  for(const extra of [{ beta: -1 }, { beta: 71 }, { gamma: 46 }, { gamma: -46 }]){
     const tracker = calibrated();
     assert.equal(tracker.update(event(0, extra), 350), false);
-    assert.equal(tracker.isCalibrated, false);
+    assert.equal(tracker.isCalibrated, true);
     assert.equal(tracker.classify(350, straight).direction, 0);
+    assert.equal(tracker.mapHeading(350), null);
+    feed(tracker, 400, 600, 0);
+    assert.equal(tracker.classify(600, straight).direction, 0);
+    tracker.update(event(0), 650);
+    assert.equal(tracker.classify(650, straight).direction, 1);
+    assert.equal(tracker.classify(350, straight).reason, 'posture-changed');
   }
+});
+
+test('calibration is unavailable while landscape or posture readings are unsuitable', () => {
   const tracker = new CampusHeadingTracker();
   feed(tracker, 0, 300, 0, {}, 90);
   assert.equal(tracker.calibrate(0, 300), false);
+  for(const extra of [{ beta: -1 }, { beta: 71 }, { gamma: 46 }]){
+    const uncalibrated = new CampusHeadingTracker();
+    feed(uncalibrated, 0, 300, 0, extra);
+    assert.equal(uncalibrated.calibrate(0, 300), false);
+  }
+});
+
+test('ordinary varied usable grip does not have to match its calibration posture', () => {
+  const tracker = calibrated(123, 270);
+  const candidates = [{ direction: 1, bearing: 270 }, { direction: -1, bearing: 90 }];
+  const grips = [
+    { beta: 60, gamma: 31 },
+    { beta: 70, gamma: -45 },
+    { beta: 0, gamma: 45 },
+    { beta: 25, gamma: 0 }
+  ];
+  grips.forEach((grip, index) => {
+    const time = 350 + index * 50;
+    assert.equal(tracker.update(event(123, grip), time), true);
+    assert.equal(tracker.isCalibrated, true);
+    assert.equal(tracker.mapHeading(time), 270);
+    assert.equal(tracker.classify(time, candidates).direction, 1);
+  });
+});
+
+test('returning from unsuitable posture recovers reverse without changing the map offset', () => {
+  const tracker = calibrated(123, 270);
+  const candidates = [{ direction: 1, bearing: 270 }, { direction: -1, bearing: 90 }];
+  feed(tracker, 350, 600, 200, { beta: 90 });
+  assert.equal(tracker.classify(600, candidates).direction, 0);
+  assert.equal(tracker.isCalibrated, true);
+  feed(tracker, 650, 850, 303, { beta: 60, gamma: 35 });
+  assert.equal(tracker.classify(850, candidates).direction, 0);
+  tracker.update(event(303, { beta: 60, gamma: 35 }), 900);
+  assert.equal(tracker.classify(900, candidates).direction, -1);
+  assert.equal(tracker.mapHeading(900), 90);
+  assert.equal(tracker.classify(600, candidates).direction, 0);
+  assert.equal(tracker.classify(850, candidates).direction, 0);
+});
+
+test('missing heading pauses and then recovers with an entire fresh stable suffix', () => {
+  for(const missing of [{ alpha: null }, { beta: null }, { gamma: NaN }]){
+    const tracker = calibrated();
+    tracker.update(event(0, missing), 350);
+    assert.equal(tracker.isCalibrated, true);
+    assert.equal(tracker.mapHeading(350), null);
+    feed(tracker, 400, 600, 180);
+    assert.equal(tracker.classify(600, straight).direction, 0);
+    tracker.update(event(180), 650);
+    assert.equal(tracker.classify(650, straight).direction, -1);
+    assert.equal(tracker.classify(350, straight).reason, 'missing-heading');
+  }
+});
+
+test('stale reading recovery does not reinterpret historical steps or reset direction', () => {
+  const tracker = calibrated();
+  assert.equal(tracker.classify(800, straight).reason, 'stale-heading');
+  assert.equal(tracker.isCalibrated, true);
+  feed(tracker, 1000, 1200, 180);
+  assert.equal(tracker.classify(1200, straight).direction, 0);
+  tracker.update(event(180), 1250);
+  assert.equal(tracker.classify(1250, straight).direction, -1);
+  assert.equal(tracker.classify(800, straight).reason, 'stale-heading');
+});
+
+test('unstable heading retains calibration and resumes after its stable suffix', () => {
+  const tracker = calibrated();
+  for(let time = 350; time <= 650; time += 50) tracker.update(event(time % 100 ? 120 : 180), time);
+  assert.equal(tracker.classify(650, straight).reason, 'unstable-heading');
+  assert.equal(tracker.isCalibrated, true);
+  feed(tracker, 700, 900, 180);
+  assert.equal(tracker.classify(900, straight).direction, 0);
+  tracker.update(event(180), 950);
+  assert.equal(tracker.classify(950, straight).direction, -1);
+  assert.equal(tracker.classify(650, straight).reason, 'unstable-heading');
 });
 
 test('nonfinite inputs, malformed candidates, and duplicate times cannot guess direction', () => {

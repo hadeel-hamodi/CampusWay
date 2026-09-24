@@ -132,16 +132,47 @@ test('new calibration resets pending steps and cannot classify steps from the ol
   assert.equal(Number(h.element('netSteps').textContent), 0);
 });
 
-test('posture/reference changes require recalibration and cannot move net position', async () => {
-  for(const extra of [{beta: 80}, {absolute: true}]){
+test('reference or heading source changes require recalibration and cannot move net position', async () => {
+  for(const extra of [{absolute: true}, {webkitCompassHeading: 70}]){
     const h = await calibrated();
     h.orient(450, 70, extra);
     assert.equal(h.run('headingTracker.isCalibrated'), false);
-    assert.match(h.element('directionStatus').textContent, /Recalibrate/);
+    assert.match(h.element('directionStatus').textContent, /set.*direction|recalibrat/i);
     h.injectSteps(500, [450]);
     assert.equal(Number(h.element('netSteps').textContent), 0);
     assert.equal(Number(h.element('unknownSteps').textContent), 1);
   }
+});
+
+test('temporary tilt preserves counts and automatically resumes forward or reverse', async () => {
+  for(const bearing of [70, 250]){
+    const h = await calibrated();
+    h.stable(450, 850, 70);
+    h.injectSteps(850, [700, 800]);
+    h.stable(900, 1300, bearing, {beta: 80});
+    assert.equal(h.run('headingTracker.isCalibrated'), true);
+    assert.match(h.element('directionStatus').textContent, /paused/i);
+    assert.match(h.element('directionStatus').textContent, /automatic/i);
+    h.injectSteps(1300, [1100, 1250]);
+    assert.equal(Number(h.element('forwardSteps').textContent), 2);
+    assert.equal(Number(h.element('backwardSteps').textContent), 0);
+    assert.equal(Number(h.element('unknownSteps').textContent), 2);
+    h.stable(1350, 1750, bearing);
+    assert.doesNotMatch(h.element('directionStatus').textContent, /paused/i);
+    assert.equal(Number(h.element('netSteps').textContent), 2, 'unknown steps must not be replayed');
+    h.injectSteps(1750, [1700]);
+    assert.equal(Number(h.element('forwardSteps').textContent), bearing === 70 ? 3 : 2);
+    assert.equal(Number(h.element('backwardSteps').textContent), bearing === 70 ? 0 : 1);
+    assert.equal(Number(h.element('unknownSteps').textContent), 2);
+  }
+});
+
+test('suitable tilt changes do not discard diagnostic calibration', async () => {
+  const h = await calibrated();
+  h.stable(450, 850, 70, {beta: 60, gamma: 35});
+  h.injectSteps(850, [800]);
+  assert.equal(h.run('headingTracker.isCalibrated'), true);
+  assert.equal(Number(h.element('forwardSteps').textContent), 1);
 });
 
 test('backgrounding or changing screen orientation invalidates the forward reference', async () => {
@@ -152,6 +183,6 @@ test('backgrounding or changing screen orientation invalidates the forward refer
     assert.equal(h.run('headingTracker.isCalibrated'), false);
     h.element('resetBtn').onclick();
     assert.equal(h.run('headingTracker.isCalibrated'), false, 'reset must not invent calibration');
-    assert.match(h.element('directionStatus').textContent, /Recalibrate/);
+    assert.match(h.element('directionStatus').textContent, /set.*direction|recalibrat/i);
   }
 });

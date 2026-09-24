@@ -11,8 +11,7 @@
     calibrationSpread: 15,
     stableTime: 250,
     stableSpread: 20,
-    directionTolerance: 45,
-    postureChange: 30
+    directionTolerance: 45
   });
 
   const normalize = angle => ((angle % 360) + 360) % 360;
@@ -70,11 +69,10 @@
       if(angle === null || (angle !== 0 && angle !== 180)) reason = 'portrait-required';
       else if(heading === null || !Number.isFinite(beta) || !Number.isFinite(gamma)) reason = 'missing-heading';
       else if(beta < 0 || beta > 70 || Math.abs(gamma) > 45) reason = 'posture-changed';
-      else if(this._calibration &&
-        (Math.abs(beta - this._calibration.beta) > SETTINGS.postureChange ||
-         Math.abs(gamma - this._calibration.gamma) > SETTINGS.postureChange)) reason = 'posture-changed';
 
-      if(reason === 'portrait-required' || reason === 'posture-changed') this.invalidate();
+      // A temporary grip or reading problem pauses classification, not calibration.
+      // Keep the original map offset; a fresh stable suffix must follow this barrier
+      // before movement can resume. Reference/screen changes still invalidate above.
       this._samples.push({ time: now, heading, beta, gamma, reason });
       this._samples = this._samples.filter(sample => now - sample.time <= SETTINGS.historyTime);
       if(this._samples.length > SETTINGS.maxSamples) this._samples.splice(0, this._samples.length - SETTINGS.maxSamples);
