@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v7-direction-recovery';
+const CACHE_NAME = 'campusway-v8-accessible-routes';
 
 const APP_FILES = [
   './',

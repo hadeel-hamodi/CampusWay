@@ -430,9 +430,9 @@ const floorPlanMarkupCache = new Map();
 
 // Translation layer only. Routing, graph loading and room handoff stay unchanged.
 const INDOOR_T = {
-  en:{campusMap:'← Campus map',building:'BUILDING',startFloor:'START FLOOR',startLocation:'START LOCATION',destinationFloor:'DESTINATION FLOOR',destination:'DESTINATION',route:'Route',autoMode:'Auto Mode',phoneSensors:'Phone Sensors',accessibleRoute:'Accessible route',startNavigation:'▶ Start navigation',chooseRoute:'Choose a route.',floor:'Floor',navigation:'Navigation',noRoute:'No route yet',noRouteHelp:"Choose where you're starting and where you want to go.",livePosition:'Live position',notStarted:'Not started',howWorks:'How this demo works',howWorksText:'Choose a floor first; the location dropdown then contains only rooms and useful destinations from that floor. During navigation, the marker follows the planned route.',chooseDestinationBanner:'Choose a destination',routeAppear:'Your route will appear here.',recenter:'◎ Recenter'},
-  he:{campusMap:'→ מפת הקמפוס',building:'בניין',startFloor:'קומת התחלה',startLocation:'נקודת התחלה',destinationFloor:'קומת יעד',destination:'יעד',route:'מסלול',autoMode:'מצב אוטומטי',phoneSensors:'חיישני הטלפון',accessibleRoute:'מסלול נגיש',startNavigation:'▶ התחל ניווט',chooseRoute:'בחר מסלול.',floor:'קומה',navigation:'ניווט',noRoute:'אין מסלול עדיין',noRouteHelp:'בחר מאיפה להתחיל ולאן ברצונך להגיע.',livePosition:'מיקום נוכחי',notStarted:'טרם התחיל',howWorks:'איך הניווט עובד',howWorksText:'בחר קודם קומה. לאחר מכן יוצגו החדרים והיעדים השימושיים באותה קומה. במהלך הניווט הסמן מתקדם לאורך המסלול המתוכנן.',chooseDestinationBanner:'בחר יעד',routeAppear:'המסלול יופיע כאן.',recenter:'◎ מרכז מחדש'},
-  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا، ثم ستظهر الغرف والوجهات المفيدة الموجودة في ذلك الطابق. أثناء الملاحة يتحرك المؤشر على المسار المحدد.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'}
+  en:{campusMap:'← Campus map',building:'BUILDING',startFloor:'START FLOOR',startLocation:'START LOCATION',destinationFloor:'DESTINATION FLOOR',destination:'DESTINATION',route:'Route',autoMode:'Auto Mode',phoneSensors:'Phone Sensors',accessibleRoute:'Accessible route',startNavigation:'▶ Start navigation',chooseRoute:'Choose a route.',floor:'Floor',navigation:'Navigation',noRoute:'No route yet',noRouteHelp:"Choose where you're starting and where you want to go.",routeNotFound:'No route found.',routeNotFoundHelp:'Try another start or destination.',noAccessibleRoute:'No step-free route found.',noAccessibleRouteHelp:'Try another entrance or destination. The previous route has been cleared.',livePosition:'Live position',notStarted:'Not started',howWorks:'How this demo works',howWorksText:'Choose a floor first; the location dropdown then contains only rooms and useful destinations from that floor. During navigation, the marker follows the planned route.',chooseDestinationBanner:'Choose a destination',routeAppear:'Your route will appear here.',recenter:'◎ Recenter'},
+  he:{campusMap:'→ מפת הקמפוס',building:'בניין',startFloor:'קומת התחלה',startLocation:'נקודת התחלה',destinationFloor:'קומת יעד',destination:'יעד',route:'מסלול',autoMode:'מצב אוטומטי',phoneSensors:'חיישני הטלפון',accessibleRoute:'מסלול נגיש',startNavigation:'▶ התחל ניווט',chooseRoute:'בחר מסלול.',floor:'קומה',navigation:'ניווט',noRoute:'אין מסלול עדיין',noRouteHelp:'בחר מאיפה להתחיל ולאן ברצונך להגיע.',routeNotFound:'לא נמצא מסלול.',routeNotFoundHelp:'נסה נקודת התחלה או יעד אחרים.',noAccessibleRoute:'לא נמצא מסלול ללא מדרגות.',noAccessibleRouteHelp:'נסה כניסה או יעד אחרים. המסלול הקודם נוקה.',livePosition:'מיקום נוכחי',notStarted:'טרם התחיל',howWorks:'איך הניווט עובד',howWorksText:'בחר קודם קומה. לאחר מכן יוצגו החדרים והיעדים השימושיים באותה קומה. במהלך הניווט הסמן מתקדם לאורך המסלול המתוכנן.',chooseDestinationBanner:'בחר יעד',routeAppear:'המסלול יופיע כאן.',recenter:'◎ מרכז מחדש'},
+  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',routeNotFound:'لم يتم العثور على مسار.',routeNotFoundHelp:'جرّب نقطة بداية أو وجهة أخرى.',noAccessibleRoute:'لم يتم العثور على مسار بدون درج.',noAccessibleRouteHelp:'جرّب مدخلًا أو وجهة أخرى. تم حذف المسار السابق.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا، ثم ستظهر الغرف والوجهات المفيدة الموجودة في ذلك الطابق. أثناء الملاحة يتحرك المؤشر على المسار المحدد.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'}
 };
 
 function indoorLanguage(){
@@ -581,6 +581,11 @@ if(savedContext){
   try{
     const context = JSON.parse(savedContext);
 
+    if(context.buildingKey && context.buildingKey !== BUILDING){
+      sessionStorage.removeItem('indoorContext');
+      return;
+    }
+
 // If arriving from outdoor navigation, use the exact entrance
 // selected by the outdoor route. Until entrance mapping is added,
 // fall back to the first mapped entrance like before.
@@ -666,7 +671,6 @@ if(!matchingDestinations.length && context.destinationNodeId){
 document.getElementById('building').onchange = async () => {
 stopNavigationMotion();
 BUILDING = document.getElementById('building').value;
-  
 routePath = [];
 routeNodes = [];
 progressIndex = 0;
@@ -1320,14 +1324,34 @@ function describeRoute(){
   $('eta').textContent='Demo';
 }
 
+function clearRouteState(title=it('noRoute'), help=it('noRouteHelp')){
+  stopNavigationMotion();
+  routePath=[];
+  routeNodes=[];
+  progressIndex=0;
+  progressT=0;
+  sensorFloorBoundary=false;
+  $('startBtn').disabled=true;
+  $('routeCard').innerHTML=`<strong>${esc(title)}</strong><div class="muted">${esc(help)}</div>`;
+  $('steps').innerHTML='';
+  $('instruction').textContent=title;
+  $('subInstruction').textContent=help;
+  $('livePos').textContent=it('notStarted');
+  $('eta').textContent='--';
+  $('status').textContent=title;
+  updateDirectionControls();
+  floorButtons();
+  drawBaseMap();
+}
+
 function route(){
   const rawFrom=$('from').value, rawTo=$('to').value;
   if(!$('fromFloor').value||!$('toFloor').value){
-    $('status').textContent='Choose the start and destination floors first.';
+    clearRouteState(it('noRoute'), it('noRouteHelp'));
     return;
   }
   if(!rawFrom||!rawTo){
-    $('status').textContent='Choose both locations.';
+    clearRouteState(it('noRoute'), it('noRouteHelp'));
     return;
   }
 
@@ -1335,7 +1359,13 @@ function route(){
   const b=resolveSelection(rawTo);
 
   const p=dijkstra(a,b);
-  if(!p){$('status').textContent='No route found.';return}
+  if(!p){
+    clearRouteState(
+      $('accessibleRoute').checked ? it('noAccessibleRoute') : it('routeNotFound'),
+      $('accessibleRoute').checked ? it('noAccessibleRouteHelp') : it('routeNotFoundHelp')
+    );
+    return;
+  }
 
   stopNavigationMotion();
   routePath=p;
@@ -1843,11 +1873,21 @@ async function startNavigation(){
 }
 
 $('fromFloor').onchange=()=>{
+  if(routeNodes.length || navigationActive) clearRouteState();
   fillLocationSelect($('fromFloor').value,'from','Choose start location...');
 };
 
 $('toFloor').onchange=()=>{
+  if(routeNodes.length || navigationActive) clearRouteState();
   fillLocationSelect($('toFloor').value,'to','Choose destination...');
+};
+
+$('from').onchange=()=>{
+  if(routeNodes.length || navigationActive) clearRouteState();
+};
+
+$('to').onchange=()=>{
+  if(routeNodes.length || navigationActive) clearRouteState();
 };
 
 let navMode = 'auto';
@@ -1867,6 +1907,17 @@ function setNavigationMode(mode){
 $('autoModeBtn').onclick=()=>setNavigationMode('auto');
 $('sensorModeBtn').onclick=()=>setNavigationMode('sensor');
 $('calibrateBtn').onclick=calibrateAndStart;
+
+$('accessibleRoute').onchange=()=>{
+  if(
+    $('fromFloor').value && $('toFloor').value &&
+    $('from').value && $('to').value
+  ){
+    route();
+  }else if(routeNodes.length || navigationActive){
+    clearRouteState();
+  }
+};
 
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden && navMode === 'sensor') requireDirectionCalibration();
@@ -1890,6 +1941,7 @@ $('swap').onclick=()=>{
 
   $('from').value=tv;
   $('to').value=fv;
+  if(routeNodes.length || navigationActive) clearRouteState();
 };
 $('startBtn').onclick=startNavigation;
 
@@ -1987,6 +2039,12 @@ const savedAccessibilityProfile =
 
 if(savedAccessibilityProfile === 'mobility'){
   $('accessibleRoute').checked = true;
+  $('accessibleRoute').disabled = true;
+  $('accessibleRoute').title = localizedInstruction(
+    'Mobility profile keeps stair-free routing on.',
+    'ملف الإعاقة الحركية يُبقي المسار بدون درج مفعّلًا.',
+    'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.'
+  );
 }
 
 applyIndoorTranslations();

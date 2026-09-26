@@ -315,16 +315,24 @@ addEdge(
   // Find closest OSM routing node
   // --------------------------------------------------
 
-  function nearestNode(lat, lon) {
+  function nearestNode(lat, lon, options = {}) {
 
     let best = null;
     let bestDistance = Infinity;
+    const avoidSteps = options.avoidSteps === true;
 
     const point = [lat, lon];
 
     for(const [id, coord] of coordinates.entries()){
 
       if(!graph.has(id)){
+        continue;
+      }
+
+      if(
+        avoidSteps &&
+        !(graph.get(id) || []).some(edge => edge.type !== 'steps')
+      ){
         continue;
       }
 
@@ -451,11 +459,12 @@ function closestNodesBetweenComponents(componentA, componentB){
   // Dijkstra
   // --------------------------------------------------
 
- function shortestPath(start, end) {
+ function shortestPath(start, end, options = {}) {
 
     const distances = new Map();
     const previous = new Map();
     const previousEdge = new Map();
+    const avoidSteps = options.avoidSteps === true;
 
     const unvisited =
       new Set(graph.keys());
@@ -494,6 +503,10 @@ function closestNodesBetweenComponents(componentA, componentB){
 
       unvisited.delete(current);
 for(const edge of graph.get(current) || []){
+
+  if(avoidSteps && edge.type === 'steps'){
+    continue;
+  }
 
   if(!unvisited.has(edge.node)){
     continue;
@@ -692,21 +705,28 @@ async function route(
   startLat,
   startLng,
   endLat,
-  endLng
+  endLng,
+  options = {}
 ){
 
     await load();
 
+    const routeOptions = {
+      avoidSteps: options.avoidSteps === true
+    };
+
     const startNode =
       nearestNode(
         startLat,
-        startLng
+        startLng,
+        routeOptions
       );
 
     const endNode =
       nearestNode(
         endLat,
-        endLng
+        endLng,
+        routeOptions
       );
 
     if(
@@ -719,7 +739,8 @@ async function route(
 const result =
   shortestPath(
     startNode,
-    endNode
+    endNode,
+    routeOptions
   );
 
 if(!result){

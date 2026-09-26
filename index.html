@@ -658,7 +658,7 @@ const T = {
       {id:'mental',  label:'Mental Health Support',sub:'Routes to quiet space on request'},
     ],
     alerts:{
-      mobility:'Elevator in Eshkol Tower reported out of service. Routes will avoid it automatically.',
+      mobility:'Stairs are excluded from accessible indoor routes. If no step-free route is mapped, CampusWay will tell you.',
       visual:'Tactile guide path active from Carmel Gate to Main Building.',
       mental:'Quiet zones (libraries, garden) will be suggested near your route.',
       spatial:'Step-by-step landmarks enabled — fewer turns, simpler directions.',
@@ -676,6 +676,7 @@ const T = {
     servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks',
     continueIndoors:'Continue indoors →', switchingIndoor:'Switching to indoor mode...', room:'Room',
     yourLocation:'Your location', hour:'hr', hours:'hours', noBuildingOrRoom:'No matching building or room found.',
+    noAccessibleRoute:'No step-free outdoor route found.', noAccessibleRouteHelp:'Try another starting point or destination. CampusWay will not draw an unverified route.',
   },
   he:{
     destination:'לאן תרצה ללכת?',
@@ -709,7 +710,7 @@ const T = {
       {id:'mental',  label:'תמיכה נפשית',          sub:'מסלולים לאזורי שקט לפי בקשה'},
     ],
     alerts:{
-      mobility:'מעלית במגדל אשכול מדווחת כלא זמינה. המסלולים יעקפו אותה אוטומטית.',
+      mobility:'מדרגות אינן נכללות במסלולים נגישים בתוך הבניינים. אם לא מופה מסלול ללא מדרגות, CampusWay יודיע לך.',
       visual:'נתיב מישוש פעיל משער הכרמל לבניין הראשי.',
       mental:'אזורים שקטים (ספריות, גן) יוצעו ליד המסלול שלך.',
       spatial:'ניווט לפי ציוני דרך פעיל — פחות פניות, הוראות פשוטות.',
@@ -727,6 +728,7 @@ const T = {
     servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון',
     continueIndoors:'המשך לניווט בתוך הבניין ←', switchingIndoor:'עובר למצב ניווט בתוך הבניין...', room:'חדר',
     yourLocation:'המיקום שלך', hour:'שעה', hours:'שעות', noBuildingOrRoom:'לא נמצא בניין או חדר תואם.',
+    noAccessibleRoute:'לא נמצא מסלול חיצוני ללא מדרגות.', noAccessibleRouteHelp:'נסה נקודת התחלה או יעד אחרים. CampusWay לא יציג מסלול שלא אומת.',
   },
   ar:{
     destination:'إلى أين تريد الذهاب؟',
@@ -760,7 +762,7 @@ const T = {
       {id:'mental',  label:'الصحة النفسية',          sub:'مسارات إلى أماكن هادئة عند الطلب'},
     ],
     alerts:{
-      mobility:'تم الإبلاغ عن عطل في مصعد برج إشكول. ستتجنب المسارات المصعد تلقائيًا.',
+      mobility:'يتم استبعاد الدرج من المسارات المهيأة داخل المباني. إذا لم يكن هناك مسار بدون درج على الخريطة، سيخبرك CampusWay.',
       visual:'مسار لمسي نشط من بوابة الكرمل إلى المبنى الرئيسي.',
       mental:'ستُقترح مناطق هادئة (مكتبات، حدائق) بالقرب من مسارك.',
       spatial:'الملاحة بالمعالم مفعّلة — أقل منعطفات، توجيهات أبسط.',
@@ -778,6 +780,7 @@ const T = {
     servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم',
     continueIndoors:'تابع إلى الداخل ←', switchingIndoor:'جارٍ الانتقال إلى وضع الملاحة داخل المبنى...', room:'غرفة',
     yourLocation:'موقعك', hour:'ساعة', hours:'ساعات', noBuildingOrRoom:'لم يتم العثور على مبنى أو غرفة مطابقة.',
+    noAccessibleRoute:'لم يتم العثور على مسار خارجي بدون درج.', noAccessibleRouteHelp:'جرّب نقطة بداية أو وجهة أخرى. لن يعرض CampusWay مسارًا غير موثّق.',
   }
 };
 
@@ -786,11 +789,17 @@ const T = {
 // ═══════════════════════════════════════════
 let lang = 'en';
 let t = T.en;
-let currentProfile = 'general';
+const PROFILE_IDS = new Set(['general','mobility','visual','spatial','mental']);
+const storedProfile = sessionStorage.getItem('accessibilityProfile');
+let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
+sessionStorage.setItem('accessibilityProfile', currentProfile);
 let audioOn = false;
 let customStart = null; // {lat, lng, label}
 let userLocationMarker = null;
 let foodMode = false;
+let keepIndoorContextForCurrentRoute = false;
+let currentOutdoorDestination = null;
+let outdoorRouteRequestId = 0;
 
 // ═══════════════════════════════════════════
 // LANGUAGE PICKER
@@ -798,12 +807,14 @@ let foodMode = false;
 function pickLang(l, dir){
   lang = l;
   t = T[l];
+  sessionStorage.setItem('campuswayLanguage', l);
   document.documentElement.lang = l;
   document.documentElement.dir = dir;
   document.getElementById('langScreen').style.display = 'none';
   document.getElementById('appWrap').classList.add('visible');
   applyTranslations();
   buildProfiles();
+  if(currentProfile !== 'general') showAlert(currentProfile);
   buildLegend();
   setTimeout(()=>{ map.invalidateSize(); map.fitBounds(CAMPUS_DATA.buildings.map(b=>[b.lat,b.lng]),{padding:[60,60],maxZoom:16}); }, 100);
 }
@@ -952,7 +963,7 @@ function buildProfiles(){
   el.innerHTML = '';
   t.profiles.forEach((p,i)=>{
     const btn = document.createElement('button');
-    btn.className = 'profile-btn'+(p.id==='general'?' active':'');
+    btn.className = 'profile-btn'+(p.id===currentProfile?' active':'');
     btn.dataset.id = p.id;
     btn.innerHTML = `<div class="profile-icon">${ICONS[ICON_KEYS[i]]}</div>
       <div class="profile-text"><strong>${p.label}</strong><small>${p.sub}</small></div>`;
@@ -963,6 +974,12 @@ function buildProfiles(){
       sessionStorage.setItem('accessibilityProfile', currentProfile);
       showAlert(p.id);
       speak(p.label + '. ' + p.sub);
+      if(currentOutdoorDestination){
+        const destination = currentOutdoorDestination;
+        routeTo(destination.name, destination.lat, destination.lng, {
+          keepIndoorContext: destination.keepIndoorContext
+        });
+      }
     };
     el.appendChild(btn);
   });
@@ -1337,7 +1354,8 @@ function routeToIndoorService(match){
     JSON.stringify({
       entranceId: null,
       startNodeId: null,
-      destinationLabel: label
+      destinationLabel: label,
+      buildingKey: match.buildingKey
     })
   );
 
@@ -1354,7 +1372,8 @@ function routeToIndoorService(match){
   routeTo(
     match.building.name,
     match.building.lat,
-    match.building.lng
+    match.building.lng,
+    {keepIndoorContext:true}
   );
 }
 
@@ -1505,8 +1524,15 @@ gateMarkers.forEach(marker => {
   }
 }
 
-async function routeTo(name, lat, lng){
-if(routeLine) map.removeLayer(routeLine);
+async function routeTo(name, lat, lng, options={}){
+const keepIndoorContext = options.keepIndoorContext === true;
+keepIndoorContextForCurrentRoute = keepIndoorContext;
+currentOutdoorDestination = {name, lat, lng, keepIndoorContext};
+if(!keepIndoorContext) sessionStorage.removeItem('indoorContext');
+
+const requestId = ++outdoorRouteRequestId;
+if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+clearInterval(window._dashAnim);
 
 const start = getStart();
 
@@ -1517,10 +1543,25 @@ outdoorResult = await CampusOutdoorRouting.route(
   start.lat,
   start.lng,
   lat,
-  lng
+  lng,
+  {avoidSteps: currentProfile === 'mobility'}
 );
 }catch(error){
   console.error('Outdoor routing failed:', error);
+}
+
+if(requestId !== outdoorRouteRequestId) return;
+
+if(!outdoorResult && currentProfile === 'mobility'){
+  const indoorBtn = document.getElementById('continueIndoorBtn');
+  indoorBtn.style.display = 'none';
+  delete indoorBtn.dataset.building;
+  document.getElementById('routeTitle').textContent = t.noAccessibleRoute;
+  document.getElementById('routeSub').textContent = t.noAccessibleRouteHelp;
+  document.getElementById('routeEta').textContent = '—';
+  document.getElementById('routeCard').classList.add('show');
+  speak(t.noAccessibleRoute + ' ' + t.noAccessibleRouteHelp);
+  return;
 }
 
 let waypoints;
@@ -1605,6 +1646,8 @@ if(INDOOR_BUILDINGS[name]){
 }
 
 function closeRoute(){
+  outdoorRouteRequestId++;
+  currentOutdoorDestination = null;
   document.getElementById('routeCard').classList.remove('show');
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
   clearInterval(window._dashAnim);
@@ -1671,11 +1714,15 @@ function pickStart(name, lat, lng){
   gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#00B09B',fillColor:'#00B09B',fillOpacity:0.4,weight:3}).addTo(map);
   gpsMarker.bindPopup('🚩 '+name).openPopup();
   map.flyTo([lat,lng],17,{duration:0.6});
-  // If there's already an active route, recalculate it from new start
-  if(routeLine){
-    const dest = document.getElementById('routeTitle').textContent.split('→')[1]?.trim();
-    const match = CAMPUS_DATA.buildings.find(b=>b.name === dest);
-    if(match) setTimeout(()=> routeTo(match.name, match.lat, match.lng), 700);
+  // Recalculate the saved destination, including after an accessible route failed.
+  if(currentOutdoorDestination){
+    const destination = currentOutdoorDestination;
+    setTimeout(()=>{
+      if(currentOutdoorDestination !== destination) return;
+      routeTo(destination.name, destination.lat, destination.lng, {
+        keepIndoorContext: destination.keepIndoorContext
+      });
+    }, 700);
   }
 }
 
@@ -1836,7 +1883,8 @@ const buildingNames = {
     JSON.stringify({
       entranceId: null,
       startNodeId: null,
-      destinationLabel: label
+      destinationLabel: label,
+      buildingKey
     })
   );
 
@@ -1854,7 +1902,8 @@ const buildingNames = {
   routeTo(
     building.name,
     building.lat,
-    building.lng
+    building.lng,
+    {keepIndoorContext:true}
   );
 }
 
