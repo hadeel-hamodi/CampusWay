@@ -3344,6 +3344,23 @@ if(name === 'Main Building'){
       label: 'Main entrance 700'
     })
   );
+}else if(name === 'Rabin Building'){
+  customStart = {
+    lat,
+    lng,
+    label: name,
+    buildingKey: 'rabin',
+    nodeId: 'floor7_n108'
+  };
+
+  sessionStorage.setItem(
+    'indoorStartContext',
+    JSON.stringify({
+      buildingKey: 'rabin',
+      startNodeId: 'floor7_n108',
+      label: 'Rabin entrance 700'
+    })
+  );
 }else{
   customStart = {lat, lng, label:name};
 }
