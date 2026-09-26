@@ -594,16 +594,25 @@ if(journeyStage === 'same-building'){
           destinations = [savedDestination];
         }
 
-}else if(
-  String(destinationContext.destinationLabel)
-    .toLowerCase()
-    .includes('restroom')
-){
-  destinations = allNodes().filter(
-    node => node.type === 'restroom'
-  );
+    }else if(
+      String(destinationContext.destinationLabel)
+        .toLowerCase()
+        .includes('restroom')
+    ){
+      destinations = allNodes().filter(
+        node => node.type === 'restroom'
+      );
 
-        }else if(destinationContext.destinationLabel){
+    }else if(
+      String(destinationContext.destinationLabel)
+        .toLowerCase()
+        .includes('shelter')
+    ){
+      destinations = allNodes().filter(
+        node => node.type === 'shelter'
+      );
+
+    }else if(destinationContext.destinationLabel){
           const wantedLabel =
             String(destinationContext.destinationLabel)
               .trim()
@@ -783,9 +792,27 @@ if(transferEntranceId){
         $('from').value = entrance.id;
       }
 
-      let matchingDestinations = [];
+let matchingDestinations = [];
 
-      if(context.destinationLabel){
+if(
+  String(context.destinationLabel)
+    .toLowerCase()
+    .includes('restroom')
+){
+  matchingDestinations = allNodes().filter(
+    node => node.type === 'restroom'
+  );
+
+      }else if(
+        String(context.destinationLabel)
+          .toLowerCase()
+          .includes('shelter')
+      ){
+        matchingDestinations = allNodes().filter(
+          node => node.type === 'shelter'
+        );
+
+      }else if(context.destinationLabel){
         matchingDestinations = allNodes().filter(
           node =>
             ['room', 'gym', 'library', 'landmark'].includes(
@@ -805,9 +832,9 @@ if(transferEntranceId){
 
         if(
           savedNode &&
-          ['room', 'gym', 'library', 'landmark'].includes(
-            savedNode.type
-          )
+          ['room', 'restroom', 'shelter', 'gym', 'library', 'landmark'].includes(
+          savedNode.type
+        )
         ){
           matchingDestinations = [savedNode];
         }
@@ -920,7 +947,7 @@ function userFacingLocationsForFloor(floorId){
 
   const result=(GRAPH.floors[floorId].nodes||[])
 .filter(n =>
-  ['room', 'entrance', 'restroom', 'landmark', 'gym', 'library'].includes(n.type)
+  ['room', 'entrance', 'restroom', 'shelter', 'landmark', 'gym', 'library'].includes(n.type)
 )
     .sort((a,b)=>{
       const priority={room:0,restroom:1,entrance:2,landmark:3};

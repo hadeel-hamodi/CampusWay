@@ -550,6 +550,11 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
       <span id="lbl-service-food">Food</span>
     </button>
 
+    <button class="a11y-btn" onclick="findNearbyService('shop')">
+  <span style="font-size:18px;">🛍️</span>
+  <span id="lbl-service-shops">Shops</span>
+    </button>
+
     <button class="a11y-btn" onclick="findNearbyService('clinic')">
       <span style="font-size:18px;">🏥</span>
       <span id="lbl-service-clinic">Clinic</span>
@@ -570,6 +575,11 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
   <button class="a11y-btn" onclick="findNearbyService('landmark')">
     <span style="font-size:18px;">📍</span>
     <span id="lbl-service-landmarks">Landmarks</span>
+  </button>
+
+  <button class="a11y-btn" onclick="findNearbyService('shelter')">
+  <span style="font-size:18px;">🛡️</span>
+  <span id="lbl-service-shelters">Shelters</span>
   </button>
 </div>
 </div>
@@ -665,7 +675,7 @@ const T = {
     },
     voices:['US English','UK English','Default'],
     legendBuilding:'Building',
-    legendGate:'Gate / Entrance', legendFood:'Food & Shops', legendClinic:'Clinic',
+    legendGate:'Gate / Entrance', legendFood:'Food', legendShop:'Shops', legendClinic:'Clinic',
     minWalk:'min walk',
     favourites:'Favourites',
     noFavourites:'No saved places yet. Click "Save" on any building.',
@@ -673,7 +683,7 @@ const T = {
     removeFromFav:'Remove',
     langSwitch:'🌐 Language',
     legendElevator:'Elevator', legendStairs:'Stairs',
-    servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks',
+    servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks',serviceShops:'Shops', serviceShelters:'Shelters',
     continueIndoors:'Continue indoors →', switchingIndoor:'Switching to indoor mode...', room:'Room',
     yourLocation:'Your location', hour:'hr', hours:'hours', noBuildingOrRoom:'No matching building or room found.',
   },
@@ -716,7 +726,7 @@ const T = {
     },
     voices:['עברית','אנגלית','ברירת מחדל'],
     legendBuilding:'בניין',
-    legendGate:'שער / כניסה', legendFood:'מזון וחנויות', legendClinic:'קליניקה',
+    legendGate:'שער / כניסה', legendFood:'מזון', legendShop:'חנויות', legendClinic:'קליניקה',
     legendElevator:'מעלית', legendStairs:'מדרגות',
     minWalk:'דק׳ הליכה',
     favourites:'מועדפים',
@@ -724,7 +734,7 @@ const T = {
     saveToFav:'⭐ שמור למועדפים',
     langSwitch:'🌐 שפה',
     removeFromFav:'הסר',
-    servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון',
+    servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון',serviceShops:'חנויות', serviceShelters:'מרחבים מוגנים',
     continueIndoors:'המשך לניווט בתוך הבניין ←', switchingIndoor:'עובר למצב ניווט בתוך הבניין...', room:'חדר',
     yourLocation:'המיקום שלך', hour:'שעה', hours:'שעות', noBuildingOrRoom:'לא נמצא בניין או חדר תואם.',
   },
@@ -767,7 +777,7 @@ const T = {
     },
     voices:['عربية','إنجليزية','افتراضي'],
     legendBuilding:'مبنى',
-    legendGate:'بوابة / مدخل', legendFood:'طعام ومحلات', legendClinic:'عيادة',
+    legendGate:'بوابة / مدخل', legendFood:'طعام', legendShop:'محلات', legendClinic:'عيادة',
     legendElevator:'مصعد', legendStairs:'سلالم',
     minWalk:'دقيقة سيرًا',
     favourites:'المفضلة',
@@ -775,7 +785,7 @@ const T = {
     saveToFav:'⭐ حفظ في المفضلة',
     langSwitch:'🌐 لغة',
     removeFromFav:'إزالة',
-    servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم',
+    servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم',serviceShops:'محلات', serviceShelters:'ملاجئ',
     continueIndoors:'تابع إلى الداخل ←', switchingIndoor:'جارٍ الانتقال إلى وضع الملاحة داخل المبنى...', room:'غرفة',
     yourLocation:'موقعك', hour:'ساعة', hours:'ساعات', noBuildingOrRoom:'لم يتم العثور على مبنى أو غرفة مطابقة.',
   }
@@ -841,6 +851,8 @@ function applyTranslations(){
   document.getElementById('lbl-services').textContent = t.servicesNearMe;
   document.getElementById('lbl-service-restrooms').textContent = t.serviceRestrooms;
   document.getElementById('lbl-service-food').textContent = t.serviceFood;
+  document.getElementById('lbl-service-shops').textContent = t.serviceShops;
+  document.getElementById('lbl-service-shelters').textContent = t.serviceShelters;
   document.getElementById('lbl-service-clinic').textContent = t.serviceClinic;
   document.getElementById('lbl-service-gym').textContent = t.serviceGym;
   document.getElementById('lbl-service-library').textContent = t.serviceLibrary;
@@ -921,7 +933,8 @@ function toggleContrast(){
       div.style.color = '#000';
       const orig = div.dataset.origBg;
       if(orig.includes('0891B2') || orig.includes('rgb(8, 145, 178)')) div.innerHTML = '🚻';
-      else if(orig.includes('F59E0B') || orig.includes('rgb(245, 158, 11)')) div.innerHTML = '🚪';
+      else if(orig.includes('9CA3AF') || orig.includes('rgb(156, 163, 175)')) div.innerHTML = '🚪';
+      else if(orig.includes('F59E0B') || orig.includes('rgb(245, 158, 11)')) div.innerHTML = '🛍️';
       else if(orig.includes('00B09B') || orig.includes('rgb(0, 176, 155)')) div.innerHTML = '🍽️';
       else if(orig.includes('EF4444') || orig.includes('rgb(239, 68, 68)')) div.innerHTML = '+';
       else if(orig.includes('8B5CF6') || orig.includes('rgb(139, 92, 246)')) div.innerHTML = '▲';
@@ -1132,7 +1145,7 @@ const gateMarkers = [];
 
 CAMPUS_DATA.points.gates.forEach(g=>{
   const icon = L.divIcon({className:'',
-    html:`<div style="width:18px;height:18px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:#9CA3AF;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
 const marker = L.marker([g.lat,g.lng],{icon})
   .addTo(map)
@@ -1171,6 +1184,35 @@ CAMPUS_DATA.points.food.forEach(f=>{
   foodMarkers.push(marker);
 });
 
+// Shops & services — blue
+const shopMarkers = [];
+
+const normalShopIcon = L.divIcon({
+  className:'',
+  html: `<div style="width:14px;height:14px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
+  iconAnchor:[7,7]
+});
+
+CAMPUS_DATA.points.shops.forEach(s=>{
+  const marker = L.marker([s.lat,s.lng],{
+    icon: normalShopIcon
+  })
+  .addTo(map)
+  .bindPopup(`
+    <b>🛍️ ${s.name}</b>
+
+    <button
+      class="building-popup-btn"
+      onclick="routeTo('${s.name.replace(/'/g,"\\'")}', ${s.lat}, ${s.lng})"
+    >
+      ${t.navigateHere}
+    </button>
+  `);
+
+  marker.shopData = s;
+  shopMarkers.push(marker);
+});
+
 // Clinic — red cross
 const clinicMarkers = [];
 
@@ -1185,22 +1227,10 @@ const marker = L.marker([c.lat,c.lng],{icon})
 clinicMarkers.push(marker);
 });
 
-// Stairs & Elevators (mock data)
-const VERTICAL = [
-  // Main Building — Elevator (library, floors 5-6-7)
-  {lat:32.76308, lng:35.01795, type:'elevator', label:'Main Building — Library Elevator (Floors 5–7)', working:true},
-  
-  // Main Building — Stairs 1 (Aguda Cafe, floor 5→6)
-  {lat:32.76275, lng:35.01835, type:'stairs', label:'Main Building — Stairs by Aguda Cafe (Floor 5→6)'},
-  
-  // Main Building — Stairs 2 (above stairs 1, floor 6→7)
-  {lat:32.76278, lng:35.01838, type:'stairs', label:'Main Building — Stairs above Aguda Cafe (Floor 6→7)'},
-  
-  // Main Building — Stairs 3 (floor 6→7)
-  {lat:32.762331, lng:35.019234, type:'stairs', label:'Main Building — Stairs near Entrance / Garden Cafe (Floor 6→7)'},
-];
+// Outdoor stairs & elevators
+const vertical = [];
 
-VERTICAL.forEach(v=>{
+vertical.forEach(v=>{
   const isElevator = v.type === 'elevator';
   const broken = isElevator && !v.working;
   const bg = broken ? '#EF4444' : isElevator ? '#8B5CF6' : '#64748B';
@@ -1219,8 +1249,9 @@ function buildLegend(){
   
   document.getElementById('mapLegend').innerHTML = `
     <div class="legend-row">${dot('#0D1B3E','4px','','■')} ${t.legendBuilding}</div>
-    <div class="legend-row">${dot('#F59E0B','50%','','🚪')} ${t.legendGate}</div>
+    <div class="legend-row">${dot('#9CA3AF','50%','','🚪')} ${t.legendGate}</div>
     <div class="legend-row">${dot('#00B09B','50%','','🍽️')} ${t.legendFood}</div>
+    <div class="legend-row">${dot('#F59E0B','50%','','🛍️')} ${t.legendShop}</div>
     <div class="legend-row">${dot('#8B5CF6','4px','▲','▲')} ${t.legendElevator}</div>
     <div class="legend-row">${dot('#64748B','4px','≡','≡')} ${t.legendStairs}</div>
     <div class="legend-row">${dot('#EF4444','50%','+','+')} ${t.legendClinic}</div>`;
@@ -1341,6 +1372,72 @@ services.push({
   return services;
 }
 
+function collectIndoorShelterServices(){
+
+  const buildings = [
+    {
+      key: 'madriga',
+      name: 'Terrace Building',
+      graph: typeof MADRIGA_GRAPH !== 'undefined' ? MADRIGA_GRAPH : null
+    },
+    {
+      key: 'main',
+      name: 'Main Building',
+      graph: typeof MAIN_GRAPH !== 'undefined' ? MAIN_GRAPH : null
+    },
+    {
+      key: 'rabin',
+      name: 'Rabin Building',
+      graph: typeof RABIN_GRAPH !== 'undefined' ? RABIN_GRAPH : null
+    },
+    {
+      key: 'student',
+      name: 'Student House',
+      graph: typeof STUDENT_GRAPH !== 'undefined' ? STUDENT_GRAPH : null
+    },
+    {
+      key: 'multi-purpose',
+      name: 'Multi-Purpose Building',
+      graph: typeof MULTI_PURPOSE_GRAPH !== 'undefined' ? MULTI_PURPOSE_GRAPH : null
+    }
+  ];
+
+  const services = [];
+
+  buildings.forEach(building => {
+
+    const graph = building.graph;
+
+    const campusBuilding = CAMPUS_DATA.buildings.find(
+      b => b.name === building.name
+    );
+
+    if(!graph || !campusBuilding) return;
+
+    let hasShelter = false;
+
+    Object.values(graph.floors || {}).forEach(floor => {
+      (floor.nodes || []).forEach(node => {
+        if(node.type === 'shelter'){
+          hasShelter = true;
+        }
+      });
+    });
+
+    if(!hasShelter) return;
+
+    services.push({
+      name: 'Nearest shelter',
+      buildingName: building.name,
+      buildingKey: building.key,
+      lat: campusBuilding.lat,
+      lng: campusBuilding.lng
+    });
+  });
+
+  return services;
+}
+
 function findNearbyIndoorService(type){
 
   const start = getStart();
@@ -1365,7 +1462,18 @@ function findNearbyIndoorService(type){
       graph: typeof STUDENT_GRAPH !== 'undefined' ? STUDENT_GRAPH : null,
       buildingName: 'Student House',
       buildingKey: 'student'
-    }
+    },
+    ,
+    {
+      graph: typeof MULTI_PURPOSE_GRAPH !== 'undefined' ? MULTI_PURPOSE_GRAPH : null,
+      buildingName: 'Multi-Purpose Building',
+      buildingKey: 'multi-purpose'
+    },
+    /*{
+      graph: typeof EDUCATION_GRAPH !== 'undefined' ? EDUCATION_GRAPH : null,
+      buildingName: 'Education Building',
+      buildingKey: 'education'
+    }*/
   ];
 
   const matches = [];
@@ -1469,6 +1577,17 @@ function findNearbyService(type){
     services = collectIndoorRestroomServices();
   }
 
+  if(type === 'shelter'){
+
+    sessionStorage.removeItem('journeyStage');
+    sessionStorage.removeItem('originIndoorComplete');
+    sessionStorage.removeItem('sharedIndoorTransfer');
+    sessionStorage.removeItem('intermediateIndoorTransfer');
+    sessionStorage.removeItem('madrigaTransferEntrance');
+
+    services = collectIndoorShelterServices();
+  }
+
   if(type === 'food'){
     showFoodPlaces();
     return;
@@ -1544,6 +1663,44 @@ setTimeout(() => {
 }, 100);
 
 return;
+  }
+
+  if(type === 'shelter'){
+    sessionStorage.setItem(
+      'indoorContext',
+      JSON.stringify({
+        entranceId: null,
+        startNodeId: null,
+        destinationLabel: 'Shelter'
+      })
+    );
+
+    sessionStorage.setItem(
+      'indoorBuilding',
+      nearest.buildingKey
+    );
+
+    routeTo(
+      nearest.buildingName,
+      nearest.lat,
+      nearest.lng
+    );
+
+    setTimeout(() => {
+      const title = document.getElementById('routeTitle');
+
+      if(title){
+        const startLabel =
+          customStart && customStart.label === '📍 GPS'
+            ? t.currentLocation
+            : getStart().label;
+
+        title.textContent =
+          `${t.routeFrom} ${startLabel} → Nearest shelter`;
+      }
+    }, 100);
+
+    return;
   }
 
   routeTo(
