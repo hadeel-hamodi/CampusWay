@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v20-upstream-wheelchair';
+const CACHE_NAME = 'campusway-v22-cross-building-resume';
 
 const APP_FILES = [
 './',

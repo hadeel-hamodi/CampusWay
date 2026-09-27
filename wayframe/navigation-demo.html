@@ -2232,6 +2232,29 @@ function handleDetectedStep(stepTime){
 }
 
 
+function returnToOutdoorJourney(){
+  sessionStorage.setItem(
+    'campusTransitionDirection',
+    'outdoor'
+  );
+
+  if(
+    typeof window.location?.replace === 'function'
+  ){
+    window.location.replace(
+      '../index.html?resumeJourney=1'
+    );
+    return;
+  }
+
+  if(window.history?.length > 1){
+    window.history.back();
+    return;
+  }
+
+  window.location.href = '../index.html';
+}
+
 function completeNavigation(){
   stopNavigationMotion();
   progressIndex=routeNodes.length-1;
@@ -2327,66 +2350,36 @@ const usesIntermediateTransfer =
       'originIndoorComplete',
       'true'
     );
-  }
 
-  let continueButton =
-    document.getElementById('continueOutdoorBtn');
-
-  if(!continueButton){
-    continueButton =
-      document.createElement('button');
-
-    continueButton.id = 'continueOutdoorBtn';
-
-    continueButton.style.marginTop = '12px';
-    continueButton.style.padding = '10px 16px';
-    continueButton.style.border = '0';
-    continueButton.style.borderRadius = '10px';
-    continueButton.style.background = '#00B09B';
-    continueButton.style.color = 'white';
-    continueButton.style.fontWeight = '700';
-    continueButton.style.cursor = 'pointer';
-
-    $('routeCard').appendChild(continueButton);
-  }
-
-  continueButton.textContent =
-    usesSharedTransfer
-      ? sharedTransfer.method === 'elevator'
-        ? 'Continue via elevator →'
-        : 'Continue via stairs →'
-      : 'Continue outdoors →';
-
-  continueButton.onclick = () => {
     sessionStorage.setItem(
       'journeyStage',
       'destination'
     );
 
-    if(usesSharedTransfer){
-      const destinationBuilding =
-        sharedTransfer.destinationBuilding;
+    $('instruction').textContent = localizedInstruction(
+      'Continue outdoors',
+      'تابع خارج المبنى',
+      'המשך מחוץ לבניין'
+    );
 
-      sessionStorage.setItem(
-        'indoorBuilding',
-        destinationBuilding
-      );
+    $('subInstruction').textContent = localizedInstruction(
+      'Opening the outdoor route to the next building...',
+      'يتم فتح المسار الخارجي إلى المبنى التالي...',
+      'פותח את המסלול החיצוני לבניין הבא...'
+    );
 
-      sessionStorage.removeItem(
-        'originIndoorComplete'
-      );
+    $('eta').textContent = localizedInstruction(
+      'Switching',
+      'جارٍ الانتقال',
+      'עובר'
+    );
 
-      window.location.assign(
-        `./navigation-demo.html?building=${
-          encodeURIComponent(destinationBuilding)
-        }`
-      );
+    $('status').textContent =
+      'Switching to the outdoor route...';
 
-      return;
-    }
-
-    history.back();
-  };
+    setTimeout(returnToOutdoorJourney, 650);
+    return;
+  }
 }
 
 if(sessionStorage.getItem('journeyStage') === 'intermediate'){
