@@ -77,9 +77,9 @@ const BUILDING_ENTRANCES = {
 
   'multi-purpose': [
     {
-      nodeId: 'floor1_n2',
-      lat: 32.760500,
-      lng: 35.021520
+    nodeId: 'floor1_n2',
+    lat: 32.760360504552914,
+    lng: 35.0214770436287
     },
     {
     nodeId: 'floor1_n5',

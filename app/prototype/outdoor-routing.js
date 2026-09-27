@@ -722,6 +722,61 @@ addEdge(
   'campus_madriga_floor_minus1_entrance',
   'footway'
 );
+
+// --------------------------------------------------
+// Multi-Purpose Building Floor 1 entrance (n2)
+// Connects the Terrace-side pedestrian route to the
+// Multi-Purpose Building entrance
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_multi_entrance_approach_1',
+  32.76036501571282,
+  35.02147167921067
+);
+
+addCampusNode(
+  'campus_multi_entrance_approach_2',
+  32.76033794874998,
+  35.02143412828446
+);
+
+addCampusNode(
+  'campus_multi_entrance_approach_3',
+  32.76023870314921,
+  35.02127051353455
+);
+
+addCampusNode(
+  'campus_multi_access_entrance',
+  32.760360504552914,
+  35.0214770436287
+);
+
+addEdge(
+  'campus_madriga_access_mid',
+  'campus_multi_entrance_approach_1',
+  'footway'
+);
+
+addEdge(
+  'campus_multi_entrance_approach_1',
+  'campus_multi_entrance_approach_2',
+  'footway'
+);
+
+addEdge(
+  'campus_multi_entrance_approach_2',
+  'campus_multi_entrance_approach_3',
+  'footway'
+);
+
+addEdge(
+  'campus_multi_entrance_approach_1',
+  'campus_multi_access_entrance',
+  'footway'
+);
+
 /*
  // --------------------------------------------------
  // Accessible ramp: street <-> Rabin Floor 6 plaza
