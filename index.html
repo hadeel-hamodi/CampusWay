@@ -1294,7 +1294,7 @@ function routeToShopPlace(shop){
   );
 
   if(!building) return;
-  
+
   routeTo(
     building.name,
     building.lat,
@@ -1649,6 +1649,20 @@ function routeToIndoorService(match){
     'indoorBuilding',
     match.buildingKey
   );
+
+  if(
+  match.node.type === 'gym' &&
+  match.buildingKey === 'madriga'
+){
+  sessionStorage.setItem(
+    'preferredDestinationEntrance',
+    'floorminus1_n1'
+  );
+}else{
+  sessionStorage.removeItem(
+    'preferredDestinationEntrance'
+  );
+}
 
   document.getElementById('searchInput').value =
     `${label} — ${localizedBuildingName(match.building)}`;
@@ -2954,7 +2968,10 @@ const preferredMainEntranceByOrigin = {
   education: 'floor700_n70'
 };
 
-let preferredEntranceId = null;
+let preferredEntranceId =
+  sessionStorage.getItem('preferredDestinationEntrance') || null;
+
+sessionStorage.removeItem('preferredDestinationEntrance');
 
 if(entranceKey === 'main'){
   preferredEntranceId =

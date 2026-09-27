@@ -477,7 +477,7 @@ addCampusNode(
 
 addEdge(
   'campus_multi_sidewalk_top',
-  'campus_multi_sidewalk_bottom',
+  1446999294,
   'footway'
 );
 
@@ -487,11 +487,9 @@ addEdge(
   'footway'
 );
 
-addEdge(
-  'campus_multi_sidewalk_top',
-  1447013834,
-  'footway'
-);
+// --------------------------------------------------
+// Main -> Multi-Purpose sidewalk connection
+// --------------------------------------------------
 
 addEdge(
   'campus_multi_sidewalk_top',
@@ -499,6 +497,10 @@ addEdge(
   'footway'
 );
 
+// --------------------------------------------------
+// Terrace Building Floor 1 standard approach
+// Uses the physical bump / step near the building
+// --------------------------------------------------
 addCampusNode(
   'campus_madriga_bump_approach',
   32.760134,
@@ -576,6 +578,10 @@ addEdge(
   'footway'
 );
 
+// --------------------------------------------------
+// Terrace Building Floor 1 accessible approach
+// Step-free alternative for Mobility profile
+// --------------------------------------------------
 addCampusNode(
   'campus_madriga_access_straight',
   32.75969059477067,
@@ -630,12 +636,92 @@ addEdge(
   'footway'
 );
 
+// --------------------------------------------------
+// Outdoor network connection correction
+// --------------------------------------------------
 addEdge(
   2102958523,
   1447013838,
   'footway'
 );
 
+// --------------------------------------------------
+// Terrace Building Floor -1 / Gym downhill approach
+// Custom path from the junction downhill to the
+// Floor -1 entrance
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_madriga_downhill_start',
+  32.759674805590414,
+  35.0209191441536
+);
+
+addCampusNode(
+  'campus_madriga_downhill_1',
+  32.76012592392313,
+  35.02048462629319
+);
+
+addCampusNode(
+  'campus_madriga_downhill_2',
+  32.7604620055954,
+  35.02087354660035
+);
+
+addCampusNode(
+  'campus_madriga_downhill_3',
+  32.76073944118784,
+  35.021190047264106
+);
+
+addCampusNode(
+  'campus_madriga_downhill_4',
+  32.76084545293389,
+  35.021321475505836
+);
+
+addEdge(
+  'campus_multi_sidewalk_bottom',
+  'campus_madriga_downhill_start',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_downhill_start',
+  'campus_madriga_downhill_1',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_downhill_1',
+  'campus_madriga_downhill_2',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_downhill_2',
+  'campus_madriga_downhill_3',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_downhill_3',
+  'campus_madriga_downhill_4',
+  'footway'
+);
+
+addCampusNode(
+  'campus_madriga_floor_minus1_entrance',
+  32.760864,
+  35.021283
+);
+
+addEdge(
+  'campus_madriga_downhill_4',
+  'campus_madriga_floor_minus1_entrance',
+  'footway'
+);
 /*
  // --------------------------------------------------
  // Accessible ramp: street <-> Rabin Floor 6 plaza

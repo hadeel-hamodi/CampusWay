@@ -13,9 +13,9 @@ const BUILDING_ENTRANCES = {
     lng: 35.021029
     },
     {
-      nodeId: 'floorminus1_n1',
-      lat: 32.760820,
-      lng: 35.021340
+    nodeId: 'floorminus1_n1',
+    lat: 32.760864,
+    lng: 35.021283
     },
     {
       nodeId: 'floor4_n46',
