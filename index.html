@@ -1028,8 +1028,6 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 map.getContainer().style.background = '#EAF3ED';
 
-
-
 async function showOutdoorDebugGraph(){
 
   await CampusOutdoorRouting.load();
@@ -1252,6 +1250,57 @@ const normalShopIcon = L.divIcon({
   html: `<div style="width:14px;height:14px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
   iconAnchor:[7,7]
 });
+function routeToShopPlace(shop){
+
+  // Outdoor-only shop
+  if(!shop.indoor){
+    routeTo(
+      shop.name,
+      shop.lat,
+      shop.lng
+    );
+    return;
+  }
+
+  // Indoor shop destination
+  sessionStorage.setItem(
+    'indoorContext',
+    JSON.stringify({
+      entranceId: null,
+      startNodeId: null,
+      destinationLabel: shop.name,
+      destinationNodeIds: shop.indoor.nodeIds
+    })
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    shop.indoor.buildingKey
+  );
+
+  const buildingNameByKey = {
+    main: 'Main Building',
+    rabin: 'Rabin Building',
+    madriga: 'Terrace Building',
+    student: 'Student House',
+    'multi-purpose': 'Multi-Purpose Building'
+  };
+
+  const buildingName =
+    buildingNameByKey[shop.indoor.buildingKey];
+
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === buildingName
+  );
+
+  if(!building) return;
+  
+  routeTo(
+    building.name,
+    building.lat,
+    building.lng
+  );
+}
 
 CAMPUS_DATA.points.shops.forEach(s=>{
   const marker = L.marker([s.lat,s.lng],{
@@ -1263,7 +1312,7 @@ CAMPUS_DATA.points.shops.forEach(s=>{
 
     <button
       class="building-popup-btn"
-      onclick="routeTo('${s.name.replace(/'/g,"\\'")}', ${s.lat}, ${s.lng})"
+      onclick='routeToShopPlace(${JSON.stringify(s)})'
     >
       ${t.navigateHere}
     </button>
@@ -3371,18 +3420,21 @@ if(sameBuilding){
   'Education and Science': 'education'
 };
 
+
 if(INDOOR_BUILDINGS[name]){
   indoorBtn.style.display = 'block';
 
   let indoorStartContext = null;
 
-  try{
-    indoorStartContext = JSON.parse(
-      sessionStorage.getItem('indoorStartContext') || 'null'
-    );
-  }catch(error){
-    indoorStartContext = null;
-  }
+try{
+  indoorStartContext = customStart
+    ? JSON.parse(
+        sessionStorage.getItem('indoorStartContext') || 'null'
+      )
+    : null;
+}catch(error){
+  indoorStartContext = null;
+}
 
 if(
   sameBuilding &&
