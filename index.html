@@ -124,6 +124,12 @@ header{
   padding:9px 6px;border-radius:11px;border:1.5px solid var(--line);
   background:var(--white);cursor:pointer;font-family:inherit;transition:.15s;
 }
+.a11y-btn.service-active{
+  background:#E6F7F4;
+  border:2px solid #00B09B;
+  box-shadow:0 0 0 2px rgba(0,176,155,.12);
+  font-weight:700;
+}
 .a11y-btn:hover{border-color:var(--teal);}
 .a11y-btn.active{border-color:var(--teal);background:var(--teal-light);}
 .a11y-btn span{font-size:10px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2;}
@@ -540,44 +546,44 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
   <span class="panel-label" id="lbl-services">Services Near Me</span>
 
   <div class="a11y-toolbar">
-    <button class="a11y-btn" onclick="findNearbyService('restroom')">
+    <button id="serviceRestroomBtn" class="a11y-btn" onclick="findNearbyService('restroom')">
       <span style="font-size:18px;">🚻</span>
       <span id="lbl-service-restrooms">Restrooms</span>
     </button>
 
-    <button class="a11y-btn" onclick="findNearbyService('food')">
+    <button id="serviceFoodBtn" class="a11y-btn" onclick="findNearbyService('food')">
       <span style="font-size:18px;">🍽️</span>
       <span id="lbl-service-food">Food</span>
     </button>
 
-    <button class="a11y-btn" onclick="findNearbyService('shop')">
+   <button id="serviceShopBtn" class="a11y-btn" onclick="findNearbyService('shop')">
   <span style="font-size:18px;">🛍️</span>
   <span id="lbl-service-shops">Shops</span>
     </button>
 
-    <button class="a11y-btn" onclick="findNearbyService('clinic')">
+    <button id="serviceClinicBtn" class="a11y-btn" onclick="findNearbyService('clinic')">
       <span style="font-size:18px;">🏥</span>
       <span id="lbl-service-clinic">Clinic</span>
     </button>
   </div>
 
   <div class="a11y-toolbar" style="margin-top:8px;">
-  <button class="a11y-btn" onclick="findNearbyService('gym')">
+  <button id="serviceGymBtn" class="a11y-btn" onclick="findNearbyService('gym')">
     <span style="font-size:18px;">🏋️</span>
     <span id="lbl-service-gym">Gym</span>
   </button>
 
-  <button class="a11y-btn" onclick="findNearbyService('library')">
+  <button id="serviceLibraryBtn" class="a11y-btn" onclick="findNearbyService('library')">
     <span style="font-size:18px;">📚</span>
     <span id="lbl-service-library">Library</span>
   </button>
 
-  <button class="a11y-btn" onclick="findNearbyService('landmark')">
+  <button id="serviceLandmarkBtn" class="a11y-btn" onclick="findNearbyService('landmark')">
     <span style="font-size:18px;">📍</span>
     <span id="lbl-service-landmarks">Landmarks</span>
   </button>
 
-  <button class="a11y-btn" onclick="findNearbyService('shelter')">
+  <button id="serviceShelterBtn" class="a11y-btn" onclick="findNearbyService('shelter')">
   <span style="font-size:18px;">🛡️</span>
   <span id="lbl-service-shelters">Shelters</span>
   </button>
@@ -801,6 +807,7 @@ let audioOn = false;
 let customStart = null; // {lat, lng, label}
 let userLocationMarker = null;
 let foodMode = false;
+let shopMode = false;
 let restroomMode = false;
 
 // ═══════════════════════════════════════════
@@ -1289,11 +1296,11 @@ function getStart(){
 
 function restoreServiceMarkers(){
 
-restroomMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
-});
+  restroomMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
 
-restroomMode = false;
+  restroomMode = false;
 
   clinicMarkers.forEach(marker => {
     if(!map.hasLayer(marker)) marker.addTo(map);
@@ -1305,6 +1312,7 @@ restroomMode = false;
 
   foodMode = false;
 }
+
 function collectIndoorRestroomServices(){
 
   const buildings = [
@@ -1463,7 +1471,6 @@ function findNearbyIndoorService(type){
       buildingName: 'Student House',
       buildingKey: 'student'
     },
-    ,
     {
       graph: typeof MULTI_PURPOSE_GRAPH !== 'undefined' ? MULTI_PURPOSE_GRAPH : null,
       buildingName: 'Multi-Purpose Building',
@@ -1553,11 +1560,70 @@ function routeToIndoorService(match){
   );
 }
 
+function exitFoodShopMode(){
+
+  foodMode = false;
+  shopMode = false;
+
+  foodMarkers.forEach(marker => {
+    marker.setIcon(normalFoodIcon);
+
+    if(!map.hasLayer(marker)){
+      marker.addTo(map);
+    }
+  });
+
+  shopMarkers.forEach(marker => {
+    marker.setIcon(normalShopIcon);
+
+    if(!map.hasLayer(marker)){
+      marker.addTo(map);
+    }
+  });
+}
+
+function setActiveServiceButton(type){
+
+  const buttons = {
+    restroom: 'serviceRestroomBtn',
+    food: 'serviceFoodBtn',
+    shop: 'serviceShopBtn',
+    clinic: 'serviceClinicBtn',
+    gym: 'serviceGymBtn',
+    library: 'serviceLibraryBtn',
+    landmark: 'serviceLandmarkBtn',
+    shelter: 'serviceShelterBtn'
+  };
+
+  Object.values(buttons).forEach(id => {
+    document
+      .getElementById(id)
+      ?.classList.remove('service-active');
+  });
+
+  const activeButton = document.getElementById(buttons[type]);
+
+  if(activeButton){
+    activeButton.classList.add('service-active');
+  }
+}
+
 function findNearbyService(type){
 
-  if(type !== 'food' && type !== 'restroom'){
-    restoreServiceMarkers();
+    if(type !== 'food' && type !== 'shop'){
+    exitFoodShopMode();
   }
+
+
+  setActiveServiceButton(type);
+
+if(
+  type !== 'food' &&
+  type !== 'shop' &&
+  type !== 'restroom'
+){
+  restoreServiceMarkers();
+}
 
   if(
     type === 'gym' ||
@@ -1592,6 +1658,13 @@ function findNearbyService(type){
     showFoodPlaces();
     return;
   }
+
+
+if(type === 'shop'){
+  showShopPlaces();
+  return;
+}
+
 
   if(type === 'clinic'){
 
@@ -1711,18 +1784,38 @@ return;
 }
 
 function showFoodPlaces(){
-      closeRoute();
-        if(foodMode){
+  closeRoute();
 
-    restroomMarkers.forEach(marker => marker.addTo(map));
-    clinicMarkers.forEach(marker => marker.addTo(map));
-    gateMarkers.forEach(marker => marker.addTo(map));
+  const foodBtn = document.getElementById('serviceFoodBtn');
+  const shopBtn = document.getElementById('serviceShopBtn');
 
-    foodMarkers.forEach(marker => {
-    marker.setIcon(normalFoodIcon);
-  });
+  // Clicking Food again -> return to normal map
+  if(foodMode){
 
     foodMode = false;
+    foodBtn?.classList.remove('service-active');
+
+    foodMarkers.forEach(marker => {
+      marker.setIcon(normalFoodIcon);
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    shopMarkers.forEach(marker => {
+      marker.setIcon(normalShopIcon);
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    clinicMarkers.forEach(marker => {
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    gateMarkers.forEach(marker => {
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    restroomMarkers.forEach(marker => {
+      if(map.hasLayer(marker)) map.removeLayer(marker);
+    });
 
     const allLatLngs = CAMPUS_DATA.buildings.map(
       b => [b.lat, b.lng]
@@ -1736,18 +1829,41 @@ function showFoodPlaces(){
     return;
   }
 
+  // Always deactivate Shops before activating Food
+shopMode = false;
+shopBtn?.classList.remove('service-active');
+
+shopMarkers.forEach(marker => {
+  marker.setIcon(normalShopIcon);
+
+  if(map.hasLayer(marker)){
+    map.removeLayer(marker);
+  }
+});
+
+  // Activate Food
   foodMode = true;
-restroomMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
+  foodBtn?.classList.add('service-active');
+
+  foodMarkers.forEach(marker => {
+  if(!map.hasLayer(marker)) marker.addTo(map);
 });
 
-clinicMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
-});
+  restroomMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
 
-gateMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
-});
+  clinicMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  gateMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  shopMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
 
   if(!foodMarkers.length) return;
 
@@ -1780,6 +1896,121 @@ gateMarkers.forEach(marker => {
     marker.setIcon(highlightedIcon);
 
     bounds.push([food.lat, food.lng]);
+  });
+
+  if(bounds.length){
+    map.fitBounds(bounds, {
+      padding:[70,70],
+      maxZoom:18
+    });
+  }
+}
+
+function showShopPlaces(){
+  closeRoute();
+
+    const shopBtn = document.getElementById('serviceShopBtn');
+  const foodBtn = document.getElementById('serviceFoodBtn');
+
+  // If Food is active, turn it off before opening Shops
+  if(foodMode){
+    foodMode = false;
+
+    foodBtn?.classList.remove('service-active');
+
+    foodMarkers.forEach(marker => {
+      marker.setIcon(normalFoodIcon);
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    foodBtn?.classList.remove('service-active');
+  }
+
+  if(shopMode){
+
+    restroomMarkers.forEach(marker => marker.addTo(map));
+    clinicMarkers.forEach(marker => marker.addTo(map));
+    gateMarkers.forEach(marker => marker.addTo(map));
+
+    foodMarkers.forEach(marker => {
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    shopMarkers.forEach(marker => {
+      marker.setIcon(normalShopIcon);
+    });
+
+    shopMode = false;
+
+    shopBtn?.classList.remove('service-active');
+
+    const allLatLngs = CAMPUS_DATA.buildings.map(
+      b => [b.lat, b.lng]
+    );
+
+    map.fitBounds(allLatLngs, {
+      padding:[60,60],
+      maxZoom:16
+    });
+
+    return;
+  }
+
+  shopMode = true;
+
+  shopBtn?.classList.add('service-active');
+
+  shopMarkers.forEach(marker => {
+  if(!map.hasLayer(marker)) marker.addTo(map);
+});
+
+  restroomMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  clinicMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  gateMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  foodMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  if(!shopMarkers.length) return;
+
+  const bounds = [];
+
+  shopMarkers.forEach(marker => {
+
+    const shop = marker.shopData;
+
+    const highlightedIcon = L.divIcon({
+      className:'',
+      html:`
+        <div style="
+          width:28px;
+          height:28px;
+          border-radius:50%;
+          background:#F59E0B;
+          border:3px solid #fff;
+          box-shadow:0 3px 12px rgba(0,0,0,.35);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:15px;
+        ">🛍️</div>
+      `,
+      iconSize:[28,28],
+      iconAnchor:[14,14]
+    });
+
+    marker.setIcon(highlightedIcon);
+
+    bounds.push([shop.lat, shop.lng]);
   });
 
   if(bounds.length){
