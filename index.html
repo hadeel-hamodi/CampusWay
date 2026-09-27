@@ -2867,6 +2867,27 @@ if(
     }
   }
 }
+
+// Terrace uses the Floor -1 entrance when travelling to Student House.
+if(
+  (
+    customStart?.buildingKey === 'madriga' ||
+    customStart?.label === 'Terrace Building'
+  ) &&
+  name === 'Student House'
+){
+  const floorMinus1Exit = (
+    BUILDING_ENTRANCES.madriga || []
+  ).find(
+    entrance => entrance.nodeId === 'floorminus1_n1'
+  );
+
+  if(floorMinus1Exit){
+    customStart.lat = floorMinus1Exit.lat;
+    customStart.lng = floorMinus1Exit.lng;
+    customStart.entranceId = floorMinus1Exit.nodeId;
+  }
+}
 const start = getStart();
 
 // Rabin uses the Floor 7 bridge entrance when travelling to Main.

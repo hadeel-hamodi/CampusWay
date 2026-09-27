@@ -777,6 +777,131 @@ addEdge(
   'footway'
 );
 
+// --------------------------------------------------
+// Madriga / Gym path -> Student House Floor 1
+// Continues along the pedestrian street instead of
+// turning into the Madriga Floor -1 entrance
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_student_path_1',
+  32.76087928644331,
+  35.021359026432044
+);
+
+addCampusNode(
+  'campus_student_path_2',
+  32.7608999,
+  35.0214103
+);
+
+addCampusNode(
+  'campus_student_path_3',
+  32.7609917,
+  35.0215113
+);
+
+addCampusNode(
+  'campus_student_path_4',
+  32.7610641,
+  35.0215991
+);
+
+addCampusNode(
+  'campus_student_path_5',
+  32.7611487,
+  35.0217306
+);
+
+addCampusNode(
+  'campus_student_path_turn',
+  32.7612645,
+  35.0217117
+);
+
+addCampusNode(
+  'campus_student_path_6',
+  32.761475,
+  35.021520
+);
+
+addCampusNode(
+  'campus_student_path_7',
+  32.761548,
+  35.021473
+);
+
+addCampusNode(
+  'campus_student_path_8',
+  32.761642,
+  35.021372
+);
+
+addCampusNode(
+  'campus_student_floor1_entrance',
+  32.761673,
+  35.021330
+);
+
+addEdge(
+  'campus_madriga_downhill_4',
+  'campus_student_path_1',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_1',
+  'campus_student_path_2',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_2',
+  'campus_student_path_3',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_3',
+  'campus_student_path_4',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_4',
+  'campus_student_path_5',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_5',
+  'campus_student_path_turn',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_turn',
+  'campus_student_path_6',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_6',
+  'campus_student_path_7',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_7',
+  'campus_student_path_8',
+  'footway'
+);
+
+addEdge(
+  'campus_student_path_8',
+  'campus_student_floor1_entrance',
+  'footway'
+);
 /*
  // --------------------------------------------------
  // Accessible ramp: street <-> Rabin Floor 6 plaza

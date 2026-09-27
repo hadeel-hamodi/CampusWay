@@ -64,9 +64,9 @@ const BUILDING_ENTRANCES = {
 
   student: [
     {
-      nodeId: 'floor1_n105',
-      lat: 32.761790,
-      lng: 35.021310
+     nodeId: 'floor1_n105',
+     lat: 32.761673,
+     lng: 35.021330
     },
     {
       nodeId: 'floor4_n3',
