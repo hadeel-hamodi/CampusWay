@@ -2888,7 +2888,14 @@ if(
     customStart.entranceId = floorMinus1Exit.nodeId;
   }
 }
+
 const start = getStart();
+
+console.log(
+  'ROUTE DEBUG',
+  'start =', start,
+  'destination =', { name, lat, lng }
+);
 
 // Rabin uses the Floor 7 bridge entrance when travelling to Main.
 if(
@@ -3009,6 +3016,13 @@ if(entranceKey === 'main'){
   preferredEntranceId = 'floor1_n2';
 }
 
+else if(
+  originBuildingKey === 'student' &&
+  entranceKey === 'madriga'
+){
+  preferredEntranceId = 'floorminus1_n1';
+}
+
 let routingEntrances = profileEntrances;
 
 if(preferredEntranceId){
@@ -3027,25 +3041,30 @@ if(preferredEntranceId){
   );
 }
 
-  const selectedEntrance = routingEntrances.reduce((nearest, entrance) => {
-    if(!nearest) return entrance;
+const selectedEntrance = routingEntrances.reduce((nearest, entrance) => {
+  if(!nearest) return entrance;
 
-    const entranceDistance = CampusOutdoorRouting.distance(
-      [start.lat, start.lng],
-      [entrance.lat, entrance.lng]
-    );
+  const entranceDistance = CampusOutdoorRouting.distance(
+    [start.lat, start.lng],
+    [entrance.lat, entrance.lng]
+  );
 
-    const nearestDistance = CampusOutdoorRouting.distance(
-      [start.lat, start.lng],
-      [nearest.lat, nearest.lng]
-    );
+  const nearestDistance = CampusOutdoorRouting.distance(
+    [start.lat, start.lng],
+    [nearest.lat, nearest.lng]
+  );
 
-    return entranceDistance < nearestDistance ? entrance : nearest;
-  }, null);
+  return entranceDistance < nearestDistance ? entrance : nearest;
+}, null);
 
 if(selectedEntrance){
   lat = selectedEntrance.lat;
   lng = selectedEntrance.lng;
+
+  console.log(
+  'SELECTED DESTINATION ENTRANCE:',
+  selectedEntrance
+);
 
   let indoorContext = {};
 
