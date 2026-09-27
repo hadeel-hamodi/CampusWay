@@ -1172,6 +1172,58 @@ const normalFoodIcon = L.divIcon({
   iconAnchor:[7,7]
 });
 
+function routeToFoodPlace(food){
+
+  // Outdoor-only food place
+  if(!food.indoor){
+    routeTo(
+      food.name,
+      food.lat,
+      food.lng
+    );
+    return;
+  }
+
+  // Indoor food destination
+  sessionStorage.setItem(
+    'indoorContext',
+    JSON.stringify({
+      entranceId: null,
+      startNodeId: null,
+      destinationLabel: food.name,
+      destinationNodeIds: food.indoor.nodeIds
+    })
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    food.indoor.buildingKey
+  );
+
+  const buildingNameByKey = {
+    main: 'Main Building',
+    rabin: 'Rabin Building',
+    madriga: 'Terrace Building',
+    student: 'Student House',
+    'multi-purpose': 'Multi-Purpose Building'
+  };
+
+  const buildingName =
+    buildingNameByKey[food.indoor.buildingKey];
+
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === buildingName
+  );
+
+  if(!building) return;
+
+  routeTo(
+    building.name,
+    building.lat,
+    building.lng
+  );
+}
+
 CAMPUS_DATA.points.food.forEach(f=>{
   const marker = L.marker([f.lat,f.lng],{
     icon: normalFoodIcon
@@ -1182,7 +1234,7 @@ CAMPUS_DATA.points.food.forEach(f=>{
 
     <button
       class="building-popup-btn"
-      onclick="routeTo('${f.name.replace(/'/g,"\\'")}', ${f.lat}, ${f.lng})"
+      onclick='routeToFoodPlace(${JSON.stringify(f)})'
     >
       ${t.navigateHere}
     </button>

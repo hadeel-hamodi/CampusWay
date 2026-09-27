@@ -586,16 +586,24 @@ if(journeyStage === 'same-building'){
 
         let destinations = [];
 
-      if(destinationContext.destinationNodeId){
-        const savedDestination =
-          nodeById(destinationContext.destinationNodeId);
+    if(destinationContext.destinationNodeId){
+  const savedDestination =
+    nodeById(destinationContext.destinationNodeId);
 
-        if(savedDestination){
-          destinations = [savedDestination];
-        }
+  if(savedDestination){
+    destinations = [savedDestination];
+  }
 
-    }else if(
-      String(destinationContext.destinationLabel)
+}else if(
+  Array.isArray(destinationContext.destinationNodeIds) &&
+  destinationContext.destinationNodeIds.length
+){
+  destinations = destinationContext.destinationNodeIds
+    .map(id => nodeById(id))
+    .filter(Boolean);
+
+}else if(
+  String(destinationContext.destinationLabel)
         .toLowerCase()
         .includes('restroom')
     ){
@@ -811,6 +819,14 @@ if(
         matchingDestinations = allNodes().filter(
           node => node.type === 'shelter'
         );
+
+        }else if(
+       Array.isArray(context.destinationNodeIds) &&
+      context.destinationNodeIds.length
+      ){
+      matchingDestinations = context.destinationNodeIds
+      .map(id => nodeById(id))
+      .filter(Boolean);
 
       }else if(context.destinationLabel){
         matchingDestinations = allNodes().filter(
