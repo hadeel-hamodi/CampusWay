@@ -686,6 +686,7 @@ const T = {
     servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks',serviceShops:'Shops', serviceShelters:'Shelters',
     continueIndoors:'Continue indoors →', switchingIndoor:'Switching to indoor mode...', room:'Room',
     yourLocation:'Your location', hour:'hr', hours:'hours', noBuildingOrRoom:'No matching building or room found.',
+    startNotMapped:'This starting point is not mapped yet. Choose a listed room or start from the building.',
     noAccessibleRoute:'No step-free outdoor route found.', noAccessibleRouteHelp:'Try another starting point or destination. CampusWay will not draw an unverified route.',
   },
   he:{
@@ -738,6 +739,7 @@ const T = {
     servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון',serviceShops:'חנויות', serviceShelters:'מרחבים מוגנים',
     continueIndoors:'המשך לניווט בתוך הבניין ←', switchingIndoor:'עובר למצב ניווט בתוך הבניין...', room:'חדר',
     yourLocation:'המיקום שלך', hour:'שעה', hours:'שעות', noBuildingOrRoom:'לא נמצא בניין או חדר תואם.',
+    startNotMapped:'נקודת המוצא הזו עדיין לא מופתה. בחר חדר מהרשימה או התחל מהבניין.',
     noAccessibleRoute:'לא נמצא מסלול חיצוני ללא מדרגות.', noAccessibleRouteHelp:'נסה נקודת התחלה או יעד אחרים. CampusWay לא יציג מסלול שלא אומת.',
   },
   ar:{
@@ -790,6 +792,7 @@ const T = {
     servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم',serviceShops:'محلات', serviceShelters:'ملاجئ',
     continueIndoors:'تابع إلى الداخل ←', switchingIndoor:'جارٍ الانتقال إلى وضع الملاحة داخل المبنى...', room:'غرفة',
     yourLocation:'موقعك', hour:'ساعة', hours:'ساعات', noBuildingOrRoom:'لم يتم العثور على مبنى أو غرفة مطابقة.',
+    startNotMapped:'نقطة البداية هذه غير مربوطة بالمسارات بعد. اختر غرفة من القائمة أو ابدأ من المبنى.',
     noAccessibleRoute:'لم يتم العثور على مسار خارجي بدون درج.', noAccessibleRouteHelp:'جرّب نقطة بداية أو وجهة أخرى. لن يعرض CampusWay مسارًا غير موثّق.',
   }
 };
@@ -805,6 +808,7 @@ let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
 sessionStorage.setItem('accessibilityProfile', currentProfile);
 let audioOn = false;
 let customStart = null; // {lat, lng, label}
+let selectedStartLocation = null;
 let userLocationMarker = null;
 let foodMode = false;
 let keepIndoorContextForCurrentRoute = false;
@@ -3213,6 +3217,8 @@ function clearIndoorStartJourney(){
 function toggleGPS(){
   if(document.getElementById('gpsBtn').classList.contains('active')){
     customStart = null;
+    selectedStartLocation = null;
+    clearIndoorStartJourney();
     document.getElementById('startInput').value = '';
     document.getElementById('gpsBtn').classList.remove('active');
     if(gpsMarker){ map.removeLayer(gpsMarker); gpsMarker = null; }
@@ -3230,6 +3236,7 @@ function useGPS_do(){
   const {latitude:lat, longitude:lng} = pos.coords;
       customStart = {lat, lng, label:'📍 GPS'};
       document.getElementById('startInput').value = t.gpsActive;
+      selectedStartLocation = {kind:'gps', displayValue:t.gpsActive};
       document.getElementById('gpsBtn').classList.add('active');
       document.getElementById('startInput').disabled = false;
       if(gpsMarker) map.removeLayer(gpsMarker);
@@ -3248,17 +3255,16 @@ function useGPS_do(){
 
 const startSuggestions = document.getElementById('startSuggestions');
 
-function showStartSuggestions(filter){
-  const q = (filter || '').trim().toLowerCase();
+function normalizeLocationQuery(value){
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^(?:room|غرفة|חדר)\s+/i, '')
+    .trim();
+}
 
-  const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
-    !q ||
-    building.name.toLowerCase().includes(q) ||
-    building.name_he.includes(filter || '')
-  );
-
-  const roomMatches = [];
-
+function getStartMatches(filter){
+  const query = normalizeLocationQuery(filter);
   const searchableGraphs = [
     {
       graph: typeof MADRIGA_GRAPH !== 'undefined' ? MADRIGA_GRAPH : null,
@@ -3282,9 +3288,24 @@ function showStartSuggestions(filter){
     }
   ];
 
-  if(q){
+  const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
+    !query ||
+    building.name.toLowerCase().includes(query) ||
+    (building.name_he || '').toLowerCase().includes(query)
+  );
+
+  const roomMatches = [];
+  if(query){
     for(const item of searchableGraphs){
       if(!item.graph) continue;
+
+      const connectedNodeIds = new Set();
+      for(const graphFloor of Object.values(item.graph.floors)){
+        for(const connection of (graphFloor.connections || [])){
+          connectedNodeIds.add(connection.from);
+          connectedNodeIds.add(connection.to);
+        }
+      }
 
       for(const [floorKey, floor] of Object.entries(item.graph.floors)){
         for(const node of (floor.nodes || [])){
@@ -3292,7 +3313,8 @@ function showStartSuggestions(filter){
 
           if(
             ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
-            nodeLabel.toLowerCase().includes(q) &&
+            nodeLabel.toLowerCase().includes(query) &&
+            connectedNodeIds.has(node.id) &&
             !/^node\s*\d+$/i.test(nodeLabel)
           ){
             roomMatches.push({
@@ -3319,7 +3341,24 @@ function showStartSuggestions(filter){
     return true;
   });
 
-  if(!buildingMatches.length && !uniqueRoomMatches.length){
+  // Rank room results: exact match → starts with query → contains query.
+  uniqueRoomMatches.sort((a, b) => {
+    const aLabel = String(a.node.label).trim().toLowerCase();
+    const bLabel = String(b.node.label).trim().toLowerCase();
+    const rank = label =>
+      label === query ? 0 : label.startsWith(query) ? 1 : 2;
+
+    return rank(aLabel) - rank(bLabel) ||
+      aLabel.localeCompare(bLabel, undefined, {numeric:true});
+  });
+
+  return {query, buildingMatches, roomMatches:uniqueRoomMatches};
+}
+
+function showStartSuggestions(filter, matches = getStartMatches(filter)){
+  const {buildingMatches, roomMatches} = matches;
+
+  if(!buildingMatches.length && !roomMatches.length){
     startSuggestions.style.display = 'none';
     return;
   }
@@ -3340,37 +3379,7 @@ function showStartSuggestions(filter){
     </div>
   `).join('');
 
-  // Rank room results:
-// exact match → starts with query → contains query
-uniqueRoomMatches.sort((a, b) => {
-  const query = q.trim().toLowerCase();
-
-  const aLabel = String(a.node.label).trim().toLowerCase();
-  const bLabel = String(b.node.label).trim().toLowerCase();
-
-  const rank = label => {
-    if(label === query || label === `room ${query}`) return 0;
-
-    const roomNumber = label.replace(/^room\s+/i, '');
-
-    if(roomNumber.startsWith(query)) return 1;
-    if(label.startsWith(query)) return 2;
-
-    return 3;
-  };
-
-  const difference = rank(aLabel) - rank(bLabel);
-
-  if(difference !== 0){
-    return difference;
-  }
-
-  return aLabel.localeCompare(bLabel, undefined, {
-    numeric: true
-  });
-});
-
-  const roomHTML = uniqueRoomMatches.map(match => `
+  const roomHTML = roomMatches.map(match => `
     <div
       class="suggestion-item"
       onclick="pickIndoorStart(
@@ -3388,6 +3397,25 @@ uniqueRoomMatches.sort((a, b) => {
   `).join('');
 
   startSuggestions.innerHTML = buildingHTML + roomHTML;
+  startSuggestions.style.display = 'block';
+}
+
+function showStartNotMapped(filter, matches = null){
+  if(matches && (matches.buildingMatches.length || matches.roomMatches.length)){
+    showStartSuggestions(filter, matches);
+  }else{
+    startSuggestions.innerHTML = '';
+  }
+
+  startSuggestions.innerHTML = `
+    <div
+      class="suggestion-item"
+      role="status"
+      style="cursor:default;color:var(--mid);"
+    >
+      ${t.startNotMapped}
+    </div>
+  ` + startSuggestions.innerHTML;
   startSuggestions.style.display = 'block';
 }
 
@@ -3434,6 +3462,9 @@ if(name === 'Main Building'){
   customStart = {lat, lng, label:name};
 }
   document.getElementById('startInput').value = name;
+  selectedStartLocation = {
+    kind:'building', name, lat, lng, displayValue:name
+  };
   startSuggestions.style.display = 'none';
   if(gpsMarker) map.removeLayer(gpsMarker);
   gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#00B09B',fillColor:'#00B09B',fillOpacity:0.4,weight:3}).addTo(map);
@@ -3507,6 +3538,10 @@ function pickIndoorStart(nodeId, label, buildingKey){
   );
 
   document.getElementById('startInput').value = customStart.label;
+  selectedStartLocation = {
+    kind:'room', nodeId, label, buildingKey,
+    displayValue:customStart.label
+  };
   startSuggestions.style.display = 'none';
 
   const buildingMarkerPosition = CAMPUS_DATA.buildings.find(
@@ -3531,23 +3566,103 @@ gpsMarker = L.circleMarker(
 
   gpsMarker.bindPopup(`🚩 ${customStart.label}`).openPopup();
   map.flyTo([visualStartLat, visualStartLng], 17, {duration: 0.6});
+
+  if(currentOutdoorDestination){
+    const destination = currentOutdoorDestination;
+    setTimeout(()=>{
+      if(currentOutdoorDestination !== destination) return;
+      routeTo(destination.name, destination.lat, destination.lng, {
+        keepIndoorContext:destination.keepIndoorContext
+      });
+    }, 700);
+  }
 }
 
-document.getElementById('startInput').addEventListener('focus', ()=> showStartSuggestions(''));
-document.getElementById('startInput').addEventListener('input', e=>{
+const startInput = document.getElementById('startInput');
+
+function doStartSearch(value){
+  const rawValue = String(value || '').trim();
+  if(!rawValue) return true;
+
+  if(
+    customStart &&
+    selectedStartLocation &&
+    rawValue === selectedStartLocation.displayValue
+  ){
+    return true;
+  }
+
+  const matches = getStartMatches(rawValue);
+  const exactBuildings = matches.buildingMatches.filter(building =>
+    building.name.trim().toLowerCase() === matches.query ||
+    (building.name_he || '').trim().toLowerCase() === matches.query
+  );
+  const exactRooms = matches.roomMatches.filter(match =>
+    String(match.node.label).trim().toLowerCase() === matches.query
+  );
+  const exactCount = exactBuildings.length + exactRooms.length;
+
+  if(exactCount === 1){
+    if(exactBuildings.length){
+      const building = exactBuildings[0];
+      pickStart(building.name, building.lat, building.lng);
+    }else{
+      const match = exactRooms[0];
+      pickIndoorStart(match.node.id, match.node.label, match.buildingKey);
+    }
+    return true;
+  }
+
+  if(exactCount > 1){
+    showStartSuggestions(rawValue, {
+      query:matches.query,
+      buildingMatches:exactBuildings,
+      roomMatches:exactRooms
+    });
+    return false;
+  }
+
+  if(/^\d{3,}(?:\/\d+)?$/.test(matches.query)){
+    showStartNotMapped(rawValue, matches);
+    return false;
+  }
+
+  if(matches.buildingMatches.length || matches.roomMatches.length){
+    showStartSuggestions(rawValue, matches);
+    return false;
+  }
+
+  showStartNotMapped(rawValue);
+  return false;
+}
+
+function ensureStartSelection(){
+  const value = startInput.value.trim();
+  if(!value) return true;
+  return doStartSearch(value);
+}
+
+startInput.addEventListener('focus', ()=> showStartSuggestions(startInput.value));
+startInput.addEventListener('input', e=>{
   clearIndoorStartJourney();
+  customStart = null;
+  selectedStartLocation = null;
+  document.getElementById('gpsBtn').classList.remove('active');
+  if(gpsMarker){ map.removeLayer(gpsMarker); gpsMarker = null; }
   showStartSuggestions(e.target.value);
+});
+startInput.addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    doStartSearch(startInput.value);
+  }
 });
 document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) startSuggestions.style.display='none'; });
 
 const searchSuggestions = document.getElementById('searchSuggestions');
 
 function normalizeDestinationQuery(value){
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^(?:room|غرفة|חדר)\s+/i, '')
-    .trim();
+  return normalizeLocationQuery(value);
 }
 
 function getDestinationMatches(filter){
@@ -3675,6 +3790,8 @@ function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
 
 function pickIndoorDestination(nodeId, label, buildingKey){
 
+if(!ensureStartSelection()) return;
+
 const buildingNames = {
   madriga: 'Terrace Building',
   main: 'Main Building',
@@ -3725,6 +3842,8 @@ const buildingNames = {
 }
 
 function pickDestination(name, lat, lng){
+  if(!ensureStartSelection()) return;
+
   // A building-only destination must not reuse an old room.
   sessionStorage.removeItem('indoorContext');
   sessionStorage.removeItem('indoorBuilding');

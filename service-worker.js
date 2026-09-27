@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v22-cross-building-resume';
+const CACHE_NAME = 'campusway-v24-start-room-search';
 
 const APP_FILES = [
 './',

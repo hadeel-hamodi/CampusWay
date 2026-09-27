@@ -252,11 +252,12 @@ test('changing the start retries a saved destination even when no route line was
     setTimeout(callback){scheduled=callback;},
     routeTo(...args){calls.push(args);},
     clearIndoorStartJourney(){},
-    customStart:null, gpsMarker:null, routeLine:null,
+    customStart:null, selectedStartLocation:null,
+    gpsMarker:null, routeLine:null,
     startSuggestions:{style:{}},
     currentOutdoorDestination:{name:'Main Building',lat:3,lng:4,keepIndoorContext:true}
   });
-  vm.runInContext(between(index, 'function pickStart(', "document.getElementById('startInput').addEventListener"), context);
+  vm.runInContext(between(index, 'function pickStart(', 'const startInput ='), context);
   vm.runInContext("pickStart('New Start',1,2)", context);
   assert.equal(typeof scheduled, 'function');
   scheduled();
