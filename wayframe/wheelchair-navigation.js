@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const X_METRES = 13.26;
-  const Y_METRES = 10.12;
+  const X_METRES = 132.6;
+  const Y_METRES = 101.2;
   const EPSILON = 1e-9;
   const CONNECTOR_TYPES = new Set(['elevator', 'stairs', 'ramp']);
 

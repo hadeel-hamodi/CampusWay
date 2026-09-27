@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CampusWay Live Indoor Navigation</title>
 <style>
+
+
 *{box-sizing:border-box}
 :root{
   --navy:#0D1B3E;
@@ -259,7 +261,7 @@ button{cursor:pointer;font-weight:700}
   id="backToCampusBtn"
   class="secondary"
   type="button"
-  onclick="history.back()"
+  onclick="window.location.href='../index.html'"
 >
   ← Campus map
 </button>
@@ -300,6 +302,7 @@ button{cursor:pointer;font-weight:700}
       <input id="accessibleRoute" type="checkbox">
       ♿ Accessible route
       </label>
+
       <button id="startBtn" class="secondary" disabled>▶ Start navigation</button>
       <span id="status" class="statusline" role="status" aria-live="polite">Choose a route.</span>
       <div class="card" id="directionCard" hidden>
@@ -382,9 +385,11 @@ button{cursor:pointer;font-weight:700}
 <script src="route-progress.js"></script>
 <script src="wheelchair-navigation.js"></script>
 <script>
+
 let GRAPH = null;
 let BUILDING = 'madriga';
 let initialBuildingQueryApplied=false;
+
 
 
 
@@ -422,6 +427,15 @@ function floorPlanOnlyGraph(building){
     )
   };
 }
+
+function availableFloors(){
+  const floorPlans=new Set(FLOOR_PLAN_FLOORS[BUILDING] || []);
+  return ORDER.filter(floorId=>{
+    const floor=GRAPH?.floors?.[floorId];
+    if(!floor) return false;
+    return floorPlans.has(floorId) || (floor.nodes || []).length>0;
+  });
+}
 let routePath=[];
 let routeNodes=[];
 let activeFloor='floor1';
@@ -458,6 +472,16 @@ let panStart={x:0,y:0,cameraX:0,cameraY:0};
 const CAMERA_W=1000, CAMERA_H=700;
 
 const $=id=>document.getElementById(id);
+
+function indoorDistanceMeters(a, b){
+const dxMeters = (b.x - a.x) * 132.6;
+const dyMeters = (b.y - a.y) * 101.2;
+
+  return Math.hypot(
+    dxMeters,
+    dyMeters
+  );
+}
 
 const svg=$('mapSvg');
 const floorPlanMarkupCache = new Map();
@@ -607,104 +631,358 @@ async function loadGraph(){
   }else{
     throw new Error(`Could not load ${BUILDING} indoor graph`);
   }
-  activeFloor = Object.keys(GRAPH.floors)[0] || 'floor1';
+  activeFloor = availableFloors()[0] || Object.keys(GRAPH.floors)[0] || 'floor1';
 
   populateLocations();
   floorButtons();
   drawBaseMap();
 
-  // Restore an indoor destination selected in the main CampusWay app.
-const savedContext = sessionStorage.getItem('indoorContext');
+// Restore a room-to-exit route or an entrance-to-room route.
+const journeyStage =
+  sessionStorage.getItem('journeyStage') || 'destination';
 
-if(savedContext){
-  try{
-    const context = JSON.parse(savedContext);
+if(journeyStage === 'same-building'){
+  const savedStartContext =
+    sessionStorage.getItem('indoorStartContext');
 
-    if(context.buildingKey && context.buildingKey !== BUILDING){
-      sessionStorage.removeItem('indoorContext');
-      return;
-    }
+  const savedContext =
+    sessionStorage.getItem('indoorContext');
 
-// If arriving from outdoor navigation, use the exact entrance
-// selected by the outdoor route. Until entrance mapping is added,
-// fall back to the first mapped entrance like before.
-let entrance = null;
+  if(savedStartContext && savedContext){
+    try{
+      const startContext = JSON.parse(savedStartContext);
+      const destinationContext = JSON.parse(savedContext);
 
-if(context.entranceId){
-  const savedEntrance = nodeById(context.entranceId);
+      if(
+        startContext.buildingKey !== BUILDING ||
+        destinationContext.buildingKey !== BUILDING
+      ){
+        return;
+      }
 
-  if(savedEntrance && savedEntrance.type === 'entrance'){
-    entrance = savedEntrance;
-  }
-}
+      const startNode = nodeById(startContext.startNodeId);
 
-if(!entrance){
-  entrance = allNodes().find(
-    node => node.type === 'entrance'
-  );
-}
-
-if(entrance){
-  $('fromFloor').value = entrance.floor;
-
-  fillLocationSelect(
-    entrance.floor,
-    'from',
-    'Choose starting point...'
-  );
-
-  $('from').value = entrance.id;
-}
-
-    // Restore the room chosen in the main CampusWay app.
-    // Support both current and older saved context formats.
-    let matchingDestinations = [];
-if(context.destinationLabel){
-  matchingDestinations = allNodes().filter(
-    node =>
-      ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
-      String(node.label).trim().toLowerCase() ===
-      String(context.destinationLabel).trim().toLowerCase()
-  );
-}
-
-if(!matchingDestinations.length && context.destinationNodeId){
-  const savedNode = nodeById(context.destinationNodeId);
-
-  if(
-    savedNode &&
-    ['room', 'gym', 'library', 'landmark'].includes(savedNode.type)
-  ){
-    matchingDestinations = [savedNode];
-  }
-}
-
-    if(matchingDestinations.length){
-      const startId = $('from').value;
-      const best = startId
-        ? bestDestinationNode(startId, matchingDestinations)
-        : { destination: matchingDestinations[0] };
-
-      const destination =
-        best.destination || matchingDestinations[0];
-
-      if(destination){
-        $('toFloor').value = destination.floor;
+      if(startNode){
+        $('fromFloor').value = startNode.floor;
 
         fillLocationSelect(
-          destination.floor,
-          'to',
-          'Choose destination...'
+          startNode.floor,
+          'from',
+          'Choose starting point...'
         );
 
-        $('to').value = destination.id;
+        ensureNodeOption('from', startNode);
+        $('from').value = startNode.id;
+
+        let destinations = [];
+
+      if(destinationContext.destinationNodeId){
+        const savedDestination =
+          nodeById(destinationContext.destinationNodeId);
+
+        if(savedDestination){
+          destinations = [savedDestination];
+        }
+
+    }else if(
+      String(destinationContext.destinationLabel)
+        .toLowerCase()
+        .includes('restroom')
+    ){
+      destinations = allNodes().filter(
+        node => node.type === 'restroom'
+      );
+
+    }else if(
+      String(destinationContext.destinationLabel)
+        .toLowerCase()
+        .includes('shelter')
+    ){
+      destinations = allNodes().filter(
+        node => node.type === 'shelter'
+      );
+
+    }else if(destinationContext.destinationLabel){
+          const wantedLabel =
+            String(destinationContext.destinationLabel)
+              .trim()
+              .toLowerCase();
+
+          destinations = allNodes().filter(
+            node =>
+              String(node.label)
+                .trim()
+                .toLowerCase() === wantedLabel
+          );
+        }
+
+        if(destinations.length){
+          const best =
+            bestDestinationNode(startNode.id, destinations);
+
+          const destination = best.destination;
+
+          if(destination){
+            $('toFloor').value = destination.floor;
+
+            fillLocationSelect(
+              destination.floor,
+              'to',
+              'Choose destination...'
+            );
+
+            ensureNodeOption('to', destination);
+            $('to').value = destination.id;
+          }
+        }
       }
+    }catch(error){
+      console.warn(
+        'Could not restore same-building indoor route:',
+        error
+      );
     }
-    
-  }catch(err){
-    console.warn('Could not restore indoor destination:', err);
+  }
+
+  }else if(journeyStage === 'intermediate'){
+  const startNode = nodeById('floor7_n108');
+
+  if(startNode){
+    $('fromFloor').value = startNode.floor;
+
+    fillLocationSelect(
+      startNode.floor,
+      'from',
+      'Choose starting point...'
+    );
+
+    ensureNodeOption('from', startNode);
+    $('from').value = startNode.id;
+
+    const destinationNode = nodeById(
+  $('accessibleRoute').checked
+    ? 'floor5_n104'
+    : 'floor5_n204'
+);
+
+if(destinationNode){
+  $('toFloor').value = destinationNode.floor;
+
+  fillLocationSelect(
+    destinationNode.floor,
+    'to',
+    'Choose destination...'
+  );
+
+  ensureNodeOption('to', destinationNode);
+  $('to').value = destinationNode.id;
+}
+  }
+
+}else if(journeyStage === 'origin'){
+  const savedStartContext =
+    sessionStorage.getItem('indoorStartContext');
+
+  if(savedStartContext){
+    try{
+      const context = JSON.parse(savedStartContext);
+
+      if(context.buildingKey !== BUILDING){
+        return;
+      }
+
+      const startNode = nodeById(context.startNodeId);
+      const exitNode = nodeById(context.exitEntranceId);
+
+      if(startNode){
+        $('fromFloor').value = startNode.floor;
+
+        fillLocationSelect(
+          startNode.floor,
+          'from',
+          'Choose starting point...'
+        );
+
+        $('from').value = startNode.id;
+      }
+
+      if(exitNode){
+        $('toFloor').value = exitNode.floor;
+
+      fillLocationSelect(
+        exitNode.floor,
+        'to',
+        'Choose destination...'
+      );
+
+      ensureNodeOption('to', exitNode);
+
+      $('to').value = exitNode.id;
+      }
+    }catch(error){
+      console.warn(
+        'Could not restore indoor starting room:',
+        error
+      );
+    }
+  }
+}else{
+  const savedContext =
+    sessionStorage.getItem('indoorContext');
+
+  if(savedContext){
+    try{
+      const context = JSON.parse(savedContext);
+
+      if(context.buildingKey !== BUILDING){
+        return;
+      }
+
+      let entrance = null;
+
+      const transferEntranceId =
+  sessionStorage.getItem('madrigaTransferEntrance');
+
+if(transferEntranceId){
+  const transferEntrance =
+    nodeById(transferEntranceId);
+
+  if(transferEntrance){
+    entrance = transferEntrance;
+
+    sessionStorage.removeItem(
+      'madrigaTransferEntrance'
+    );
   }
 }
+
+      if(!entrance && context.entranceId){
+        const savedEntrance =
+          nodeById(context.entranceId);
+
+        if(
+          savedEntrance &&
+          ['entrance', 'elevator'].includes(
+            savedEntrance.type
+          )
+        ){
+          entrance = savedEntrance;
+        }
+      }
+
+      if(!entrance){
+        entrance = allNodes().find(
+          node => node.type === 'entrance'
+        );
+      }
+
+      if(entrance){
+        $('fromFloor').value = entrance.floor;
+
+        fillLocationSelect(
+          entrance.floor,
+          'from',
+          'Choose starting point...'
+        );
+
+        ensureNodeOption('from', entrance);
+
+        $('from').value = entrance.id;
+      }
+
+let matchingDestinations = [];
+
+if(
+  String(context.destinationLabel)
+    .toLowerCase()
+    .includes('restroom')
+){
+  matchingDestinations = allNodes().filter(
+    node => node.type === 'restroom'
+  );
+
+      }else if(
+        String(context.destinationLabel)
+          .toLowerCase()
+          .includes('shelter')
+      ){
+        matchingDestinations = allNodes().filter(
+          node => node.type === 'shelter'
+        );
+
+      }else if(context.destinationLabel){
+        matchingDestinations = allNodes().filter(
+          node =>
+            ['room', 'gym', 'library', 'landmark'].includes(
+              node.type
+            ) &&
+            String(node.label).trim().toLowerCase() ===
+            String(context.destinationLabel).trim().toLowerCase()
+        );
+      }
+
+      if(
+        !matchingDestinations.length &&
+        context.destinationNodeId
+      ){
+        const savedNode =
+          nodeById(context.destinationNodeId);
+
+        if(
+          savedNode &&
+          ['room', 'restroom', 'shelter', 'gym', 'library', 'landmark'].includes(
+          savedNode.type
+        )
+        ){
+          matchingDestinations = [savedNode];
+        }
+      }
+
+      if(matchingDestinations.length){
+        const startId = $('from').value;
+
+        const best = startId
+          ? bestDestinationNode(
+              startId,
+              matchingDestinations
+            )
+          : {
+              destination:
+                matchingDestinations[0]
+            };
+
+        const destination =
+          best.destination ||
+          matchingDestinations[0];
+
+        if(destination){
+          $('toFloor').value = destination.floor;
+
+          fillLocationSelect(
+            destination.floor,
+            'to',
+            'Choose destination...'
+          );
+
+          $('to').value = destination.id;
+        }
+      }
+    }catch(error){
+      console.warn(
+        'Could not restore indoor destination:',
+        error
+      );
+      if(
+        $('from').value &&
+        $('to').value
+      ){
+        setTimeout(() => {
+          route();
+        }, 0);
+      }
+     }
+    }
+  }
 }
 
 document.getElementById('building').onchange = async () => {
@@ -769,7 +1047,7 @@ function userFacingLocationsForFloor(floorId){
 
   const result=(GRAPH.floors[floorId].nodes||[])
 .filter(n =>
-  ['room', 'entrance', 'restroom', 'landmark', 'gym', 'library'].includes(n.type)
+  ['room', 'entrance', 'restroom', 'shelter', 'landmark', 'gym', 'library'].includes(n.type)
 )
     .sort((a,b)=>{
       const priority={room:0,restroom:1,entrance:2,landmark:3};
@@ -801,7 +1079,7 @@ function userFacingLocationsForFloor(floorId){
 function populateLocations(){
   virtualDestinations.clear();
 
-  const mappedFloors=ORDER.filter(f=>GRAPH.floors[f]);
+  const mappedFloors=availableFloors();
   const floorOptions=mappedFloors
     .map(f=>`<option value="${f}">Floor ${floorLabel(f)}</option>`)
     .join('');
@@ -844,6 +1122,31 @@ function fillLocationSelect(floorId, selectId, placeholder){
   select.disabled=false;
 }
 
+function ensureNodeOption(selectId, node){
+  if(!node) return;
+
+  const select = $(selectId);
+
+  const alreadyExists =
+    [...select.options].some(
+      option => option.value === node.id
+    );
+
+  if(alreadyExists) return;
+
+  let label = node.label || node.type;
+
+  if(node.type === 'elevator'){
+    label = 'Elevator';
+  }else if(node.type === 'entrance'){
+    label += ' — Entrance';
+  }
+
+  select.add(
+    new Option(label, node.id)
+  );
+}
+
 function buildGraph(){
   const ns=allNodes(),by=new Map(ns.map(n=>[n.id,n])),adj=new Map(ns.map(n=>[n.id,[]]));
   for(const f of Object.values(GRAPH.floors)){
@@ -858,7 +1161,7 @@ for(const c of (f.connections||[])){
     continue;
   }
 
-  const w=Math.hypot(a.x-b.x,a.y-b.y);
+  const w = indoorDistanceMeters(a, b);
   adj.get(a.id).push({id:b.id,w,kind:'walk'});
   adj.get(b.id).push({id:a.id,w,kind:'walk'});
 }
@@ -934,10 +1237,7 @@ function bestDestinationNode(startId, destinations){
       if(a.floor !== b.floor){
         distance += 0.02;
       }else{
-        distance += Math.hypot(
-          a.x - b.x,
-          a.y - b.y
-        );
+        distance += indoorDistanceMeters(a, b);
       }
     }
 
@@ -1163,7 +1463,7 @@ function drawBaseMap(){
     const bearing=headingTracker.mapHeading();
     if(bearing !== null){
       const radians=bearing*Math.PI/180;
-      deviceHeading=Math.atan2(Math.sin(radians)*840/13.26,Math.cos(radians)*570/10.12)*180/Math.PI;
+      deviceHeading=Math.atan2(Math.sin(radians)*840/132.6,Math.cos(radians)*570/101.2)*180/Math.PI;
     }
     const targetHeading=deviceHeading !== null ? -deviceHeading : headingDeg;
 
@@ -1321,7 +1621,7 @@ if((navMode === 'auto' || navMode === 'wheelchair') && progressIndex < routeNode
 
 function floorButtons(){
   $('floorButtons').innerHTML='';
-  const used=routeNodes.length?[...new Set(routeNodes.map(n=>n.floor))]:ORDER.filter(f=>GRAPH.floors[f]);
+  const used=routeNodes.length?[...new Set(routeNodes.map(n=>n.floor))]:availableFloors();
   used.forEach(f=>{
     const b=document.createElement('button');
     b.textContent=floorLabel(f);b.className=f===activeFloor?'active':'';
@@ -1341,7 +1641,7 @@ function floorButtons(){
   });
 }
 
-function describeRoute(){
+  function describeRoute(routeMeters, verticalSeconds){
   const a=routeNodes[0],b=routeNodes.at(-1);
   const aLabel=a._displayLabel||a.label;
   const bLabel=b._displayLabel||b.label;
@@ -1356,11 +1656,65 @@ function describeRoute(){
       steps.push(localizedInstruction(`Take the ${method} to Floor ${floorLabel(n.floor)}`,`استخدم ${method==='elevator'?'المصعد':'الدرج'} إلى ${localizedFloor(n.floor)}`,`עלה ב${method==='elevator'?'מעלית':'מדרגות'} אל ${localizedFloor(n.floor)}`));
     }
   }
-  steps.push(localizedInstruction(`Arrive at ${bLabel}`,`وصل إلى ${localizedNodeLabel(bLabel)}`,`הגע אל ${localizedNodeLabel(bLabel)}`));
+  let sharedTransfer = null;
+
+try{
+  sharedTransfer = JSON.parse(
+    sessionStorage.getItem('sharedIndoorTransfer') || 'null'
+  );
+}catch(error){
+  sharedTransfer = null;
+}
+
+const currentBuilding =
+  new URLSearchParams(
+    window.location.search
+  ).get('building');
+
+const isSharedOrigin =
+  sessionStorage.getItem('journeyStage') === 'origin' &&
+  sharedTransfer &&
+  sharedTransfer.originBuilding === currentBuilding;
+
+if(isSharedOrigin){
+  const destinationName =
+    sharedTransfer.destinationBuilding === 'rabin'
+      ? 'Rabin'
+      : 'Madriga';
+
+  const destinationFloor =
+    sharedTransfer.destinationBuilding === 'rabin'
+      ? '5'
+      : '4';
+
+  steps.push(
+    sharedTransfer.method === 'elevator'
+      ? `Take the elevator directly to ${destinationName} Floor ${destinationFloor}`
+      : `Take the stairs to ${destinationName} Floor ${destinationFloor}`
+  );
+}else{
+  steps.push(
+    localizedInstruction(
+      `Arrive at ${bLabel}`,
+      `وصل إلى ${localizedNodeLabel(bLabel)}`,
+      `הגע אל ${localizedNodeLabel(bLabel)}`
+    )
+  );
+}
   $('steps').innerHTML=steps.map(s=>`<div class="step"><div class="dot"></div><div>${esc(s)}</div></div>`).join('');
   $('instruction').textContent=localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','עקוב אחר המסלול המסומן');
   $('subInstruction').textContent=localizedInstruction(`Destination: ${bLabel}`,`الوجهة: ${localizedNodeLabel(bLabel)}`,`יעד: ${localizedNodeLabel(bLabel)}`);
-  $('eta').textContent='Demo';
+const walkingSpeedMps = 1.2;
+
+const totalSeconds =
+  (routeMeters / walkingSpeedMps) + verticalSeconds;
+
+const walkingMinutes = Math.max(
+  1,
+  Math.ceil(totalSeconds / 60)
+);
+
+$('eta').textContent = `${walkingMinutes} min`;
 }
 
 function clearRouteState(title=it('noRoute'), help=it('noRouteHelp')){
@@ -1413,20 +1767,42 @@ function route(){
   // Remember user-facing labels, especially for the virtual "Elevators" destination.
   routeNodes[0]._displayLabel=selectionLabel(rawFrom);
   routeNodes[routeNodes.length-1]._displayLabel=selectionLabel(rawTo);
-  let routeMeters = 0;
+let routeMeters = 0;
+let verticalSeconds = 0;
+let elevatorRideActive = false;
 
 for(let i = 0; i < routeNodes.length - 1; i++){
   const a = routeNodes[i];
   const b = routeNodes[i + 1];
 
-  if(a.floor !== b.floor) continue;
+  if(a.floor !== b.floor){
+    if(a.type === 'elevator' && b.type === 'elevator'){
+      // One-time waiting + doors cost when entering an elevator ride.
+      if(!elevatorRideActive){
+        verticalSeconds += 30;
+        elevatorRideActive = true;
+      }
 
-  const dxMeters = (b.x - a.x) * 13.26;
-  const dyMeters = (b.y - a.y) * 10.12;
+      // Travel time for each floor crossed.
+      verticalSeconds += 10;
 
-  routeMeters += Math.hypot(dxMeters, dyMeters);
+    }else if(a.type === 'stairs' && b.type === 'stairs'){
+      // Approximate stair travel time per floor.
+      verticalSeconds += 30;
+      elevatorRideActive = false;
+
+    }else{
+      elevatorRideActive = false;
+    }
+
+    continue;
+  }
+
+  // Once we are walking again, the elevator ride is over.
+  elevatorRideActive = false;
+
+  routeMeters += indoorDistanceMeters(a, b);
 }
-
 console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
   activeFloor=routeNodes[0].floor;
@@ -1438,7 +1814,7 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
   $('startBtn').disabled=false;
   updateDirectionControls();
   $('status').textContent=localizedInstruction('Route ready.','المسار جاهز.','המסלול מוכן.');
-  describeRoute();floorButtons();drawBaseMap();updateProgressUI();
+  describeRoute(routeMeters, verticalSeconds);floorButtons();drawBaseMap();updateProgressUI();
 }
 
 
@@ -1530,8 +1906,8 @@ function wheelchairTurnAt(index){
   const current=routeNodes[index];
   const next=routeNodes[checkpoints[position+1]];
   if(previous.floor!==current.floor || current.floor!==next.floor) return 0;
-  const incoming={x:(current.x-previous.x)*13.26,y:(current.y-previous.y)*10.12};
-  const outgoing={x:(next.x-current.x)*13.26,y:(next.y-current.y)*10.12};
+  const incoming={x:(current.x-previous.x)*132.6,y:(current.y-previous.y)*101.2};
+  const outgoing={x:(next.x-current.x)*132.6,y:(next.y-current.y)*101.2};
   const cross=incoming.x*outgoing.y-incoming.y*outgoing.x;
   const dot=incoming.x*outgoing.x+incoming.y*outgoing.y;
   const magnitude=Math.atan2(Math.abs(cross),dot)*180/Math.PI;
@@ -1694,9 +2070,15 @@ if(a.floor!==b.floor){
   $('subInstruction').textContent =
     `Continue on Floor ${floorLabel(b.floor)}`;
 
-  progressIndex++;
-  progressT=0;
-  activeFloor=b.floor;
+    progressIndex++;
+    progressT=0;
+
+    if(progressIndex >= routeNodes.length - 1){
+      completeNavigation();
+      return;
+    }
+
+    activeFloor=b.floor;
 
   floorButtons();
   drawBaseMap();
@@ -1708,9 +2090,8 @@ if(a.floor!==b.floor){
 
   return;
 }
-    const dxMeters=(b.x-a.x)*13.26;
-    const dyMeters=(b.y-a.y)*10.12;
-    const segLenMeters=Math.hypot(dxMeters,dyMeters);
+    const segLenMeters =
+    indoorDistanceMeters(a, b);
 
     if(segLenMeters<0.001){
       progressIndex++;
@@ -1871,7 +2252,174 @@ function completeNavigation(){
   $('progressBar').style.width='100%';
   $('startBtn').disabled=true;
   $('status').textContent='Arrived.';
+if(sessionStorage.getItem('journeyStage') === 'origin'){
+  let sharedTransfer = null;
+
+  try{
+    sharedTransfer = JSON.parse(
+      sessionStorage.getItem('sharedIndoorTransfer') || 'null'
+    );
+  }catch(error){
+    sharedTransfer = null;
+  }
+
+  const currentBuilding =
+    new URLSearchParams(
+      window.location.search
+    ).get('building');
+
+  const usesSharedTransfer =
+    sharedTransfer &&
+    sharedTransfer.originBuilding === currentBuilding;
+
+    let intermediateTransfer = null;
+
+try{
+  intermediateTransfer = JSON.parse(
+    sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+  );
+}catch(error){
+  intermediateTransfer = null;
 }
+
+const usesIntermediateTransfer =
+  currentBuilding === 'main' &&
+  intermediateTransfer?.building === 'rabin';
+
+    if(usesSharedTransfer){
+  const destinationBuilding =
+    sharedTransfer.destinationBuilding;
+
+  $('status').textContent =
+    `Switching to ${
+      destinationBuilding === 'rabin'
+        ? 'Rabin'
+        : 'Madriga'
+    }...`;
+
+  sessionStorage.setItem(
+    'journeyStage',
+    'destination'
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    destinationBuilding
+  );
+
+  sessionStorage.removeItem(
+    'originIndoorComplete'
+  );
+
+  setTimeout(() => {
+    window.location.assign(
+      `./navigation-demo.html?building=${
+        encodeURIComponent(destinationBuilding)
+      }`
+    );
+  }, 400);
+
+  return;
+}
+
+  if(!usesSharedTransfer){
+    sessionStorage.setItem(
+      'originIndoorComplete',
+      'true'
+    );
+  }
+
+  let continueButton =
+    document.getElementById('continueOutdoorBtn');
+
+  if(!continueButton){
+    continueButton =
+      document.createElement('button');
+
+    continueButton.id = 'continueOutdoorBtn';
+
+    continueButton.style.marginTop = '12px';
+    continueButton.style.padding = '10px 16px';
+    continueButton.style.border = '0';
+    continueButton.style.borderRadius = '10px';
+    continueButton.style.background = '#00B09B';
+    continueButton.style.color = 'white';
+    continueButton.style.fontWeight = '700';
+    continueButton.style.cursor = 'pointer';
+
+    $('routeCard').appendChild(continueButton);
+  }
+
+  continueButton.textContent =
+    usesSharedTransfer
+      ? sharedTransfer.method === 'elevator'
+        ? 'Continue via elevator →'
+        : 'Continue via stairs →'
+      : 'Continue outdoors →';
+
+  continueButton.onclick = () => {
+    sessionStorage.setItem(
+      'journeyStage',
+      'destination'
+    );
+
+    if(usesSharedTransfer){
+      const destinationBuilding =
+        sharedTransfer.destinationBuilding;
+
+      sessionStorage.setItem(
+        'indoorBuilding',
+        destinationBuilding
+      );
+
+      sessionStorage.removeItem(
+        'originIndoorComplete'
+      );
+
+      window.location.assign(
+        `./navigation-demo.html?building=${
+          encodeURIComponent(destinationBuilding)
+        }`
+      );
+
+      return;
+    }
+
+    history.back();
+  };
+}
+
+if(sessionStorage.getItem('journeyStage') === 'intermediate'){
+sessionStorage.setItem(
+  'madrigaTransferEntrance',
+  'floor4_n43'
+);
+  sessionStorage.setItem(
+    'journeyStage',
+    'destination'
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    'madriga'
+  );
+
+  sessionStorage.removeItem(
+    'intermediateIndoorTransfer'
+  );
+
+  $('status').textContent = 'Switching to Madriga...';
+
+  setTimeout(() => {
+    window.location.assign(
+      './navigation-demo.html?building=madriga'
+    );
+  }, 400);
+
+  return;
+}
+}
+
 
 function screenOrientationAngle(){
   return window.screen?.orientation?.angle ?? window.orientation ?? 0;
@@ -2019,7 +2567,7 @@ function startAutoDemo(){
       return;
     }
 
-    advanceAlongRoute(0.10);
+    advanceAlongRoute(1.0);
   }, 80);
 }
 

@@ -31,7 +31,7 @@ function harness(testPage=false,permission){
       let dijkstraCalls=0,dijkstraAccessible=[]; function dijkstra(){dijkstraCalls++;dijkstraAccessible.push(Boolean($('accessibleRoute').checked));return testNodes.map(n=>n.id);}
       function nodeById(id){return testNodes.find(n=>n.id===id);} async function loadGraph(){}
       function floorLabel(f){return f;} function localizedFloor(f){return f;} function localizedNodeLabel(f){return f;}
-      function mapPoint(n){return {x:n.x*13.26,y:n.y*10.12};}`);
+      function mapPoint(n){return {x:n.x*132.6,y:n.y*101.2};}`);
     run(between(nav,'function currentInterpolated(){','function drawUserMarker(){'));
     // Actual route, signed movement, instructions, sensor and lifecycle code; only drawing/loading are stubbed.
     run(between(nav,'function route(){',"$('fromFloor').onchange="));
@@ -67,7 +67,7 @@ async function startWheelchair(h){
   h.run("setNavigationMode('wheelchair')");await h.run('startNavigation()');assert.equal(h.run('navigationActive'),true);
 }
 function near(actual,expected){assert.ok(Math.abs(actual-expected)<1e-7,`${actual} ~= ${expected}`);}
-function travelled(h){return (1-h.position().y)*10.12;}
+function travelled(h){return (1-h.position().y)*101.2;}
 
 test('scripts parse and shared helpers load before both consumers',()=>{
   for(const source of [nav,tester]){
@@ -106,7 +106,7 @@ test('delayed batch animates five forward then three reverse in FIFO order to ne
   const h=harness();await startSensor(h);h.stable(450,2800,0);h.stable(2850,4550,180);
   h.injectSteps(4550,[700,1200,1700,2200,2700,3400,3900,4400]);
   assert.deepEqual(Array.from(h.run('stepMovementQueue')),Array(5).fill(0.65).concat(Array(3).fill(-0.65)));
-  const positions=h.drain();near(travelled(h),1.3);assert.ok(Math.max(...positions.map(p=>(1-p.y)*10.12))>3.2,'forward travel must not be netted away');
+  const positions=h.drain();near(travelled(h),1.3);assert.ok(Math.max(...positions.map(p=>(1-p.y)*101.2))>3.2,'forward travel must not be netted away');
   assert.equal(h.run('lastTravelDirection'),-1);assert.match(h.element('instruction').textContent,/Returning/);
 });
 
@@ -118,7 +118,7 @@ test('turning alone causes no progress and unstable, sideways or stale headings 
 });
 
 test('start/end bounds clamp steps and estimated arrival still permits turnaround',async()=>{
-  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-1.3/10.12}]);await startSensor(h);
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-1.3/101.2}]);await startSensor(h);
   h.stable(450,850,180);h.injectSteps(850,[800]);h.drain();near(travelled(h),0);
   h.stable(900,1600,0);h.injectSteps(1600,[1200,1400,1550]);h.drain();near(travelled(h),1.3);
   assert.equal(h.run('navigationActive'),true);assert.match(h.element('instruction').textContent,/Estimated arrival/);
@@ -127,7 +127,7 @@ test('start/end bounds clamp steps and estimated arrival still permits turnaroun
 });
 
 test('endpoint pause and recalibration facing start allows backtracking',async()=>{
-  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-0.65/10.12}]);await startSensor(h);
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-0.65/101.2}]);await startSensor(h);
   h.stable(450,850,0);h.injectSteps(850,[800]);h.drain();near(travelled(h),0.65);
   h.document.hidden=true;h.listeners.get('visibilitychange')();assert.match(h.element('directionStatus').textContent,/toward the starting location/);
   h.document.hidden=false;h.stable(1500,1950,210);await h.run('calibrateAndStart()');assert.equal(h.run('navigationActive'),true);
@@ -135,14 +135,14 @@ test('endpoint pause and recalibration facing start allows backtracking',async()
 });
 
 test('old heading cannot keep pushing beyond the corner tolerance',async()=>{
-  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Corner',floor:'floor500',x:1.3/13.26,y:1},{id:'c',label:'C',floor:'floor500',x:1.3/13.26,y:0}]);
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Corner',floor:'floor500',x:1.3/132.6,y:1},{id:'c',label:'C',floor:'floor500',x:1.3/132.6,y:0}]);
   await startSensor(h,90);h.stable(450,2600,90);h.injectSteps(2600,[800,1300,1800,2300]);h.drain();
-  near(h.position().x,1.3/13.26);near(travelled(h),0.65);assert.match(h.element('status').textContent,/unclear/);
+  near(h.position().x,1.3/132.6);near(travelled(h),0.65);assert.match(h.element('status').textContent,/unclear/);
   h.stable(4200,4650,0);h.injectSteps(4650,[4600]);h.drain();near(travelled(h),1.3);
 });
 
 test('sensors stop at floor connector and can retreat on the current floor',async()=>{
-  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Lift',floor:'floor500',x:0,y:1-0.65/10.12},{id:'c',label:'Lift',floor:'floor600',x:0,y:1-0.65/10.12},{id:'d',label:'D',floor:'floor600',x:0,y:0}]);await startSensor(h);
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Lift',floor:'floor500',x:0,y:1-0.65/101.2},{id:'c',label:'Lift',floor:'floor600',x:0,y:1-0.65/101.2},{id:'d',label:'D',floor:'floor600',x:0,y:0}]);await startSensor(h);
   h.stable(450,1100,0);h.injectSteps(1100,[700,1000]);h.drain();near(travelled(h),0.65);assert.equal(h.position().floor,'floor500');assert.equal(h.run('sensorFloorBoundary'),true);
   assert.match(h.element('instruction').textContent,/Confirm your location/);h.stable(1600,2100,180);h.injectSteps(2100,[2050]);h.drain();near(travelled(h),0);
   assert.equal(h.position().floor,'floor500');assert.equal(h.run('sensorFloorBoundary'),false);
@@ -305,7 +305,7 @@ test('wheelchair buttons skip raw corridor nodes, allow correction and keep Prev
 
 test('wheelchair turn instruction uses simplified checkpoints instead of noisy raw neighbors',async()=>{
   const h=harness();
-  const points=[[0,0],[.04,0],[.08,.004],[.115,.015],[.145,.035],[.168,.062],[.184,.095],[.193,.132],[.197,.172],[.197,.212]];
+  const points=[[0,0],[.004,0],[.008,.0004],[.0115,.0015],[.0145,.0035],[.0168,.0062],[.0184,.0095],[.0193,.0132],[.0197,.0172],[.0197,.0212]];
   h.setRoute(points.map(([x,y],index)=>({
     id:String(index),label:index===points.length-1?'Destination':'Corridor',
     type:index===points.length-1?'room':'corridor',floor:'floor500',x,y

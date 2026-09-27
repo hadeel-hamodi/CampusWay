@@ -250,36 +250,315 @@ function findClosestEdge(lat, lng){
 
 function applyCampusCorrections(){
 
-   addCampusNode(
-  'campus_crossing_1',
-  32.75965118924193,
-  35.020708607441215
+// --------------------------------------------------
+// Carmel Gate <-> Multi-Purpose zebra crossing
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_carmel_crossing_gate',
+  32.759171,
+  35.021342
 );
 
-// Split the existing OSM segment at the exact
-// CampusWay crossing point.
+addCampusNode(
+  'campus_carmel_crossing_campus',
+  32.759192,
+  35.021385
+);
+
+// Insert gate side into the existing service-road segment
 removeEdge(
-  1447013833,
-  1447013832
+  1447013831,
+  1387533543
 );
 
 addEdge(
-  1447013833,
-  'campus_crossing_1',
+  1447013831,
+  'campus_carmel_crossing_gate',
   'service'
 );
 
 addEdge(
-  'campus_crossing_1',
-  1447013832,
+  'campus_carmel_crossing_gate',
+  1387533543,
   'service'
 );
 
-// CampusWay pedestrian crossing
+// The actual zebra crossing
 addEdge(
-  1446999294,
-  'campus_crossing_1',
+  'campus_carmel_crossing_gate',
+  'campus_carmel_crossing_campus',
   'footway'
+);
+
+// Insert campus side into the existing footway
+removeEdge(
+  1446999275,
+  1446999294
+);
+
+addEdge(
+  1446999275,
+  'campus_carmel_crossing_campus',
+  'footway'
+);
+
+addEdge(
+  'campus_carmel_crossing_campus',
+  1446999294,
+  'footway'
+);
+
+// --------------------------------------------------
+// Main Building <-> Education Building zebra crossing
+// Verified physically on campus
+// --------------------------------------------------
+
+// West side of crossing
+addCampusNode(
+  'campus_main_education_crossing_west',
+  32.76173888526047,
+  35.01856225354481
+);
+
+// Split existing west-side footway
+removeEdge(
+  9255990877,
+  9255990878
+);
+
+addEdge(
+  9255990877,
+  'campus_main_education_crossing_west',
+  'footway'
+);
+
+addEdge(
+  'campus_main_education_crossing_west',
+  9255990878,
+  'footway'
+);
+
+
+// East side of crossing
+addCampusNode(
+  'campus_main_education_crossing_east',
+  32.76179346536284,
+  35.018798207986364
+);
+
+// Split existing east-side segment
+removeEdge(
+  7674525963,
+  7674525964
+);
+
+addEdge(
+  7674525963,
+  'campus_main_education_crossing_east',
+  'service'
+);
+
+addEdge(
+  'campus_main_education_crossing_east',
+  7674525964,
+  'service'
+);
+
+
+// Connect both sides through the verified zebra crossing
+addEdge(
+  'campus_main_education_crossing_west',
+  'campus_main_education_crossing_east',
+  'footway'
+);
+
+// --------------------------------------------------
+// Rabin Floor 7 exit -> outdoor plaza
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_rabin_floor7_exit',
+  32.7611893,
+  35.0203915
+);
+
+addCampusNode(
+  'campus_rabin_floor7_plaza',
+  32.7609968,
+  35.0201634
+);
+
+addEdge(
+  'campus_rabin_floor7_exit',
+  'campus_rabin_floor7_plaza',
+  'footway'
+);
+
+addCampusNode(
+  'campus_rabin_floor7_right_path',
+  32.7610884,
+  35.0200528
+);
+
+addEdge(
+  'campus_rabin_floor7_plaza',
+  'campus_rabin_floor7_right_path',
+  'footway'
+);
+
+addCampusNode(
+  'campus_rabin_floor7_lower_path',
+  32.7610547,
+  35.0198543
+);
+
+addEdge(
+  'campus_rabin_floor7_right_path',
+  'campus_rabin_floor7_lower_path',
+  'footway'
+);
+
+addCampusNode(
+  'campus_rabin_floor7_street',
+  32.7610031,
+  35.0197058
+);
+
+addEdge(
+  'campus_rabin_floor7_lower_path',
+  'campus_rabin_floor7_street',
+  'footway'
+);
+
+addCampusNode(
+  'campus_rabin_floor7_street_join',
+  32.761000844805366,
+  35.019637016563756
+);
+removeEdge(
+  1447013840,
+  2102958523
+);
+
+addEdge(
+  1447013840,
+  'campus_rabin_floor7_street_join',
+  'service'
+);
+
+addEdge(
+  'campus_rabin_floor7_street_join',
+  2102958523,
+  'service'
+);
+
+addEdge(
+  'campus_rabin_floor7_street',
+  'campus_rabin_floor7_street_join',
+  'footway'
+);
+
+// --------------------------------------------------
+// Main -> Multi-Purpose sidewalk
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_multi_sidewalk_top',
+  32.7600705,
+  35.0205183
+);
+
+addCampusNode(
+  'campus_multi_sidewalk_bottom',
+  32.7597002,
+  35.0208703
+);
+
+addEdge(
+  'campus_multi_sidewalk_top',
+  'campus_multi_sidewalk_bottom',
+  'footway'
+);
+
+addEdge(
+  'campus_multi_sidewalk_bottom',
+  1446999294,
+  'footway'
+);
+
+addEdge(
+  'campus_multi_sidewalk_top',
+  1447013834,
+  'footway'
+);
+
+addEdge(
+  2102958523,
+  1447013838,
+  'footway'
+);
+
+/*
+ // --------------------------------------------------
+ // Accessible ramp: street <-> Rabin Floor 6 plaza
+ // Provides step-free access toward Student House Floor 4
+ // --------------------------------------------------
+
+ addCampusNode(
+   'campus_rabin_ramp_lower',
+   32.7618565,
+   35.0204916
+ );
+
+ addCampusNode(
+   'campus_rabin_ramp_upper',
+   32.7615516,
+   35.0208770
+ );
+
+ addEdge(
+   7674525954,
+   'campus_rabin_ramp_lower',
+   'footway'
+ );
+
+ addEdge(
+   'campus_rabin_ramp_lower',
+   'campus_rabin_ramp_upper',
+   'footway'
+ );
+
+ addEdge(
+   'campus_rabin_ramp_upper',
+   1936600008,
+   'footway'
+ );
+
+ // Split the existing direct sidewalk edge so routing follows the ramp geometry
+removeEdge(
+  7674525954,
+  1936600008
+);
+*/
+
+
+// --------------------------------------------------
+// Student House <-> Main upper connector
+// This OSM edge is mapped as service, but the physical
+// level change is stairs + nearby elevator.
+// Keep it usable for mobility through the elevator.
+// --------------------------------------------------
+
+removeEdge(
+  7674525954,
+  1936600008
+);
+
+addEdge(
+  7674525954,
+  1936600008,
+  'elevator'
 );
 
 
@@ -319,9 +598,9 @@ addEdge(
 
     let best = null;
     let bestDistance = Infinity;
-    const avoidSteps = options.avoidSteps === true;
 
     const point = [lat, lon];
+    const avoidSteps = options.avoidSteps === true;
 
     for(const [id, coord] of coordinates.entries()){
 
@@ -459,12 +738,11 @@ function closestNodesBetweenComponents(componentA, componentB){
   // Dijkstra
   // --------------------------------------------------
 
- function shortestPath(start, end, options = {}) {
+function shortestPath(start, end, options = {}) {
 
     const distances = new Map();
     const previous = new Map();
     const previousEdge = new Map();
-    const avoidSteps = options.avoidSteps === true;
 
     const unvisited =
       new Set(graph.keys());
@@ -504,11 +782,14 @@ function closestNodesBetweenComponents(componentA, componentB){
       unvisited.delete(current);
 for(const edge of graph.get(current) || []){
 
-  if(avoidSteps && edge.type === 'steps'){
+  if(!unvisited.has(edge.node)){
     continue;
   }
 
-  if(!unvisited.has(edge.node)){
+    if(
+    options.avoidSteps &&
+    edge.type === 'steps'
+  ){
     continue;
   }
 
@@ -708,92 +989,92 @@ async function route(
   endLng,
   options = {}
 ){
+  await load();
 
-    await load();
+  const routeOptions = {
+    avoidSteps: options.avoidSteps === true
+  };
 
-    const routeOptions = {
-      avoidSteps: options.avoidSteps === true
-    };
+  const startNode =
+    nearestNode(
+      startLat,
+      startLng,
+      routeOptions
+    );
 
-    const startNode =
-      nearestNode(
-        startLat,
-        startLng,
-        routeOptions
-      );
+  const endNode =
+    nearestNode(
+      endLat,
+      endLng,
+      routeOptions
+    );
 
-    const endNode =
-      nearestNode(
-        endLat,
-        endLng,
-        routeOptions
-      );
+  if(
+    startNode === null ||
+    endNode === null
+  ){
+    return null;
+  }
 
-    if(
-      startNode === null ||
-      endNode === null
-    ){
-      return null;
-    }
+  const result =
+    shortestPath(
+      startNode,
+      endNode,
+      routeOptions
+    );
 
-const result =
-  shortestPath(
-    startNode,
-    endNode,
-    routeOptions
-  );
+  if(!result){
+    const startComponent =
+      connectedComponent(startNode);
 
-if(!result){
-
-  const startComponent =
-    connectedComponent(startNode);
-
-  const endComponent =
-    connectedComponent(endNode);
+    const endComponent =
+      connectedComponent(endNode);
 
     const closestGap =
-  closestNodesBetweenComponents(
-    startComponent,
-    endComponent
-  );
+      closestNodesBetweenComponents(
+        startComponent,
+        endComponent
+      );
 
-  console.warn(
-    'No connected OSM route found',
-    {
-      startNode,
-      startCoordinate: coordinates.get(startNode),
-      startComponentSize: startComponent.size,
+    console.warn(
+      'No connected OSM route found',
+      {
+        startNode,
+        startCoordinate:
+          coordinates.get(startNode),
+        startComponentSize:
+          startComponent.size,
 
-      endNode,
-      endCoordinate: coordinates.get(endNode),
-      endComponentSize: endComponent.size,
-    
-      closestGap
-    }
-  );
+        endNode,
+        endCoordinate:
+          coordinates.get(endNode),
+        endComponentSize:
+          endComponent.size,
 
-  return null;
-}
+        closestGap
+      }
+    );
 
-    const routeCoordinates = [
+    return null;
+  }
+
+  return {
+    coordinates: [
       [startLat, startLng],
 
       ...result.nodes.map(
-        node =>
-          coordinates.get(node)
+        node => coordinates.get(node)
       ),
 
       [endLat, endLng]
-    ];
+    ],
 
-    return {
-      coordinates: routeCoordinates,
-      distance: result.distance,
-      edges: result.edges,
-      startNode,
-      endNode
-    };
-  }
+    distance: result.distance,
+    edges: result.edges,
+    startNode,
+    endNode
+  };
+}
 
 
   // --------------------------------------------------

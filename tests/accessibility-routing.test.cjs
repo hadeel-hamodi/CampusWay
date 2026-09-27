@@ -106,6 +106,7 @@ function indoorHarness(graph, accessible = true) {
     function allNodes(){return Object.values(GRAPH.floors).flatMap(f=>f.nodes||[])}
     function nodeById(id){return allNodes().find(node=>node.id===id)||null}
     function cid(n){const s=String(n.connectorId||'').trim();return (!s||['null','none','no','n/a'].includes(s.toLowerCase()))?'':s}
+    function indoorDistanceMeters(a,b){return Math.hypot((b.x-a.x)*132.6,(b.y-a.y)*101.2)}
     function esc(value){return String(value)}
     const messages={noRoute:'No route yet',noRouteHelp:'Choose locations',routeNotFound:'No route found.',routeNotFoundHelp:'Try another route.',noAccessibleRoute:'No step-free route found.',noAccessibleRouteHelp:'Try another entrance.'};
     function it(key){return messages[key]||key}
@@ -123,7 +124,7 @@ function indoorHarness(graph, accessible = true) {
     let progressIndex=1,progressT=.5,navigationActive=true,sensorFloorBoundary=true,followCamera=false,headingDeg=0;
   `);
   run(between(navigation, 'function buildGraph(){', 'function bestDestinationNode('));
-  run(between(navigation, 'function describeRoute(){', 'function updateTurnInstruction(){'));
+  run(between(navigation, 'function describeRoute(', 'function updateTurnInstruction(){'));
   return {run, element};
 }
 
@@ -207,7 +208,7 @@ test('Mobility outdoor failure does not draw the unverified fallback path', asyn
   const calls = [];
   const context = vm.createContext({
     document:{getElementById:element},
-    sessionStorage:{removeItem(){}},
+    sessionStorage:{removeItem(){},getItem(){return null;},setItem(){}},
     CampusOutdoorRouting:{
       async route(...args){calls.push(args);return null;},
       distance(){return 0;}
@@ -221,6 +222,9 @@ test('Mobility outdoor failure does not draw the unverified fallback path', asyn
     t:{noAccessibleRoute:'No step-free outdoor route found.',noAccessibleRouteHelp:'Try another point.'},
     currentProfile:'mobility', routeLine:null, keepIndoorContextForCurrentRoute:false,
     currentOutdoorDestination:null, outdoorRouteRequestId:0,
+    gpsMarker:null, customStart:null,
+    BUILDING_ENTRANCES:{main:[]},
+    sharedIndoorTransfer(){return null;},
     clearInterval() {}
   });
   vm.runInContext(between(index, 'async function routeTo(', 'function closeRoute(){'), context);
@@ -247,6 +251,7 @@ test('changing the start retries a saved destination even when no route line was
     map:{flyTo(){},removeLayer(){}},
     setTimeout(callback){scheduled=callback;},
     routeTo(...args){calls.push(args);},
+    clearIndoorStartJourney(){},
     customStart:null, gpsMarker:null, routeLine:null,
     startSuggestions:{style:{}},
     currentOutdoorDestination:{name:'Main Building',lat:3,lng:4,keepIndoorContext:true}

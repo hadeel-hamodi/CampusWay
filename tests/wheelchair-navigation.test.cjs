@@ -38,11 +38,11 @@ test('an uninterrupted elevator run skips pass-through floors', () => {
 test('centimetre-scale graph noise does not create repeated button presses', () => {
   const route = [];
   for (let index = 0; index < 20; index++) {
-    route.push(node(`horizontal-${index}`, index * 0.01, (index % 2 ? 1 : -1) * 0.003));
+    route.push(node(`horizontal-${index}`, index * 0.01, (index % 2 ? 1 : -1) * 0.0003));
   }
   route.push(node('corner', 0.2, 0));
   for (let index = 1; index <= 20; index++) {
-    route.push(node(`vertical-${index}`, 0.2 + (index % 2 ? 1 : -1) * 0.003, index * 0.01));
+    route.push(node(`vertical-${index}`, 0.2 + (index % 2 ? 1 : -1) * 0.0003, index * 0.01));
   }
   route[0].type = 'entrance';
   route[route.length - 1].type = 'room';
@@ -63,7 +63,7 @@ test('distance excludes vertical connector travel and measures the highlighted f
     node('lift-600', 1, 0, 'floor600', 'elevator'),
     node('end', 1, 1, 'floor600', 'room')
   ];
-  assert.equal(WheelchairNavigation.distanceToCheckpoint(route, { index: 0, t: 0 }, 1), 13.26);
+  assert.equal(WheelchairNavigation.distanceToCheckpoint(route, { index: 0, t: 0 }, 1), 132.6);
   assert.equal(WheelchairNavigation.distanceToCheckpoint(route, { index: 1, t: 0 }, 2), 0);
-  assert.equal(WheelchairNavigation.progressFraction(route, { index: 1, t: 0 }), 13.26 / (13.26 + 10.12));
+  assert.equal(WheelchairNavigation.progressFraction(route, { index: 1, t: 0 }), 132.6 / (132.6 + 101.2));
 });

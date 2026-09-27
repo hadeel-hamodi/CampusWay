@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const geometry = require('../wayframe/route-progress.js');
-const node = (x, y = 0, floor = '1') => ({ x: x / 13.26, y: y / 10.12, floor });
+const node = (x, y = 0, floor = '1') => ({ x: x / 132.6, y: y / 101.2, floor });
 const cursor = (index = 0, t = 0) => ({ index, t });
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} != ${expected}`);
 const bearings = values => values.map(v => `${v.direction}:${v.bearing}`).sort();
