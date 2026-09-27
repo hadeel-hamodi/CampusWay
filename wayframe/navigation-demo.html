@@ -151,13 +151,19 @@ button{cursor:pointer;font-weight:700}
   box-shadow:0 4px 16px rgba(13,27,62,.07);
   display:none;
 }
-.navBanner{
+.navStack{
   position:absolute;
   left:50%;
   transform:translateX(-50%);
   bottom:18px;
   z-index:2;
   width:min(620px,calc(100% - 28px));
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.navBanner{
+  width:100%;
   background:white;
   border:1px solid #d8e1e7;
   border-radius:18px;
@@ -196,8 +202,22 @@ button{cursor:pointer;font-weight:700}
   margin-bottom:12px;
 }
 .card strong{display:block;margin-bottom:4px}
-#directionCard{flex-basis:100%;max-width:720px;margin-bottom:0}
-#directionCard[hidden]{display:none}
+#directionCard,#wheelchairCard{flex-basis:100%;max-width:720px;margin-bottom:0}
+#directionCard[hidden],#wheelchairCard[hidden]{display:none}
+.wheelchairActions{
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(92px,.8fr) minmax(0,1.4fr);
+  gap:10px;
+  padding:10px;
+  background:rgba(255,255,255,.96);
+  border:1px solid #d8e1e7;
+  border-radius:16px;
+  box-shadow:0 8px 28px rgba(13,27,62,.14);
+}
+.wheelchairActions[hidden]{display:none}
+.wheelchairActions button{min-height:56px;font-size:16px}
+#wheelchairStatus{margin-top:8px}
 .muted{color:var(--muted);font-size:13px}
 .step{
   display:flex;
@@ -273,8 +293,9 @@ button{cursor:pointer;font-weight:700}
         <select id="to" disabled><option value="">Choose floor first</option></select>
       </div>
       <button id="routeBtn" class="primary">Route</button>
-      <button id="autoModeBtn" class="primary">Auto Mode</button>
-      <button id="sensorModeBtn" class="secondary">Phone Sensors</button>
+      <button id="autoModeBtn" class="primary" type="button" aria-pressed="true">Auto Mode</button>
+      <button id="sensorModeBtn" class="secondary" type="button" aria-pressed="false">Phone Sensors</button>
+      <button id="wheelchairModeBtn" class="secondary" type="button" aria-pressed="false">Manual / Wheelchair</button>
       <label style="display:flex;align-items:center;gap:6px;font-weight:700;">
       <input id="accessibleRoute" type="checkbox">
       ♿ Accessible route
@@ -286,6 +307,11 @@ button{cursor:pointer;font-weight:700}
         <p class="muted" id="directionHelp"></p>
         <button id="calibrateBtn" class="primary" type="button" disabled></button>
         <p class="muted" id="directionStatus" role="status" aria-live="polite"></p>
+      </div>
+      <div class="card" id="wheelchairCard" role="region" aria-labelledby="wheelchairTitle" hidden>
+        <strong id="wheelchairTitle">Wheelchair controls</strong>
+        <p class="muted" id="wheelchairHelp">Move along the highlighted route, then confirm only when you reach the next shown point. No step counting or phone sensors are used.</p>
+        <p class="muted" id="wheelchairStatus" role="status" aria-live="polite"></p>
       </div>
     </div>
   </div>
@@ -308,13 +334,19 @@ button{cursor:pointer;font-weight:700}
 
         <button id="recenterBtn" class="recenterBtn" type="button">◎ Recenter</button>
 
-        <div class="navBanner">
-          <div class="turnIcon">↑</div>
-          <div class="bannerText">
-            <strong id="instruction">Choose a destination</strong>
-            <span id="subInstruction">Your route will appear here.</span>
+        <div class="navStack">
+          <div class="navBanner">
+            <div class="turnIcon">↑</div>
+            <div class="bannerText" role="status" aria-live="polite">
+              <strong id="instruction">Choose a destination</strong>
+              <span id="subInstruction">Your route will appear here.</span>
+            </div>
+            <div class="eta" id="eta">—</div>
           </div>
-          <div class="eta" id="eta">—</div>
+          <div class="wheelchairActions" id="wheelchairMapControls" aria-label="Wheelchair navigation controls" hidden>
+            <button id="wheelchairBackBtn" class="secondary" type="button" disabled>← Previous point</button>
+            <button id="wheelchairNextBtn" class="primary" type="button" disabled>✓ I reached the next point</button>
+          </div>
         </div>
       </div>
     </div>
@@ -327,7 +359,7 @@ button{cursor:pointer;font-weight:700}
       </div>
 
       <div class="card">
-        <strong>Live position</strong>
+        <strong id="livePositionTitle">Live position</strong>
         <div class="muted" id="livePos">Not started</div>
         <div class="progress"><div id="progressBar"></div></div>
       </div>
@@ -348,6 +380,7 @@ button{cursor:pointer;font-weight:700}
 <script src="step-detector.js"></script>
 <script src="heading-tracker.js"></script>
 <script src="route-progress.js"></script>
+<script src="wheelchair-navigation.js"></script>
 <script>
 let GRAPH = null;
 let BUILDING = 'madriga';
@@ -408,6 +441,7 @@ let sensorFloorBoundary=false;
 let sensorHeadingPaused=false;
 let navigationStartToken=0;
 let motionUnavailable=false;
+let accessibilityLockedByProfile=false;
 
 // Smooth visual movement
 let stepMovementQueue=[];
@@ -430,9 +464,9 @@ const floorPlanMarkupCache = new Map();
 
 // Translation layer only. Routing, graph loading and room handoff stay unchanged.
 const INDOOR_T = {
-  en:{campusMap:'← Campus map',building:'BUILDING',startFloor:'START FLOOR',startLocation:'START LOCATION',destinationFloor:'DESTINATION FLOOR',destination:'DESTINATION',route:'Route',autoMode:'Auto Mode',phoneSensors:'Phone Sensors',accessibleRoute:'Accessible route',startNavigation:'▶ Start navigation',chooseRoute:'Choose a route.',floor:'Floor',navigation:'Navigation',noRoute:'No route yet',noRouteHelp:"Choose where you're starting and where you want to go.",routeNotFound:'No route found.',routeNotFoundHelp:'Try another start or destination.',noAccessibleRoute:'No step-free route found.',noAccessibleRouteHelp:'Try another entrance or destination. The previous route has been cleared.',livePosition:'Live position',notStarted:'Not started',howWorks:'How this demo works',howWorksText:'Choose a floor first; the location dropdown then contains only rooms and useful destinations from that floor. During navigation, the marker follows the planned route.',chooseDestinationBanner:'Choose a destination',routeAppear:'Your route will appear here.',recenter:'◎ Recenter'},
-  he:{campusMap:'→ מפת הקמפוס',building:'בניין',startFloor:'קומת התחלה',startLocation:'נקודת התחלה',destinationFloor:'קומת יעד',destination:'יעד',route:'מסלול',autoMode:'מצב אוטומטי',phoneSensors:'חיישני הטלפון',accessibleRoute:'מסלול נגיש',startNavigation:'▶ התחל ניווט',chooseRoute:'בחר מסלול.',floor:'קומה',navigation:'ניווט',noRoute:'אין מסלול עדיין',noRouteHelp:'בחר מאיפה להתחיל ולאן ברצונך להגיע.',routeNotFound:'לא נמצא מסלול.',routeNotFoundHelp:'נסה נקודת התחלה או יעד אחרים.',noAccessibleRoute:'לא נמצא מסלול ללא מדרגות.',noAccessibleRouteHelp:'נסה כניסה או יעד אחרים. המסלול הקודם נוקה.',livePosition:'מיקום נוכחי',notStarted:'טרם התחיל',howWorks:'איך הניווט עובד',howWorksText:'בחר קודם קומה. לאחר מכן יוצגו החדרים והיעדים השימושיים באותה קומה. במהלך הניווט הסמן מתקדם לאורך המסלול המתוכנן.',chooseDestinationBanner:'בחר יעד',routeAppear:'המסלול יופיע כאן.',recenter:'◎ מרכז מחדש'},
-  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',routeNotFound:'لم يتم العثور على مسار.',routeNotFoundHelp:'جرّب نقطة بداية أو وجهة أخرى.',noAccessibleRoute:'لم يتم العثور على مسار بدون درج.',noAccessibleRouteHelp:'جرّب مدخلًا أو وجهة أخرى. تم حذف المسار السابق.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا، ثم ستظهر الغرف والوجهات المفيدة الموجودة في ذلك الطابق. أثناء الملاحة يتحرك المؤشر على المسار المحدد.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'}
+  en:{campusMap:'← Campus map',building:'BUILDING',startFloor:'START FLOOR',startLocation:'START LOCATION',destinationFloor:'DESTINATION FLOOR',destination:'DESTINATION',route:'Route',autoMode:'Auto Mode',phoneSensors:'Phone Sensors',wheelchairMode:'Manual / Wheelchair',wheelchairControls:'Wheelchair controls',wheelchairHelp:'Move along the highlighted route, then confirm only when you reach the next shown point. No step counting or phone sensors are used.',previousPoint:'← Previous point',nextPoint:'✓ I reached the next point',accessibleRoute:'Accessible route',startNavigation:'▶ Start navigation',chooseRoute:'Choose a route.',floor:'Floor',navigation:'Navigation',noRoute:'No route yet',noRouteHelp:"Choose where you're starting and where you want to go.",routeNotFound:'No route found.',routeNotFoundHelp:'Try another start or destination.',noAccessibleRoute:'No step-free route found.',noAccessibleRouteHelp:'Try another entrance or destination. The previous route has been cleared.',livePosition:'Live position',notStarted:'Not started',howWorks:'How this demo works',howWorksText:'Choose a floor first. In Manual / Wheelchair mode, use the large buttons only after reaching the shown point; it does not count steps.',chooseDestinationBanner:'Choose a destination',routeAppear:'Your route will appear here.',recenter:'◎ Recenter'},
+  he:{campusMap:'→ מפת הקמפוס',building:'בניין',startFloor:'קומת התחלה',startLocation:'נקודת התחלה',destinationFloor:'קומת יעד',destination:'יעד',route:'מסלול',autoMode:'מצב אוטומטי',phoneSensors:'חיישני הטלפון',wheelchairMode:'ידני / כיסא גלגלים',wheelchairControls:'בקרת כיסא גלגלים',wheelchairHelp:'התקדם לאורך המסלול המסומן ואשר רק כשהגעת לנקודה המוצגת הבאה. אין שימוש בספירת צעדים או בחיישני הטלפון.',previousPoint:'→ נקודה קודמת',nextPoint:'✓ הגעתי לנקודה הבאה',accessibleRoute:'מסלול נגיש',startNavigation:'▶ התחל ניווט',chooseRoute:'בחר מסלול.',floor:'קומה',navigation:'ניווט',noRoute:'אין מסלול עדיין',noRouteHelp:'בחר מאיפה להתחיל ולאן ברצונך להגיע.',routeNotFound:'לא נמצא מסלול.',routeNotFoundHelp:'נסה נקודת התחלה או יעד אחרים.',noAccessibleRoute:'לא נמצא מסלול ללא מדרגות.',noAccessibleRouteHelp:'נסה כניסה או יעד אחרים. המסלול הקודם נוקה.',livePosition:'מיקום נוכחי',notStarted:'טרם התחיל',howWorks:'איך הניווט עובד',howWorksText:'בחר קודם קומה. במצב ידני / כיסא גלגלים השתמש בכפתורים הגדולים רק לאחר שהגעת לנקודה המוצגת; אין ספירת צעדים.',chooseDestinationBanner:'בחר יעד',routeAppear:'המסלול יופיע כאן.',recenter:'◎ מרכז מחדש'},
+  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',wheelchairMode:'يدوي / كرسي متحرك',wheelchairControls:'تحكم الكرسي المتحرك',wheelchairHelp:'تحرّك على المسار المحدد، وأكّد فقط عندما تصل إلى النقطة التالية المعروضة. لا يتم عدّ الخطوات ولا استخدام حساسات الهاتف.',previousPoint:'→ النقطة السابقة',nextPoint:'✓ وصلت للنقطة التالية',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',routeNotFound:'لم يتم العثور على مسار.',routeNotFoundHelp:'جرّب نقطة بداية أو وجهة أخرى.',noAccessibleRoute:'لم يتم العثور على مسار بدون درج.',noAccessibleRouteHelp:'جرّب مدخلًا أو وجهة أخرى. تم حذف المسار السابق.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا. في وضع يدوي / كرسي متحرك استخدم الأزرار الكبيرة فقط بعد وصولك للنقطة المعروضة؛ لا يتم عدّ الخطوات.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'}
 };
 
 function indoorLanguage(){
@@ -494,6 +528,11 @@ function applyIndoorTranslations(){
   set('#routeBtn','route');
   set('#autoModeBtn','autoMode');
   set('#sensorModeBtn','phoneSensors');
+  set('#wheelchairModeBtn','wheelchairMode');
+  set('#wheelchairTitle','wheelchairControls');
+  set('#wheelchairHelp','wheelchairHelp');
+  set('#wheelchairBackBtn','previousPoint');
+  set('#wheelchairNextBtn','nextPoint');
   set('#startBtn','startNavigation');
   set('#status','chooseRoute');
   set('.floorPill strong','floor');
@@ -1251,7 +1290,7 @@ function drawUserMarker(){
 
   let arrowRotation = 0;
 
-if(navMode === 'auto' && progressIndex < routeNodes.length - 1){
+if((navMode === 'auto' || navMode === 'wheelchair') && progressIndex < routeNodes.length - 1){
   const cur = currentInterpolated();
   const next = routeNodes[progressIndex + 1];
 
@@ -1271,7 +1310,7 @@ if(navMode === 'auto' && progressIndex < routeNodes.length - 1){
   marker.setAttribute('fill','#0D1B3E');
   marker.setAttribute('stroke','#fff');
   marker.setAttribute('stroke-width','3');
-  if(navMode === 'auto'){
+  if(navMode === 'auto' || navMode === 'wheelchair'){
   marker.setAttribute(
     'transform',
     `rotate(${arrowRotation} ${p.x} ${p.y})`
@@ -1404,6 +1443,10 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
 
 function updateTurnInstruction(){
+  if(navMode === 'wheelchair'){
+    updateWheelchairInstruction();
+    return;
+  }
   if(navMode === 'sensor' && sensorFloorBoundary){
     showFloorBoundary();
     return;
@@ -1457,15 +1500,170 @@ if(a.floor!==b.floor){
   else $('instruction').textContent='Turn left';
 }
 
+function wheelchairTarget(direction){
+  if(!routeNodes.length) return null;
+  return CampusWheelchairNavigation.targetCheckpoint(
+    routeNodes,
+    {index:progressIndex,t:progressT},
+    direction
+  );
+}
+
+function wheelchairCheckpointName(index, currentPoint=false){
+  const node=routeNodes[index];
+  if(!node) return '';
+  if(index===0) return localizedNodeLabel(node._displayLabel||node.label);
+  if(index===routeNodes.length-1) return localizedNodeLabel(node._displayLabel||node.label);
+  if(node.type==='elevator') return localizedInstruction('the elevator','المصعد','המעלית');
+  if(node.type==='ramp') return localizedInstruction('the ramp','المنحدر','הרמפה');
+  if(node.type==='stairs') return localizedInstruction('the stairs','الدرج','המדרגות');
+  return currentPoint
+    ? localizedInstruction('the turn','المنعطف','הפנייה')
+    : localizedInstruction('the next turn','المنعطف التالي','הפנייה הבאה');
+}
+
+function wheelchairTurnAt(index){
+  const checkpoints=CampusWheelchairNavigation.checkpointIndices(routeNodes);
+  const position=checkpoints.indexOf(index);
+  if(position<=0 || position>=checkpoints.length-1) return 0;
+  const previous=routeNodes[checkpoints[position-1]];
+  const current=routeNodes[index];
+  const next=routeNodes[checkpoints[position+1]];
+  if(previous.floor!==current.floor || current.floor!==next.floor) return 0;
+  const incoming={x:(current.x-previous.x)*13.26,y:(current.y-previous.y)*10.12};
+  const outgoing={x:(next.x-current.x)*13.26,y:(next.y-current.y)*10.12};
+  const cross=incoming.x*outgoing.y-incoming.y*outgoing.x;
+  const dot=incoming.x*outgoing.x+incoming.y*outgoing.y;
+  const magnitude=Math.atan2(Math.abs(cross),dot)*180/Math.PI;
+  if(magnitude<35) return 0;
+  return Math.sign(cross);
+}
+
+function updateWheelchairInstruction(){
+  if(!routeNodes.length) return;
+  if(progressIndex>=routeNodes.length-1){
+    const destination=routeNodes.at(-1);
+    const label=destination._displayLabel||destination.label;
+    $('instruction').textContent=localizedInstruction('You have arrived','لقد وصلت','הגעת ליעד');
+    $('subInstruction').textContent=localizedInstruction(
+      `Check the sign or landmark to confirm: ${label}`,
+      `تحقق من اللافتة أو المعلم لتأكيد الوصول: ${localizedNodeLabel(label)}`,
+      `בדוק את השלט או את נקודת הציון לאישור: ${localizedNodeLabel(label)}`
+    );
+    $('eta').textContent=localizedInstruction('Arrived','وصلت','הגעת');
+    $('wheelchairNextBtn').textContent=localizedInstruction('✓ Destination reached','✓ وصلت للوجهة','✓ הגעתי ליעד');
+    return;
+  }
+
+  const targetIndex=wheelchairTarget(1);
+  if(targetIndex===null) return;
+  const current=routeNodes[progressIndex];
+  const next=routeNodes[progressIndex+1];
+  const target=routeNodes[targetIndex];
+
+  if(progressT===0 && current && next && current.floor!==next.floor){
+    const usesElevator=routeNodes.slice(progressIndex,targetIndex+1).some(node=>node.type==='elevator');
+    const method=usesElevator
+      ? localizedInstruction('elevator','المصعد','מעלית')
+      : localizedInstruction('accessible connector','الممر المهيأ','מעבר נגיש');
+    $('instruction').textContent=localizedInstruction(
+      `Take the ${method} to Floor ${floorLabel(target.floor)}`,
+      `استخدم ${method} إلى ${localizedFloor(target.floor)}`,
+      `השתמש ב${method} אל ${localizedFloor(target.floor)}`
+    );
+    $('subInstruction').textContent=localizedInstruction(
+      'Confirm after you arrive on that floor.',
+      'أكّد بعد وصولك إلى هذا الطابق.',
+      'אשר לאחר ההגעה לקומה.'
+    );
+    $('wheelchairNextBtn').textContent=localizedInstruction(
+      `✓ Reached Floor ${floorLabel(target.floor)}`,
+      `✓ وصلت إلى ${localizedFloor(target.floor)}`,
+      `✓ הגעתי אל ${localizedFloor(target.floor)}`
+    );
+    $('eta').textContent=localizedInstruction('Manual','يدوي','ידני');
+    return;
+  }
+
+  const turn=progressT===0 ? wheelchairTurnAt(progressIndex) : 0;
+  $('instruction').textContent=turn>0
+    ? localizedInstruction('Turn right and follow the highlighted route','انعطف يمينًا واتبع المسار المحدد','פנה ימינה והמשך במסלול המסומן')
+    : turn<0
+      ? localizedInstruction('Turn left and follow the highlighted route','انعطف يسارًا واتبع المسار المحدد','פנה שמאלה והמשך במסלול המסומן')
+      : localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','המשך במסלול המסומן');
+  const distance=CampusWheelchairNavigation.distanceToCheckpoint(
+    routeNodes,
+    {index:progressIndex,t:progressT},
+    targetIndex
+  );
+  const distanceText=distance<1
+    ? localizedInstruction('less than 1 m','أقل من متر','פחות ממטר')
+    : localizedInstruction(`about ${Math.round(distance)} m`,`حوالي ${Math.round(distance)} متر`,`כ-${Math.round(distance)} מ׳`);
+  const checkpoint=wheelchairCheckpointName(targetIndex);
+  $('subInstruction').textContent=localizedInstruction(
+    `${distanceText} to ${checkpoint}. Confirm only when you reach it.`,
+    `${distanceText} حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
+    `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`
+  );
+  $('wheelchairNextBtn').textContent=targetIndex===routeNodes.length-1
+    ? localizedInstruction('✓ I reached the destination','✓ وصلت إلى الوجهة','✓ הגעתי ליעד')
+    : it('nextPoint');
+  $('eta').textContent=localizedInstruction('Manual','يدوي','ידני');
+}
+
+function moveWheelchairToCheckpoint(direction){
+  if(navMode!=='wheelchair' || !navigationActive || (direction!==1 && direction!==-1)) return;
+  const targetIndex=wheelchairTarget(direction);
+  if(targetIndex===null) return;
+  progressIndex=targetIndex;
+  progressT=0;
+  lastTravelDirection=direction;
+  activeFloor=routeNodes[targetIndex].floor;
+  followCamera=true;
+  followNode(routeNodes[targetIndex]);
+  floorButtons();
+  updateTurnInstruction();
+  updateProgressUI();
+  drawBaseMap();
+  updateDirectionControls();
+  $('wheelchairStatus').textContent=progressIndex===routeNodes.length-1
+    ? localizedInstruction('Destination confirmed. Use Previous point if this was accidental.','تم تأكيد الوصول. استخدم النقطة السابقة إذا كان الضغط بالخطأ.','היעד אושר. אם הלחיצה הייתה בטעות, השתמש בנקודה הקודמת.')
+    : direction>0
+      ? localizedInstruction('Next point confirmed. Follow the new instruction.','تم تأكيد النقطة. اتبع الإرشاد الجديد.','הנקודה אושרה. המשך לפי ההנחיה החדשה.')
+      : localizedInstruction('Previous point confirmed.','تم تأكيد النقطة السابقة.','הנקודה הקודמת אושרה.');
+}
+
 function updateProgressUI(){
   if(!routeNodes.length){$('livePos').textContent='Not started';$('progressBar').style.width='0%';return}
   const total=Math.max(1,routeNodes.length-1);
-  const pct=Math.min(100,((progressIndex+progressT)/total)*100);
+  const pct=navMode==='wheelchair'
+    ? CampusWheelchairNavigation.progressFraction(routeNodes,{index:progressIndex,t:progressT})*100
+    : Math.min(100,((progressIndex+progressT)/total)*100);
   $('progressBar').style.width=pct+'%';
 
   const cur=currentInterpolated();
   if(cur && navMode === 'sensor' && lastTravelDirection === -1){
     $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — returning along the route`,`${localizedFloor(cur.floor)} — رجوع على المسار`,`${localizedFloor(cur.floor)} — חזרה לאורך המסלול`);
+    return;
+  }
+  if(navMode==='wheelchair'){
+    const confirmed=progressT===0 ? routeNodes[progressIndex] : cur;
+    const isCheckpoint=progressT===0 &&
+      CampusWheelchairNavigation.checkpointIndices(routeNodes).includes(progressIndex);
+    if(!isCheckpoint){
+      $('livePos').textContent=localizedInstruction(
+        `Floor ${floorLabel(confirmed.floor)} — manual position on the route`,
+        `${localizedFloor(confirmed.floor)} — موقع يدوي على المسار`,
+        `${localizedFloor(confirmed.floor)} — מיקום ידני במסלול`
+      );
+      return;
+    }
+    const label=wheelchairCheckpointName(progressIndex,true);
+    $('livePos').textContent=localizedInstruction(
+      `Floor ${floorLabel(confirmed.floor)} — last confirmed point: ${label}`,
+      `${localizedFloor(confirmed.floor)} — آخر نقطة مؤكدة: ${label}`,
+      `${localizedFloor(confirmed.floor)} — נקודה אחרונה שאושרה: ${label}`
+    );
     return;
   }
   if(cur){
@@ -1564,6 +1762,7 @@ function showFloorBoundary(){
 function advanceAlongRoute(distanceMeters){
   if(!navigationActive || routeNodes.length<2) return;
   if(navMode === 'auto') return advanceAutoAlongRoute(distanceMeters);
+  if(navMode === 'wheelchair') return;
   const result=CampusRouteProgress.move(routeNodes,{index:progressIndex,t:progressT},distanceMeters);
   progressIndex=result.index;
   progressT=result.t;
@@ -1681,6 +1880,19 @@ function screenOrientationAngle(){
 function updateDirectionControls(){
   $('directionCard').hidden=navMode !== 'sensor' || navigationActive;
   $('calibrateBtn').disabled=navMode !== 'sensor' || !sensorsEnabled || routeNodes.length<2 || navigationActive;
+  const wheelchairMode=navMode==='wheelchair';
+  const wheelchairActive=wheelchairMode && navigationActive;
+  $('wheelchairCard').hidden=!wheelchairMode;
+  $('wheelchairMapControls').hidden=!wheelchairActive;
+  $('wheelchairBackBtn').disabled=!wheelchairMode || !navigationActive || wheelchairTarget(-1)===null;
+  $('wheelchairNextBtn').disabled=!wheelchairMode || !navigationActive || wheelchairTarget(1)===null;
+  $('recenterBtn').style.bottom=wheelchairActive?'auto':'';
+  $('recenterBtn').style.top=wheelchairActive?'72px':'';
+  if(wheelchairMode && !navigationActive){
+    $('wheelchairStatus').textContent=routeNodes.length<2
+      ? localizedInstruction('Choose a route first.','اختر المسار أولًا.','בחר תחילה מסלול.')
+      : localizedInstruction('Press Start navigation, then confirm each point only after reaching it.','اضغط ابدأ الملاحة، ثم أكّد كل نقطة فقط بعد وصولك إليها.','לחץ התחל ניווט, ולאחר מכן אשר כל נקודה רק אחרי שהגעת אליה.');
+  }
 }
 
 function requireDirectionCalibration(){
@@ -1862,12 +2074,17 @@ async function startNavigation(){
     $('status').textContent='Auto navigation running.';
     $('instruction').textContent='Navigation started';
     startAutoDemo();
-  }else{
+  }else if(navMode === 'sensor'){
     followCamera=true;
     $('mapViewport').scrollIntoView?.({block:'start',behavior:'smooth'});
     $('directionStatus').textContent=localizedInstruction('Direction set. Keep the phone facing your walk.','تم تثبيت الاتجاه. أبقِ الهاتف باتجاه مشيك.','הכיוון נקבע. שמור את הטלפון בכיוון ההליכה.');
     $('status').textContent=localizedInstruction('Start walking. Position is estimated.','ابدأ المشي. الموقع تقديري.','התחל ללכת. המיקום משוער.');
     $('instruction').textContent=localizedInstruction('Start walking','ابدأ المشي','התחל ללכת');
+  }else{
+    followCamera=true;
+    $('mapViewport').scrollIntoView?.({block:'start',behavior:'smooth'});
+    $('status').textContent=localizedInstruction('Manual wheelchair navigation started.','بدأت الملاحة اليدوية للكرسي المتحرك.','הניווט הידני לכיסא גלגלים התחיל.');
+    $('wheelchairStatus').textContent=localizedInstruction('Move along the highlighted route and confirm the next point after reaching it.','تحرّك على المسار المحدد وأكّد النقطة التالية بعد وصولك إليها.','התקדם במסלול המסומן ואשר את הנקודה הבאה לאחר ההגעה.');
   }
   updateTurnInstruction();
 }
@@ -1892,21 +2109,86 @@ $('to').onchange=()=>{
 
 let navMode = 'auto';
 
+function syncNavigationModeUI(){
+  $('autoModeBtn').className=navMode==='auto'?'primary':'secondary';
+  $('sensorModeBtn').className=navMode==='sensor'?'primary':'secondary';
+  $('wheelchairModeBtn').className=navMode==='wheelchair'?'primary':'secondary';
+  $('autoModeBtn').setAttribute('aria-pressed',String(navMode==='auto'));
+  $('sensorModeBtn').setAttribute('aria-pressed',String(navMode==='sensor'));
+  $('wheelchairModeBtn').setAttribute('aria-pressed',String(navMode==='wheelchair'));
+  $('wheelchairMapControls').setAttribute('aria-label',it('wheelchairControls'));
+  $('livePositionTitle').textContent=navMode==='wheelchair'
+    ? localizedInstruction('Last confirmed position','آخر موقع مؤكّد','מיקום אחרון שאושר')
+    : it('livePosition');
+}
+
 function setNavigationMode(mode){
+  if(!['auto','sensor','wheelchair'].includes(mode)) return;
   if(navMode === mode) return;
   stopNavigationMotion();
   navMode=mode;
+  const wheelchairMode=mode==='wheelchair';
+  const forceAccessible=wheelchairMode && !$('accessibleRoute').checked;
+  const resetManualPosition=wheelchairMode && routeNodes.length>0 && (progressIndex!==0 || progressT!==0);
+
+  if(wheelchairMode){
+    $('accessibleRoute').checked=true;
+    $('accessibleRoute').disabled=true;
+    $('accessibleRoute').title=localizedInstruction(
+      'Wheelchair mode keeps stair-free routing on.',
+      'وضع الكرسي المتحرك يُبقي المسار بدون درج مفعّلًا.',
+      'מצב כיסא גלגלים משאיר מסלול ללא מדרגות פעיל.'
+    );
+    if(routeNodes.length){
+      progressIndex=0;
+      progressT=0;
+      activeFloor=routeNodes[0].floor;
+      followCamera=true;
+      followNode(routeNodes[0]);
+      floorButtons();
+      updateProgressUI();
+    }
+  }else{
+    $('accessibleRoute').disabled=accessibilityLockedByProfile;
+    $('accessibleRoute').title=accessibilityLockedByProfile
+      ? localizedInstruction(
+          'Mobility profile keeps stair-free routing on.',
+          'ملف الإعاقة الحركية يُبقي المسار بدون درج مفعّلًا.',
+          'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.'
+        )
+      : '';
+  }
+  syncNavigationModeUI();
   updateDirectionControls();
-  $('autoModeBtn').className=mode==='auto'?'primary':'secondary';
-  $('sensorModeBtn').className=mode==='sensor'?'primary':'secondary';
   $('startBtn').disabled=routeNodes.length<2 || (mode==='auto' && progressIndex>=routeNodes.length-1);
-  $('status').textContent=localizedInstruction('Press Start navigation to use this mode.', 'اضغط ابدأ الملاحة لاستخدام هذا الوضع.', 'לחץ התחל ניווט כדי להשתמש במצב זה.');
-  drawBaseMap();
+  $('status').textContent=mode==='wheelchair'
+    ? resetManualPosition
+      ? localizedInstruction('Position reset to the route start. Press Start navigation.','تمت إعادة الموقع إلى بداية المسار. اضغط ابدأ الملاحة.','המיקום הוחזר לתחילת המסלול. לחץ התחל ניווט.')
+      : localizedInstruction('Press Start navigation. This mode does not use steps or phone sensors.','اضغط ابدأ الملاحة. هذا الوضع لا يستخدم الخطوات أو حساسات الهاتف.','לחץ התחל ניווט. מצב זה אינו משתמש בצעדים או בחיישני הטלפון.')
+    : localizedInstruction('Press Start navigation to use this mode.', 'اضغط ابدأ الملاحة لاستخدام هذا الوضع.', 'לחץ התחל ניווט כדי להשתמש במצב זה.');
+
+  if(forceAccessible &&
+     $('fromFloor').value && $('toFloor').value &&
+     $('from').value && $('to').value){
+    route();
+    return;
+  }
+  if(forceAccessible && routeNodes.length){
+    clearRouteState(
+      localizedInstruction('Calculate a stair-free route','احسب مسارًا بدون درج','חשב מסלול ללא מדרגות'),
+      localizedInstruction('Choose a start and destination again for wheelchair navigation.','اختر نقطة البداية والوجهة من جديد لملاحة الكرسي المتحرك.','בחר שוב נקודת התחלה ויעד לניווט בכיסא גלגלים.')
+    );
+    return;
+  }
+  if(GRAPH) drawBaseMap();
 }
 
 $('autoModeBtn').onclick=()=>setNavigationMode('auto');
 $('sensorModeBtn').onclick=()=>setNavigationMode('sensor');
+$('wheelchairModeBtn').onclick=()=>setNavigationMode('wheelchair');
 $('calibrateBtn').onclick=calibrateAndStart;
+$('wheelchairBackBtn').onclick=()=>moveWheelchairToCheckpoint(-1);
+$('wheelchairNextBtn').onclick=()=>moveWheelchairToCheckpoint(1);
 
 $('accessibleRoute').onchange=()=>{
   if(
@@ -2038,8 +2320,10 @@ const savedAccessibilityProfile =
   sessionStorage.getItem('accessibilityProfile');
 
 if(savedAccessibilityProfile === 'mobility'){
+  accessibilityLockedByProfile = true;
   $('accessibleRoute').checked = true;
   $('accessibleRoute').disabled = true;
+  navMode = 'wheelchair';
   $('accessibleRoute').title = localizedInstruction(
     'Mobility profile keeps stair-free routing on.',
     'ملف الإعاقة الحركية يُبقي المسار بدون درج مفعّلًا.',
@@ -2048,6 +2332,8 @@ if(savedAccessibilityProfile === 'mobility'){
 }
 
 applyIndoorTranslations();
+syncNavigationModeUI();
+updateDirectionControls();
 loadGraph();
 </script>
 </body>

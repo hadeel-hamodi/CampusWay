@@ -191,6 +191,8 @@ test('Mobility arriving indoors keeps the accessible option on and locked', () =
   assert.equal(accessible.checked, true);
   assert.equal(accessible.disabled, true);
   assert.match(accessible.title, /stair-free/);
+  assert.equal(context.navMode, 'wheelchair');
+  assert.equal(context.accessibilityLockedByProfile, true);
 });
 
 test('Mobility outdoor failure does not draw the unverified fallback path', async () => {

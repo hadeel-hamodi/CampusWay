@@ -3,13 +3,13 @@ const assert=require('node:assert/strict'),{test}=require('node:test');
 const root=path.join(__dirname,'..');
 const nav=fs.readFileSync(path.join(root,'wayframe/navigation-demo.html'),'utf8');
 const tester=fs.readFileSync(path.join(root,'wayframe/sensor-test.html'),'utf8');
-const modules=['step-detector.js','heading-tracker.js','route-progress.js'];
+  const modules=['step-detector.js','heading-tracker.js','route-progress.js','wheelchair-navigation.js'];
 function between(source,start,end){
   const a=source.indexOf(start),b=source.indexOf(end,a);assert.ok(a>=0&&b>a,start);return source.slice(a,b);
 }
 function harness(testPage=false,permission){
   const elements=new Map(),listeners=new Map(),timers=new Map(),frames=new Map();let clock=0,serial=0;
-  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false});return elements.get(id);};
+  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,hidden:false,className:'',attributes:{},setAttribute(name,value){this.attributes[name]=String(value);}});return elements.get(id);};
   const document={getElementById:element,addEventListener(name,fn){listeners.set(name,fn);},hidden:false};
   const window={screen:{orientation:{angle:0}},addEventListener(name,fn){listeners.set(name,fn);}};
   const context=vm.createContext({console:{log(){},warn(){},error(){}},document,window,performance:{now:()=>clock},
@@ -22,13 +22,13 @@ function harness(testPage=false,permission){
     run([...tester.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n'));
   }else{
     run(between(nav,'let routePath=[];',"const svg=$('mapSvg');"));
-    run(`let BUILDING='main';
-      function localizedInstruction(en){return en;}
+    run(`let BUILDING='main'; let GRAPH={floors:{}};
+      function localizedInstruction(en){return en;} function it(key){return key;}
       function drawBaseMap(){} function floorButtons(){} function followNode(){}
       function currentHeading(){return 0;} function describeRoute(){}
       function resolveSelection(value){return value;} function selectionLabel(value){return value;}
       let testNodes=[{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:0}];
-      function dijkstra(){return testNodes.map(n=>n.id);}
+      let dijkstraCalls=0,dijkstraAccessible=[]; function dijkstra(){dijkstraCalls++;dijkstraAccessible.push(Boolean($('accessibleRoute').checked));return testNodes.map(n=>n.id);}
       function nodeById(id){return testNodes.find(n=>n.id===id);} async function loadGraph(){}
       function floorLabel(f){return f;} function localizedFloor(f){return f;} function localizedNodeLabel(f){return f;}
       function mapPoint(n){return {x:n.x*13.26,y:n.y*10.12};}`);
@@ -62,6 +62,10 @@ function harness(testPage=false,permission){
 async function startSensor(h,heading=0,start=0){
   h.run("setNavigationMode('sensor')");await h.run('startNavigation()');h.stable(start,start+400,heading);await h.run('calibrateAndStart()');assert.equal(h.run('navigationActive'),true);
 }
+async function startWheelchair(h){
+  h.element('accessibleRoute').checked=true;
+  h.run("setNavigationMode('wheelchair')");await h.run('startNavigation()');assert.equal(h.run('navigationActive'),true);
+}
 function near(actual,expected){assert.ok(Math.abs(actual-expected)<1e-7,`${actual} ~= ${expected}`);}
 function travelled(h){return (1-h.position().y)*10.12;}
 
@@ -72,6 +76,7 @@ test('scripts parse and shared helpers load before both consumers',()=>{
   }
   for(const module of modules)new vm.Script(fs.readFileSync(path.join(root,'wayframe',module),'utf8'));
   assert.ok(nav.indexOf('src="route-progress.js"')<nav.indexOf('<script>'));
+  assert.match(nav,/class="navStack"[\s\S]*class="navBanner"[\s\S]*id="wheelchairMapControls"/);
   const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');new vm.Script(sw);
   for(const file of [...modules,'sensor-test.html','navigation-demo.html'])assert.ok(sw.includes('./wayframe/'+file));
 });
@@ -221,6 +226,131 @@ test('missing heading recovers automatically and stale readings show a temporary
   h.orient(1850,0,{alpha:null});h.injectSteps(1900,[1875]);assert.equal(h.run('headingTracker.isCalibrated'),true);near(travelled(h),before);
   h.stable(1950,2350,0);assert.doesNotMatch(h.element('status').textContent,/paused/i);
   h.injectSteps(2350,[2300]);h.drain();near(travelled(h),before+0.65);
+});
+
+test('wheelchair mode starts without permissions, timers, animation frames or step counting',async()=>{
+  let permissionCalls=0;
+  const h=harness(false,async()=>{permissionCalls++;return 'granted';});
+  h.run('sensorsEnabled=false');
+  await startWheelchair(h);
+  assert.equal(permissionCalls,0);
+  assert.equal(h.timers.size,0);
+  assert.equal(h.frames.size,0);
+  assert.equal(h.run('detectedSteps'),0);
+  assert.equal(h.element('wheelchairCard').hidden,false);
+  assert.equal(h.element('wheelchairMapControls').hidden,false);
+  assert.equal(h.element('wheelchairBackBtn').disabled,true);
+  assert.equal(h.element('wheelchairNextBtn').disabled,false);
+  assert.equal(h.element('wheelchairModeBtn').attributes['aria-pressed'],'true');
+});
+
+test('choosing wheelchair mode forces and locks a fresh accessible route',()=>{
+  const h=harness();
+  h.chooseRoute();
+  assert.equal(h.run('dijkstraCalls'),1);
+  assert.notEqual(h.element('accessibleRoute').checked,true);
+  h.run("setNavigationMode('wheelchair')");
+  assert.equal(h.element('accessibleRoute').checked,true);
+  assert.equal(h.element('accessibleRoute').disabled,true);
+  assert.equal(h.run('dijkstraCalls'),2,'the old route must be recalculated with stair exclusion');
+  assert.deepEqual(Array.from(h.run('dijkstraAccessible')),[false,true]);
+  h.run("setNavigationMode('auto')");
+  assert.equal(h.element('accessibleRoute').disabled,false);
+});
+
+test('switching from Auto to wheelchair resets simulated progress to the route start',async()=>{
+  const h=harness();
+  await h.run('startNavigation()');
+  const autoTick=[...h.timers.values()][0];
+  for(let count=0;count<20;count++) autoTick();
+  assert.ok(h.run('progressT')>0 || h.run('progressIndex')>0);
+  h.element('accessibleRoute').checked=true;
+  h.run("setNavigationMode('wheelchair')");
+  assert.equal(h.run('progressIndex'),0);
+  assert.equal(h.run('progressT'),0);
+  assert.equal(h.run('navigationActive'),false);
+  assert.match(h.element('status').textContent,/route start/i);
+});
+
+test('wheelchair buttons skip raw corridor nodes, allow correction and keep Previous at arrival',async()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'start',label:'Start',floor:'floor500',x:0,y:0},
+    {id:'noise',label:'Corridor',floor:'floor500',x:0.1,y:0},
+    {id:'corner',label:'Corner',floor:'floor500',x:0.2,y:0},
+    {id:'noise-2',label:'Corridor',floor:'floor500',x:0.2,y:0.1},
+    {id:'end',label:'Accessible Restroom',type:'restroom',floor:'floor500',x:0.2,y:0.2}
+  ]);
+  await startWheelchair(h);
+  h.element('wheelchairNextBtn').onclick();
+  assert.equal(h.run('progressIndex'),2);
+  h.element('wheelchairNextBtn').onclick();
+  assert.equal(h.run('progressIndex'),4);
+  assert.equal(h.run('navigationActive'),true);
+  assert.equal(h.element('wheelchairNextBtn').disabled,true);
+  assert.equal(h.element('wheelchairBackBtn').disabled,false);
+  assert.match(h.element('instruction').textContent,/arrived/i);
+  assert.match(h.element('subInstruction').textContent,/sign or landmark/i);
+  assert.doesNotMatch(h.element('subInstruction').textContent,/room sign/i);
+  h.element('wheelchairBackBtn').onclick();
+  assert.equal(h.run('progressIndex'),2);
+  assert.doesNotMatch(h.element('instruction').textContent,/arrived/i);
+  assert.equal(h.element('wheelchairNextBtn').disabled,false);
+  h.element('wheelchairBackBtn').onclick();
+  assert.equal(h.run('progressIndex'),0);
+  assert.equal(h.element('wheelchairBackBtn').disabled,true);
+});
+
+test('wheelchair turn instruction uses simplified checkpoints instead of noisy raw neighbors',async()=>{
+  const h=harness();
+  const points=[[0,0],[.04,0],[.08,.004],[.115,.015],[.145,.035],[.168,.062],[.184,.095],[.193,.132],[.197,.172],[.197,.212]];
+  h.setRoute(points.map(([x,y],index)=>({
+    id:String(index),label:index===points.length-1?'Destination':'Corridor',
+    type:index===points.length-1?'room':'corridor',floor:'floor500',x,y
+  })));
+  await startWheelchair(h);
+  h.element('wheelchairNextBtn').onclick();
+  assert.equal(h.run('progressIndex'),4);
+  assert.match(h.element('instruction').textContent,/Turn (right|left)/);
+});
+
+test('wheelchair floor confirmation stops at the lift and skips pass-through floors',async()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'start',label:'Start',floor:'floor500',x:0,y:0},
+    {id:'lift-500',label:'Lift',type:'elevator',floor:'floor500',x:0.2,y:0,connectorId:'L'},
+    {id:'lift-600',label:'Lift',type:'elevator',floor:'floor600',x:0.2,y:0,connectorId:'L'},
+    {id:'lift-700',label:'Lift',type:'elevator',floor:'floor700',x:0.2,y:0,connectorId:'L'},
+    {id:'end',label:'Room',type:'room',floor:'floor700',x:0.4,y:0}
+  ]);
+  await startWheelchair(h);
+  h.element('wheelchairNextBtn').onclick();
+  assert.equal(h.run('progressIndex'),1);
+  assert.equal(h.run('activeFloor'),'floor500');
+  assert.match(h.element('instruction').textContent,/Floor floor700/);
+  h.element('wheelchairNextBtn').onclick();
+  assert.equal(h.run('progressIndex'),3);
+  assert.equal(h.run('activeFloor'),'floor700');
+  h.element('wheelchairBackBtn').onclick();
+  assert.equal(h.run('progressIndex'),1);
+  assert.equal(h.run('activeFloor'),'floor500');
+});
+
+test('switching away from wheelchair mode hides controls and stale presses cannot move',async()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'start',label:'Start',floor:'floor500',x:0,y:0},
+    {id:'end',label:'Room',type:'room',floor:'floor500',x:0.2,y:0}
+  ]);
+  await startWheelchair(h);
+  const stalePress=h.element('wheelchairNextBtn').onclick;
+  h.run("setNavigationMode('auto')");
+  stalePress();
+  assert.equal(h.run('progressIndex'),0);
+  assert.equal(h.run('navigationActive'),false);
+  assert.equal(h.element('wheelchairCard').hidden,true);
+  assert.equal(h.element('wheelchairMapControls').hidden,true);
+  assert.equal(h.element('autoModeBtn').attributes['aria-pressed'],'true');
 });
 
 test('diagnostic reset clears totals without registering listeners again',async()=>{

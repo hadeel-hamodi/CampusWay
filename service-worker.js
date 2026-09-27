@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v8-accessible-routes';
+const CACHE_NAME = 'campusway-v9-wheelchair-navigation';
 
 const APP_FILES = [
   './',
@@ -26,6 +26,7 @@ const APP_FILES = [
   './wayframe/step-detector.js',
   './wayframe/heading-tracker.js',
   './wayframe/route-progress.js',
+  './wayframe/wheelchair-navigation.js',
   './wayframe/sensor-test.html'
 ];
 
