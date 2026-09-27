@@ -2,10 +2,15 @@
 
 const BUILDING_ENTRANCES = {
   madriga: [
+   {
+    nodeId: 'floor1_n49',
+    lat: 32.760836,
+    lng: 35.021125
+    },
     {
-      nodeId: 'floor1_n49',
-      lat: 32.760710,
-      lng: 35.021160
+    nodeId: 'floor1_n50',
+    lat: 32.760767,
+    lng: 35.021029
     },
     {
       nodeId: 'floorminus1_n1',

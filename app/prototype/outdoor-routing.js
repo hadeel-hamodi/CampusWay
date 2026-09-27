@@ -494,6 +494,143 @@ addEdge(
 );
 
 addEdge(
+  'campus_multi_sidewalk_top',
+  1447013834,
+  'footway'
+);
+
+addCampusNode(
+  'campus_madriga_bump_approach',
+  32.760134,
+  35.020528
+);
+
+addCampusNode(
+  'campus_madriga_bump_step',
+  32.760156,
+  35.020547
+);
+
+addEdge(
+  'campus_multi_sidewalk_top',
+  'campus_madriga_bump_approach',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_bump_approach',
+  'campus_madriga_bump_step',
+  'steps'
+);
+
+addCampusNode(
+  'campus_madriga_upper_path_1',
+  32.760357,
+  35.020812
+);
+addEdge(
+  'campus_madriga_bump_step',
+  'campus_madriga_upper_path_1',
+  'footway'
+);
+
+addCampusNode(
+  'campus_madriga_upper_path_2',
+  32.760687,
+  35.0210254
+);
+
+addEdge(
+  'campus_madriga_upper_path_1',
+  'campus_madriga_upper_path_2',
+  'footway'
+);
+
+addCampusNode(
+  'campus_madriga_floor1_entrance',
+  32.760836,
+  35.021125
+);
+
+addEdge(
+  'campus_madriga_upper_path_2',
+  'campus_madriga_floor1_entrance',
+  'footway'
+);
+
+addCampusNode(
+  'campus_madriga_floor1_entrance_2',
+  32.760767,
+  35.021029
+);
+
+addEdge(
+  'campus_madriga_upper_path_2',
+  'campus_madriga_floor1_entrance_2',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_floor1_entrance_2',
+  'campus_madriga_floor1_entrance',
+  'footway'
+);
+
+addCampusNode(
+  'campus_madriga_access_straight',
+  32.75969059477067,
+  35.02244800329209
+);
+
+addCampusNode(
+  'campus_madriga_access_turn',
+  32.7598484864191,
+  35.02225488424302
+);
+
+addCampusNode(
+  'campus_madriga_access_mid',
+  32.760550,
+  35.021330
+);
+
+addCampusNode(
+  'campus_madriga_access_approach',
+  32.760746,
+  35.021080
+);
+
+addEdge(
+  1446999286,
+  'campus_madriga_access_straight',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_access_straight',
+  'campus_madriga_access_turn',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_access_turn',
+  'campus_madriga_access_mid',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_access_mid',
+  'campus_madriga_access_approach',
+  'footway'
+);
+
+addEdge(
+  'campus_madriga_access_approach',
+  'campus_madriga_floor1_entrance_2',
+  'footway'
+);
+
+addEdge(
   2102958523,
   1447013838,
   'footway'
