@@ -808,6 +808,7 @@ let customStart = null; // {lat, lng, label}
 let userLocationMarker = null;
 let foodMode = false;
 let shopMode = false;
+let activeRouteService = null;
 let restroomMode = false;
 
 // ═══════════════════════════════════════════
@@ -1610,20 +1611,44 @@ function setActiveServiceButton(type){
 
 function findNearbyService(type){
 
-    if(type !== 'food' && type !== 'shop'){
-    exitFoodShopMode();
-  }
+  if(type !== 'food' && type !== 'shop'){
 
+    // Clicking the currently active route service again = turn it off
+    if(activeRouteService === type){
+      activeRouteService = null;
+
+      document
+        .getElementById({
+          restroom: 'serviceRestroomBtn',
+          clinic: 'serviceClinicBtn',
+          gym: 'serviceGymBtn',
+          library: 'serviceLibraryBtn',
+          landmark: 'serviceLandmarkBtn',
+          shelter: 'serviceShelterBtn'
+        }[type])
+        ?.classList.remove('service-active');
+
+      closeRoute();
+      restoreServiceMarkers();
+      return;
+    }
+
+    // Switching to another service
+    activeRouteService = type;
+    exitFoodShopMode();
+  }else{
+    activeRouteService = null;
+  }
 
   setActiveServiceButton(type);
 
-if(
-  type !== 'food' &&
-  type !== 'shop' &&
-  type !== 'restroom'
-){
-  restoreServiceMarkers();
-}
+  if(
+    type !== 'food' &&
+    type !== 'shop' &&
+    type !== 'restroom'
+  ){
+    restoreServiceMarkers();
+  }
 
   if(
     type === 'gym' ||
