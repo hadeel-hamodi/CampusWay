@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v9-wheelchair-navigation';
+const CACHE_NAME = 'campusway-v10-wheelchair-navigation';
 
 const APP_FILES = [
   './',
@@ -34,6 +34,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(APP_FILES))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -45,7 +46,7 @@ self.addEventListener('activate', event => {
           .filter(name => name !== CACHE_NAME)
           .map(name => caches.delete(name))
       )
-    )
+    ).then(() => self.clients.claim())
   );
 });
 

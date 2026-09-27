@@ -79,6 +79,8 @@ test('scripts parse and shared helpers load before both consumers',()=>{
   assert.match(nav,/class="navStack"[\s\S]*class="navBanner"[\s\S]*id="wheelchairMapControls"/);
   const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');new vm.Script(sw);
   for(const file of [...modules,'sensor-test.html','navigation-demo.html'])assert.ok(sw.includes('./wayframe/'+file));
+  assert.match(sw,/skipWaiting\(\)/);
+  assert.match(sw,/clients\.claim\(\)/);
 });
 
 test('sensors wait for a stable explicit calibration before counting or moving',async()=>{
