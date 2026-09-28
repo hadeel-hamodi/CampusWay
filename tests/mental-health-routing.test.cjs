@@ -56,17 +56,22 @@ test('Mental Health service finds a connected Student House landmark', () => {
 });
 
 test('mapped Student House landmarks are available as real rest-space candidates', () => {
+  const studentGraph = JSON.parse(fs.readFileSync(
+    path.join(root, 'buildings', 'student', 'student-indoor-graph.json'),
+    'utf8'
+  ));
   const context = vm.createContext({
     CampusRoutePlanner,
+    STUDENT_GRAPH:studentGraph,
     customStart:null,
     t:{suggestedRestSpace:'Suggested rest space',noRestSpace:'No rest space'},
     getStart(){return {lat:32.76179,lng:35.02131};},
     alert(message){throw new Error(message);}
   });
-  const sources = [
-    'app/prototype/data.js',
-    'app/prototype/student-graph.js'
-  ].map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
+  const sources = fs.readFileSync(
+    path.join(root, 'app', 'prototype', 'data.js'),
+    'utf8'
+  );
   const etaGraphHelpers = between(
     index,
     'function indoorEtaNodes(graph){',
@@ -82,7 +87,7 @@ test('mapped Student House landmarks are available as real rest-space candidates
   const selected = context.selected;
   assert.equal(selected.buildingKey, 'student');
   assert.equal(selected.node.type, 'landmark');
-  assert.ok(['floor0_n41','floor1_n40','floor1_n41','floor1_n42','floor1_n43','floor2_n49','floor3_n44','floor4_n4'].includes(selected.node.id));
+  assert.ok(['floor0_n41','floor1_n40','floor2_n49','floor3_n44','floor4_n4'].includes(selected.node.id));
 });
 
 test('rest-space journey stores an honest display label and semantic type', () => {
@@ -97,7 +102,7 @@ test('rest-space journey stores an honest display label and semantic type', () =
     routeTo(...args){routed=args;}
   });
   vm.runInContext(
-    between(index, 'function routeToIndoorService(match){', 'function findNearbyService(type){'),
+    between(index, 'function routeToIndoorService(match){', 'async function findNearbyService(type){'),
     context
   );
   vm.runInContext(`routeToIndoorService({

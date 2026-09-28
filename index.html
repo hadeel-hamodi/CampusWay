@@ -14,7 +14,6 @@
 <script src="app/prototype/madriga-graph.js"></script>
 <script src="app/prototype/main-graph.js"></script>
 <script src="app/prototype/rabin-graph.js"></script>
-<script src="app/prototype/student-graph.js"></script>
 
 <!-- Not mapped/exported yet -->
 <!-- <script src="app/prototype/education-graph.js"></script> -->
@@ -811,6 +810,30 @@ const storedProfile = sessionStorage.getItem('accessibilityProfile');
 let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
 sessionStorage.setItem('accessibilityProfile', currentProfile);
 let audioOn = false;
+// Search and navigation share this one canonical Student House graph.
+let STUDENT_GRAPH = null;
+const STUDENT_GRAPH_URL =
+  'buildings/student/student-indoor-graph.json';
+const studentGraphReady = fetch(STUDENT_GRAPH_URL)
+  .then(response => {
+    if(!response.ok){
+      throw new Error(
+        `Could not load Student House graph (${response.status})`
+      );
+    }
+    return response.json();
+  })
+  .then(graph => {
+    if(!graph || !graph.floors){
+      throw new Error('Student House graph has no floors');
+    }
+    STUDENT_GRAPH = graph;
+    return graph;
+  })
+  .catch(error => {
+    console.error('Could not load Student House graph:', error);
+    return null;
+  });
 let customStart = null; // {lat, lng, label}
 let selectedStartLocation = null;
 let userLocationMarker = null;
@@ -1663,7 +1686,24 @@ function routeToIndoorService(match){
   );
 }
 
-function findNearbyService(type){
+let nearbyServiceRequestId = 0;
+
+async function findNearbyService(type){
+
+  const requestId = ++nearbyServiceRequestId;
+
+  if([
+    'restroom',
+    'shelter',
+    'gym',
+    'library',
+    'landmark',
+    'rest-space'
+  ].includes(type)){
+    await studentGraphReady;
+  }
+
+  if(requestId !== nearbyServiceRequestId) return;
 
   if(type !== 'food' && type !== 'restroom'){
     restoreServiceMarkers();
@@ -3685,22 +3725,43 @@ function ensureStartSelection(){
   return doStartSearch(value);
 }
 
-startInput.addEventListener('focus', ()=> showStartSuggestions(startInput.value));
+let startSearchRequestId = 0;
+
+async function showReadyStartSuggestions(value){
+  const requestId = ++startSearchRequestId;
+  await studentGraphReady;
+  if(requestId !== startSearchRequestId) return;
+  showStartSuggestions(value);
+}
+
+async function runReadyStartSearch(value){
+  const requestId = ++startSearchRequestId;
+  await studentGraphReady;
+  if(requestId !== startSearchRequestId) return false;
+  return doStartSearch(value);
+}
+
+startInput.addEventListener('focus', ()=> showReadyStartSuggestions(startInput.value));
 startInput.addEventListener('input', e=>{
   clearIndoorStartJourney();
   customStart = null;
   selectedStartLocation = null;
   document.getElementById('gpsBtn').classList.remove('active');
   if(gpsMarker){ map.removeLayer(gpsMarker); gpsMarker = null; }
-  showStartSuggestions(e.target.value);
+  showReadyStartSuggestions(e.target.value);
 });
 startInput.addEventListener('keydown', e=>{
   if(e.key === 'Enter'){
     e.preventDefault();
-    doStartSearch(startInput.value);
+    runReadyStartSearch(startInput.value);
   }
 });
-document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) startSuggestions.style.display='none'; });
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.start-row')){
+    startSearchRequestId += 1;
+    startSuggestions.style.display = 'none';
+  }
+});
 
 const searchSuggestions = document.getElementById('searchSuggestions');
 
@@ -3897,12 +3958,33 @@ function pickDestination(name, lat, lng){
   routeTo(name, lat, lng);
 }
 
-document.getElementById('searchInput').addEventListener('focus', ()=> showSearchSuggestions(''));
+let destinationSearchRequestId = 0;
+
+async function showReadySearchSuggestions(value){
+  const requestId = ++destinationSearchRequestId;
+  await studentGraphReady;
+  if(requestId !== destinationSearchRequestId) return;
+  showSearchSuggestions(value);
+}
+
+async function runReadyDestinationSearch(value){
+  const requestId = ++destinationSearchRequestId;
+  await studentGraphReady;
+  if(requestId !== destinationSearchRequestId) return;
+  return doSearch(value);
+}
+
+document.getElementById('searchInput').addEventListener('focus', ()=> showReadySearchSuggestions(''));
 document.getElementById('searchInput').addEventListener('input', e=>{
   selectedSearchDestination = null;
-  showSearchSuggestions(e.target.value);
+  showReadySearchSuggestions(e.target.value);
 });
-document.addEventListener('click', e=>{ if(!e.target.closest('.search-row')) searchSuggestions.style.display='none'; });
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.search-row')){
+    destinationSearchRequestId += 1;
+    searchSuggestions.style.display = 'none';
+  }
+});
 
 // ═══════════════════════════════════════════
 // SEARCH + VOICE INPUT
@@ -3911,7 +3993,7 @@ const searchInput = document.getElementById('searchInput');
 searchInput.addEventListener('keydown', e=>{
   if(e.key==='Enter'){
     e.preventDefault();
-    doSearch(searchInput.value.trim());
+    runReadyDestinationSearch(searchInput.value.trim());
   }
 });
 
@@ -3987,7 +4069,7 @@ function toggleMic(){
   recognition.onresult = e=>{
     const transcript = e.results[0][0].transcript;
     searchInput.value = transcript;
-    doSearch(transcript);
+    runReadyDestinationSearch(transcript);
   };
   recognition.onerror = recognition.onend = ()=>{
     micActive=false;
