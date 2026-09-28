@@ -1336,8 +1336,74 @@ const marker = L.marker([c.lat,c.lng],{icon})
 clinicMarkers.push(marker);
 });
 
-// Outdoor stairs & elevators
-const vertical = [];
+// ==================================================
+// OUTDOOR STAIRS & ELEVATORS
+// ==================================================
+// Main Building Floor 600 outdoor elevator.
+// This is the same elevator used by the accessible
+// Main ↔ Student House outdoor routing graph.
+// ==================================================
+
+// ==================================================
+// OUTDOOR STAIRS & ELEVATORS
+// ==================================================
+
+const vertical = [
+  // Main Building Floor 600 outdoor elevator
+  {
+    type: 'elevator',
+    lat: 32.762211,
+    lng: 35.020120,
+    label: 'Main Building Floor 600 elevator',
+    working: true
+  },
+
+  // Small stairs on the Floor 600 → Student House route
+  {
+    type: 'stairs',
+    lat: 32.762025,
+    lng: 35.020222,
+    label: 'Floor 600 small stairs'
+  },
+
+  {
+    type: 'stairs',
+    lat: 32.762059,
+    lng: 35.020293,
+    label: 'Floor 600 long stairs'
+  },
+
+{
+  type: 'stairs',
+  lat: 32.76151986512884,
+  lng: 35.020382702350624,
+  label: 'Stairs'
+},
+
+{
+  type: 'stairs',
+  lat: 32.76145445413631,
+  lng: 35.020460486412055,
+  label: 'Stairs'
+},
+
+{
+  type: 'stairs',
+  lat: 32.761255965313104,
+  lng: 35.020739436149604,
+  label: 'Stairs'
+},
+
+{
+  type: 'stairs',
+  lat: 32.76119957636214,
+  lng: 35.02079844474793,
+  label: 'Stairs'
+}
+
+
+
+];
 
 vertical.forEach(v=>{
   const isElevator = v.type === 'elevator';
