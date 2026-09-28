@@ -471,8 +471,8 @@ addCampusNode(
 
 addCampusNode(
   'campus_multi_sidewalk_bottom',
-  32.7597002,
-  35.0208703
+  32.75974247348604,
+  35.02085745334626
 );
 
 addEdge(
@@ -653,8 +653,8 @@ addEdge(
 
 addCampusNode(
   'campus_madriga_downhill_start',
-  32.759674805590414,
-  35.0209191441536
+  32.75967706118779,
+  35.02092182636262
 );
 
 addCampusNode(
@@ -902,6 +902,417 @@ addEdge(
   'campus_student_floor1_entrance',
   'footway'
 );
+
+// Floor 6 / Teacher Buffet → stairs → existing street network
+
+addCampusNode('campus_floor6_buffet_path_1',32.762246,35.019877);
+addCampusNode('campus_floor6_buffet_path_2',32.762205,35.019925);
+addCampusNode('campus_floor6_buffet_path_3',32.762169,35.019973);
+addCampusNode('campus_floor6_buffet_path_4',32.762141,35.020010);
+addCampusNode('campus_floor6_buffet_path_5',32.762049,35.020163);
+
+addCampusNode('campus_floor6_buffet_stairs_1_bottom',32.762025,35.020222);
+
+addCampusNode('campus_floor6_buffet_path_6',32.762030,35.020269);
+addCampusNode('campus_floor6_buffet_path_7',32.762049,35.020305);
+
+addCampusNode('campus_floor6_buffet_long_stairs_top',32.762059,35.020293);
+addCampusNode('campus_floor6_buffet_long_stairs_bottom',32.762102,35.020233);
+
+addCampusNode('campus_floor6_buffet_street_1',32.762127,35.020260);
+addCampusNode('campus_floor6_buffet_street_2',32.762140,35.020285);
+addCampusNode('campus_floor6_buffet_street_3',32.762110,35.020339);
+addCampusNode('campus_floor6_buffet_street_4',32.762087,35.020365);
+addCampusNode('campus_floor6_buffet_street_5',32.762068,35.020391);
+
+
+// Walking path from Floor 6
+addEdge('campus_floor6_buffet_path_1','campus_floor6_buffet_path_2','footway');
+addEdge('campus_floor6_buffet_path_2','campus_floor6_buffet_path_3','footway');
+addEdge('campus_floor6_buffet_path_3','campus_floor6_buffet_path_4','footway');
+addEdge('campus_floor6_buffet_path_4','campus_floor6_buffet_path_5','footway');
+
+// First broad stairs
+addEdge('campus_floor6_buffet_path_5','campus_floor6_buffet_stairs_1_bottom','steps');
+
+// Between the two stair sections
+addEdge('campus_floor6_buffet_stairs_1_bottom','campus_floor6_buffet_path_6','footway');
+addEdge('campus_floor6_buffet_path_6','campus_floor6_buffet_path_7','footway');
+addEdge('campus_floor6_buffet_path_7','campus_floor6_buffet_long_stairs_top','footway');
+
+// Long stairs
+addEdge('campus_floor6_buffet_long_stairs_top','campus_floor6_buffet_long_stairs_bottom','steps');
+
+// Street after stairs
+addEdge('campus_floor6_buffet_long_stairs_bottom','campus_floor6_buffet_street_1','footway');
+addEdge('campus_floor6_buffet_street_1','campus_floor6_buffet_street_2','footway');
+addEdge('campus_floor6_buffet_street_2','campus_floor6_buffet_street_3','footway');
+addEdge('campus_floor6_buffet_street_3','campus_floor6_buffet_street_4','footway');
+addEdge('campus_floor6_buffet_street_4','campus_floor6_buffet_street_5','footway');
+
+// Join existing outdoor network
+addEdge('campus_floor6_buffet_street_5',7674525954,'footway');
+
+addCampusNode('campus_floor6_buffet_entrance',32.76266,35.01942);
+addEdge('campus_floor6_buffet_entrance','campus_floor6_buffet_path_1','footway');
+
+addCampusNode(
+  'campus_upper_direct_path',
+  32.761650686969745,
+  35.02095669507981
+);
+
+addEdge(
+  7674525954,
+  'campus_upper_direct_path',
+  'footway'
+);
+
+// ==================================================
+// MAIN BUILDING FLOOR 600 → STUDENT HOUSE
+// ==================================================
+
+
+// --------------------------------------------------
+// 1. MAIN FLOOR 600 → ELEVATOR / STAIRS AREA
+//
+// After leaving Main Building on Floor 600,
+// walk straight along this path.
+//
+// Near the end:
+// - LEFT leads to the elevator
+// - STRAIGHT continues toward the stairs
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_main_floor600_path_1',
+  32.762492,
+  35.019540
+);
+
+addCampusNode(
+  'campus_main_floor600_path_2',
+  32.762447,
+  35.019613
+);
+
+addCampusNode(
+  'campus_main_floor600_path_3',
+  32.762391,
+  35.019701
+);
+
+addCampusNode(
+  'campus_main_floor600_path_4',
+  32.762333,
+  35.019774
+);
+
+addCampusNode(
+  'campus_main_floor600_junction',
+  32.762144,
+  35.020028
+);
+
+
+// Connect the corridor from Main Floor 600
+addEdge(
+  'campus_main_floor600_path_1',
+  'campus_main_floor600_path_2',
+  'footway'
+);
+
+addEdge(
+  'campus_main_floor600_path_2',
+  'campus_main_floor600_path_3',
+  'footway'
+);
+
+addEdge(
+  'campus_main_floor600_path_3',
+  'campus_main_floor600_path_4',
+  'footway'
+);
+
+addEdge(
+  'campus_main_floor600_path_4',
+  'campus_main_floor600_junction',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// 2. ROAD AFTER THE FLOOR 6 STAIRS
+//
+// This section continues from the stairs down
+// toward Student House.
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_floor6_road_1',
+  32.7622378,
+  35.0202275
+);
+
+addCampusNode(
+  'campus_floor6_road_2',
+  32.7621881,
+  35.0202940
+);
+
+addCampusNode(
+  'campus_floor6_road_3',
+  32.7620766,
+  35.0204323
+);
+
+
+// --------------------------------------------------
+// 3. ROUTE SPLIT TOWARD STUDENT HOUSE
+//
+// At this point there are two possible routes:
+//
+// - shorter route using stairs
+// - longer step-free road for accessible routing
+//
+// The shorter stair branch still needs to be mapped.
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_floor6_route_split',
+  32.7619499,
+  35.0205711
+);
+
+
+// --------------------------------------------------
+// 4. EXISTING CONNECTION FROM FLOOR 6 STAIRS
+// --------------------------------------------------
+
+addEdge(
+  'campus_floor6_buffet_long_stairs_bottom',
+  'campus_floor6_road_1',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_road_1',
+  'campus_floor6_road_2',
+  'service'
+);
+
+addEdge(
+  'campus_floor6_road_2',
+  'campus_floor6_road_3',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_road_3',
+  'campus_floor6_route_split',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// 5. CORRECTED ROAD CONNECTION AFTER LONG STAIRS
+//
+// Direct connection added to avoid the incorrect
+// detour through road_1 / road_2.
+//
+// The older road_1 / road_2 connection is kept for
+// now until the route is fully verified.
+// --------------------------------------------------
+
+addEdge(
+  'campus_floor6_buffet_long_stairs_bottom',
+  'campus_floor6_buffet_street_3',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_buffet_street_3',
+  'campus_floor6_road_3',
+  'service'
+);
+
+
+// --------------------------------------------------
+// 6. ACCESSIBLE ROAD TOWARD STUDENT HOUSE
+//
+// Longer step-free route from the split.
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_floor6_access_road_1',
+  32.7618664,
+  35.0207060
+);
+
+addEdge(
+  'campus_floor6_route_split',
+  'campus_floor6_access_road_1',
+  'service'
+);
+
+
+addCampusNode(
+  'campus_floor6_access_road_2',
+  32.7616119,
+  35.0210267
+);
+
+addEdge(
+  'campus_floor6_access_road_1',
+  'campus_floor6_access_road_2',
+  'service'
+);
+
+
+addCampusNode(
+  'campus_floor6_access_road_3',
+  32.7615840,
+  35.0211337
+);
+
+addEdge(
+  'campus_floor6_access_road_2',
+  'campus_floor6_access_road_3',
+  'service'
+);
+
+
+// --------------------------------------------------
+// 7. PEDESTRIAN GAP AFTER THE ACCESSIBLE ROAD
+//
+// Leave the road through the pedestrian gap and
+// continue toward Student House.
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_floor6_access_gap',
+  32.7616302,
+  35.0211684
+);
+
+addEdge(
+  'campus_floor6_access_road_3',
+  'campus_floor6_access_gap',
+  'footway'
+);
+
+
+addCampusNode(
+  'campus_floor6_access_path_1',
+  32.7616689,
+  35.0211633
+);
+
+addEdge(
+  'campus_floor6_access_gap',
+  'campus_floor6_access_path_1',
+  'footway'
+);
+
+
+addCampusNode(
+  'campus_floor6_access_path_2',
+  32.7617006,
+  35.0211358
+);
+
+addEdge(
+  'campus_floor6_access_path_1',
+  'campus_floor6_access_path_2',
+  'footway'
+);
+
+// --------------------------------------------------
+// 8. MAIN FLOOR 600 EXIT → OUTDOOR CORRIDOR
+//
+// Connect the Main Building Floor 600 exit to the
+// first point of the walking path toward Student House.
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_main_floor600_exit',
+  32.761944,
+  35.019778
+);
+
+addEdge(
+  'campus_main_floor600_exit',
+  'campus_main_floor600_path_1',
+  'footway'
+);
+// 9. ELEVATOR BRANCH
+// From the Floor 600 corridor to the elevator door.
+addCampusNode(
+  'campus_main_floor600_elevator',
+  32.762211,
+  35.020120
+);
+
+addEdge(
+  'campus_main_floor600_junction',
+  'campus_main_floor600_elevator',
+  'footway'
+);
+
+// The elevator comes out at the same point where
+// the long stairs end, so reuse that existing node.
+addEdge(
+  'campus_main_floor600_elevator',
+  'campus_floor6_buffet_long_stairs_bottom',
+  'elevator'
+);
+// --------------------------------------------------
+// 10. MAIN CORRIDOR → EXISTING STAIR ROUTE
+//
+// Continuing FORWARD from the Main Floor 600 corridor
+// joins the already-mapped Floor 6 stair route.
+//
+// From here the existing route continues:
+// path_4 → path_5 → first stairs → path_6/path_7
+// → long stairs → road toward Student House.
+// --------------------------------------------------
+
+addEdge(
+  'campus_main_floor600_junction',
+  'campus_floor6_buffet_path_4',
+  'footway'
+);
+
+// ==================================================
+// MAIN FLOOR 600 — GARDEN CAFÉ ENTRANCE PATH
+// ==================================================
+//
+// Garden Café entrance → new path point →
+// existing SMALL stairs.
+// Reuses the existing stairs/elevator route.
+// ==================================================
+
+addCampusNode(
+  'campus_main_garden_path',
+  32.761781,
+  35.019993
+);
+
+// Garden Café entrance → new path point
+addEdge(
+  'campus_main_floor600_exit',
+  'campus_main_garden_path',
+  'footway'
+);
+
+// New path point → TOP OF THE SMALL STAIRS
+addEdge(
+  'campus_main_garden_path',
+  'campus_floor6_buffet_path_5',
+  'footway'
+);
+
+
 /*
  // --------------------------------------------------
  // Accessible ramp: street <-> Rabin Floor 6 plaza

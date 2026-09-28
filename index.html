@@ -2778,8 +2778,22 @@ async function routeTo(name, lat, lng){
     map.removeLayer(gpsMarker);
   }
 // Student rooms use the Floor 4 exit when travelling to Main.
+// --------------------------------------------------
+// STUDENT HOUSE → MAIN BUILDING
+// --------------------------------------------------
+// Whether the user starts from a room inside Student
+// House OR selects Student House itself, leave through
+// floor4_n3.
+//
+// This puts the outdoor route onto the same upper path
+// used by Main → Student House.
+// --------------------------------------------------
+
 if(
-  customStart?.buildingKey === 'student' &&
+  (
+    customStart?.buildingKey === 'student' ||
+    customStart?.label === 'Student House'
+  ) &&
   name === 'Main Building'
 ){
   const floor4Exit = (
@@ -2793,35 +2807,43 @@ if(
     customStart.lng = floor4Exit.lng;
     customStart.entranceId = floor4Exit.nodeId;
 
+    // If this started from an indoor room, tell the
+    // indoor route which Student House exit to use.
     try{
       const startContext = JSON.parse(
-        sessionStorage.getItem('indoorStartContext') || '{}'
+        sessionStorage.getItem('indoorStartContext') || 'null'
       );
 
-      startContext.exitEntranceId = floor4Exit.nodeId;
+      if(startContext){
+        startContext.exitEntranceId = floor4Exit.nodeId;
 
-      sessionStorage.setItem(
-        'indoorStartContext',
-        JSON.stringify(startContext)
-      );
+        sessionStorage.setItem(
+          'indoorStartContext',
+          JSON.stringify(startContext)
+        );
+      }
     }catch(error){
       console.warn(
-        'Could not update the Student exit:',
+        'Could not update Student House exit:',
         error
       );
-    }
-
-    if(gpsMarker){
-      gpsMarker.setLatLng([
-        floor4Exit.lat,
-        floor4Exit.lng
-      ]);
     }
   }
 }
 
 // Main rooms use the Floor 600 exit when travelling
 // toward Student, Rabin, or Madriga.
+// --------------------------------------------------
+// MAIN BUILDING: choose the correct Floor 600 exit
+// --------------------------------------------------
+//
+// Main → Student House:
+//   use floor600_n88, which leads to the Student House path.
+//
+// Main → Rabin / Terrace:
+//   keep using the existing floor600_n86 exit.
+// --------------------------------------------------
+
 if(
   customStart?.buildingKey === 'main' &&
   [
@@ -2830,10 +2852,15 @@ if(
     'Terrace Building'
   ].includes(name)
 ){
+  const mainExitId =
+    name === 'Student House'
+      ? 'floor600_n88'
+      : 'floor600_n86';
+
   const floor600Exit = (
     BUILDING_ENTRANCES.main || []
   ).find(
-    entrance => entrance.nodeId === 'floor600_n86'
+    entrance => entrance.nodeId === mainExitId
   );
 
   if(floor600Exit){
@@ -2867,7 +2894,6 @@ if(
     }
   }
 }
-
 // Terrace uses the Floor -1 entrance when travelling to Student House.
 if(
   (
@@ -3041,21 +3067,83 @@ if(preferredEntranceId){
   );
 }
 
-const selectedEntrance = routingEntrances.reduce((nearest, entrance) => {
-  if(!nearest) return entrance;
+// --------------------------------------------------
+// SELECT DESTINATION ENTRANCE
+// --------------------------------------------------
+//
+// Student House → Main Building:
+// Compare BOTH Floor 600 entrances using the actual
+// outdoor routing graph. This allows the router to use
+// whichever of our connected paths is genuinely shorter.
+//
+// All other routes keep the existing entrance-selection
+// behaviour so we do not disturb working routes.
+// --------------------------------------------------
 
-  const entranceDistance = CampusOutdoorRouting.distance(
-    [start.lat, start.lng],
-    [entrance.lat, entrance.lng]
+let selectedEntrance = null;
+
+if(
+  originBuildingKey === 'student' &&
+  entranceKey === 'main'
+){
+  const mainFloor600Entrances = profileEntrances.filter(
+    entrance =>
+      entrance.nodeId === 'floor600_n86' ||
+      entrance.nodeId === 'floor600_n88'
   );
 
-  const nearestDistance = CampusOutdoorRouting.distance(
-    [start.lat, start.lng],
-    [nearest.lat, nearest.lng]
-  );
+  let bestRouteDistance = Infinity;
 
-  return entranceDistance < nearestDistance ? entrance : nearest;
-}, null);
+  for(const entrance of mainFloor600Entrances){
+    try{
+      const candidateRoute = await CampusOutdoorRouting.route(
+        start.lat,
+        start.lng,
+        entrance.lat,
+        entrance.lng,
+        { avoidSteps: currentProfile === 'mobility' }
+      );
+
+      if(
+        candidateRoute &&
+        candidateRoute.distance < bestRouteDistance
+      ){
+        bestRouteDistance = candidateRoute.distance;
+        selectedEntrance = entrance;
+      }
+    }catch(error){
+      console.warn(
+        'Could not test Main Floor 600 entrance:',
+        entrance.nodeId,
+        error
+      );
+    }
+  }
+}
+
+// Keep the existing behaviour for every other route.
+if(!selectedEntrance){
+  selectedEntrance = routingEntrances.reduce(
+    (nearest, entrance) => {
+      if(!nearest) return entrance;
+
+      const entranceDistance = CampusOutdoorRouting.distance(
+        [start.lat, start.lng],
+        [entrance.lat, entrance.lng]
+      );
+
+      const nearestDistance = CampusOutdoorRouting.distance(
+        [start.lat, start.lng],
+        [nearest.lat, nearest.lng]
+      );
+
+      return entranceDistance < nearestDistance
+        ? entrance
+        : nearest;
+    },
+    null
+  );
+}
 
 if(selectedEntrance){
   lat = selectedEntrance.lat;
