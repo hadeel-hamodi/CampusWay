@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#0D1B3E">
 <script src="app/vendor/leaflet.js"></script>
 <script src="app/prototype/data.js"></script>
+<script src="wayframe/route-planner.js"></script>
 <script src="app/prototype/outdoor-routing.js"></script>
 <script src="app/prototype/madriga-graph.js"></script>
 <script src="app/prototype/main-graph.js"></script>
@@ -664,14 +665,14 @@ const T = {
       {id:'general', label:'General User',    sub:'Standard fastest route'},
       {id:'mobility',label:'Mobility',         sub:'Wheelchair / crutches — avoids stairs'},
       {id:'visual',  label:'Visual Impairment',sub:'Follows tactile guide paths'},
-      {id:'spatial', label:'Spatial / Navigation',sub:'Extra landmarks, simple steps'},
+      {id:'spatial', label:'Spatial / Navigation',sub:'Fewer turns, simpler directions'},
       {id:'mental',  label:'Mental Health Support',sub:'Routes to quiet space on request'},
     ],
     alerts:{
       mobility:'Stairs are excluded from accessible indoor routes. If no step-free route is mapped, CampusWay will tell you.',
       visual:'Tactile guide path active from Carmel Gate to Main Building.',
       mental:'Quiet zones (libraries, garden) will be suggested near your route.',
-      spatial:'Step-by-step landmarks enabled — fewer turns, simpler directions.',
+      spatial:'Simpler routing active — prefers fewer meaningful turns while also considering route length.',
     },
     voices:['US English','UK English','Default'],
     legendBuilding:'Building',
@@ -717,14 +718,14 @@ const T = {
       {id:'general', label:'משתמש כללי',       sub:'המסלול המהיר ביותר'},
       {id:'mobility',label:'ניידות',              sub:'כיסא גלגלים / קביים — ללא מדרגות'},
       {id:'visual',  label:'לקות ראייה',          sub:'עוקב אחרי נתיבי מישוש'},
-      {id:'spatial', label:'ניווט מרחבי',          sub:'ציוני דרך נוספים, הוראות פשוטות'},
+      {id:'spatial', label:'ניווט מרחבי',          sub:'פחות פניות, הוראות פשוטות'},
       {id:'mental',  label:'תמיכה נפשית',          sub:'מסלולים לאזורי שקט לפי בקשה'},
     ],
     alerts:{
       mobility:'מדרגות אינן נכללות במסלולים נגישים בתוך הבניינים. אם לא מופה מסלול ללא מדרגות, CampusWay יודיע לך.',
       visual:'נתיב מישוש פעיל משער הכרמל לבניין הראשי.',
       mental:'אזורים שקטים (ספריות, גן) יוצעו ליד המסלול שלך.',
-      spatial:'ניווט לפי ציוני דרך פעיל — פחות פניות, הוראות פשוטות.',
+      spatial:'ניווט פשוט יותר פעיל — מעדיף פחות פניות משמעותיות תוך התחשבות גם באורך המסלול.',
     },
     voices:['עברית','אנגלית','ברירת מחדל'],
     legendBuilding:'בניין',
@@ -770,14 +771,14 @@ const T = {
       {id:'general', label:'مستخدم عام',          sub:'أسرع مسار'},
       {id:'mobility',label:'إعاقة حركية',           sub:'كرسي متحرك / عكازات — تجنب السلالم'},
       {id:'visual',  label:'إعاقة بصرية',           sub:'يتبع مسارات اللمس'},
-      {id:'spatial', label:'صعوبة في الملاحة',       sub:'معالم إضافية، خطوات بسيطة'},
+      {id:'spatial', label:'صعوبة في الملاحة',       sub:'منعطفات أقل، تعليمات أبسط'},
       {id:'mental',  label:'الصحة النفسية',          sub:'مسارات إلى أماكن هادئة عند الطلب'},
     ],
     alerts:{
       mobility:'يتم استبعاد الدرج من المسارات المهيأة داخل المباني. إذا لم يكن هناك مسار بدون درج على الخريطة، سيخبرك CampusWay.',
       visual:'مسار لمسي نشط من بوابة الكرمل إلى المبنى الرئيسي.',
       mental:'ستُقترح مناطق هادئة (مكتبات، حدائق) بالقرب من مسارك.',
-      spatial:'الملاحة بالمعالم مفعّلة — أقل منعطفات، توجيهات أبسط.',
+      spatial:'تم تفعيل المسار الأبسط — يفضّل منعطفات واضحة أقل مع أخذ طول المسار بالحسبان.',
     },
     voices:['عربية','إنجليزية','افتراضي'],
     legendBuilding:'مبنى',
@@ -2047,79 +2048,32 @@ for(const [key, floors] of connectorGroups){
   return { nodes, byId, adjacency };
 }
 
-function findIndoorEtaPath(graph, startId, endId, accessible){
-  const { byId, adjacency } =
+function findIndoorEtaPath(
+  graph,
+  startId,
+  endId,
+  accessible,
+  preferFewerTurns = false
+){
+  const routeGraph =
     buildIndoorEtaGraph(graph, accessible);
 
-  if(!byId.has(startId) || !byId.has(endId)){
-    return null;
-  }
-
-  const distances = new Map(
-    [...byId.keys()].map(id => [id, Infinity])
-  );
-
-  const previous = new Map();
-  const unvisited = new Set(byId.keys());
-
-  distances.set(startId, 0);
-
-  while(unvisited.size){
-    let current = null;
-    let bestDistance = Infinity;
-
-    for(const id of unvisited){
-      const distance = distances.get(id);
-
-      if(distance < bestDistance){
-        bestDistance = distance;
-        current = id;
-      }
+  const result = CampusRoutePlanner.findPath({
+    nodeIds: () => routeGraph.byId.keys(),
+    neighbors: id => routeGraph.adjacency.get(id) || [],
+    edgeTarget: edge => edge.id,
+    edgeWeight: edge => edge.weight,
+    point: id => {
+      const node = routeGraph.byId.get(id);
+      return node ? {
+        x: node.x * 132.6,
+        y: node.y * 101.2,
+        floor: node.floor
+      } : null;
     }
+  }, startId, endId, {preferFewerTurns});
 
-    if(current === null || bestDistance === Infinity){
-      break;
-    }
-
-    if(current === endId){
-      break;
-    }
-
-    unvisited.delete(current);
-
-    for(const edge of adjacency.get(current) || []){
-      if(!unvisited.has(edge.id)) continue;
-
-      const alternative =
-        bestDistance + edge.weight;
-
-      if(alternative < distances.get(edge.id)){
-        distances.set(edge.id, alternative);
-        previous.set(edge.id, current);
-      }
-    }
-  }
-
-  if(distances.get(endId) === Infinity){
-    return null;
-  }
-
-  const path = [];
-  let current = endId;
-
-  while(current !== undefined){
-    path.unshift(current);
-
-    if(current === startId){
-      break;
-    }
-
-    current = previous.get(current);
-  }
-
-  return path[0] === startId
-    ? path
-    : null;
+  return result ? result.nodes : null;
 }
 
 function calculateIndoorEtaSeconds(graph, path){
@@ -2181,7 +2135,8 @@ async function getIndoorLegEtaSeconds(
   buildingKey,
   startNodeId,
   endNodeId,
-  accessible
+  accessible,
+  preferFewerTurns = false
 ){
   const graph =
     await loadIndoorGraphForEta(buildingKey);
@@ -2191,7 +2146,8 @@ async function getIndoorLegEtaSeconds(
       graph,
       startNodeId,
       endNodeId,
-      accessible
+      accessible,
+      preferFewerTurns
     );
 
   if(!path){
@@ -2222,6 +2178,8 @@ function getOutdoorEtaSeconds(waypoints, accessible){
 async function getMainToMadrigaEtaSeconds(){
   const accessible =
     currentProfile === 'mobility';
+  const preferFewerTurns =
+    currentProfile === 'spatial';
 
   let indoorContext = {};
 
@@ -2248,7 +2206,8 @@ if(!mainStartNodeId){
       'main',
       mainStartNodeId,
       'floor600_n86',
-      accessible
+      accessible,
+      preferFewerTurns
     );
 
   const rabinSeconds =
@@ -2256,7 +2215,8 @@ if(!mainStartNodeId){
       'rabin',
       'floor7_n108',
       'floor5_n104',
-      accessible
+      accessible,
+      preferFewerTurns
     );
 
   const madrigaSeconds =
@@ -2264,7 +2224,8 @@ if(!mainStartNodeId){
       'madriga',
       'floor4_n43',
       madrigaDestinationNodeId,
-      accessible
+      accessible,
+      preferFewerTurns
     );
 
   if(
@@ -2305,6 +2266,8 @@ async function getJourneyEtaSeconds({
 }){
   const accessible =
     currentProfile === 'mobility';
+  const preferFewerTurns =
+    currentProfile === 'spatial';
 
   let startContext = {};
   let destinationContext = {};
@@ -2339,7 +2302,8 @@ async function getJourneyEtaSeconds({
         originBuildingKey,
         startContext.startNodeId,
         startContext.exitEntranceId,
-        accessible
+        accessible,
+        preferFewerTurns
       );
 
     if(originSeconds !== null){
@@ -2366,7 +2330,8 @@ async function getJourneyEtaSeconds({
         'rabin',
         'floor7_n108',
         'floor5_n104',
-        accessible
+        accessible,
+        preferFewerTurns
       );
 
     if(rabinSeconds === null){
@@ -2389,7 +2354,8 @@ async function getJourneyEtaSeconds({
           'madriga',
           'floor4_n43',
           madrigaDestinationNodeId,
-          accessible
+          accessible,
+          preferFewerTurns
         );
 
       if(madrigaSeconds === null){
@@ -2431,7 +2397,8 @@ async function getJourneyEtaSeconds({
         destinationBuildingKey,
         destinationContext.startNodeId,
         destinationContext.destinationNodeId,
-        accessible
+        accessible,
+        preferFewerTurns
       );
 
     if(destinationSeconds !== null){
@@ -2797,7 +2764,10 @@ if(outdoorLegRequired){
   try{
     outdoorResult = await CampusOutdoorRouting.route(
       start.lat, start.lng, lat, lng,
-      { avoidSteps: currentProfile === 'mobility' }
+      {
+        avoidSteps: currentProfile === 'mobility',
+        preferFewerTurns: currentProfile === 'spatial'
+      }
     );
   }catch(error){
     console.error('Outdoor routing failed:', error);

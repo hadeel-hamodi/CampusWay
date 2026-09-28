@@ -384,6 +384,7 @@ button{cursor:pointer;font-weight:700}
 <script src="heading-tracker.js"></script>
 <script src="route-progress.js"></script>
 <script src="wheelchair-navigation.js"></script>
+<script src="route-planner.js"></script>
 <script>
 
 let GRAPH = null;
@@ -1195,54 +1196,71 @@ for(const c of (f.connections||[])){
   return {by,adj};
 }
 
-function dijkstra(start,end){
-  const {by,adj}=buildGraph(); if(!by.has(start)||!by.has(end))return null;
-  const dist=new Map([...by.keys()].map(id=>[id,Infinity])),prev=new Map(),un=new Set(by.keys());
-  dist.set(start,0);
-  while(un.size){
-    let cur=null,best=Infinity;
-    for(const id of un){const d=dist.get(id);if(d<best){best=d;cur=id}}
-    if(cur===null||best===Infinity)break;if(cur===end)break;un.delete(cur);
-    for(const e of (adj.get(cur)||[])){
-      if(!un.has(e.id))continue;
-      const alt=best+e.w;
-      if(alt<dist.get(e.id)){dist.set(e.id,alt);prev.set(e.id,cur)}
+function selectedRoutingProfile(){
+  const profile=sessionStorage.getItem('accessibilityProfile');
+  return ['general','mobility','visual','spatial','mental'].includes(profile)
+    ? profile
+    : 'general';
+}
+
+function indoorRouteAdapter(graph){
+  return {
+    nodeIds:()=>graph.by.keys(),
+    neighbors:id=>graph.adj.get(id)||[],
+    edgeTarget:edge=>edge.id,
+    edgeWeight:edge=>edge.w,
+    point:id=>{
+      const node=graph.by.get(id);
+      return node ? {
+        x:node.x*132.6,
+        y:node.y*101.2,
+        floor:node.floor
+      } : null;
     }
-  }
-  if(dist.get(end)===Infinity)return null;
-  const p=[];let c=end;
-  while(c!==undefined){p.unshift(c);if(c===start)break;c=prev.get(c)}
-  return p[0]===start?p:null;
+  };
+}
+
+function indoorRouteOptions(){
+  return {
+    preferFewerTurns:selectedRoutingProfile()==='spatial'
+  };
+}
+
+function dijkstra(start,end){
+  const graph=buildGraph();
+  const result=CampusRoutePlanner.findPath(
+    indoorRouteAdapter(graph),
+    start,
+    end,
+    indoorRouteOptions()
+  );
+  return result ? result.nodes : null;
+}
+
+function indoorPathPreference(path){
+  if(!path) return null;
+  return CampusRoutePlanner.pathMetrics(
+    indoorRouteAdapter(buildGraph()),
+    path,
+    indoorRouteOptions()
+  );
 }
 
 function bestDestinationNode(startId, destinations){
   let bestDestination = null;
   let bestRoute = null;
-  let bestDistance = Infinity;
+  let bestScore = Infinity;
 
   for(const destination of destinations){
     const path = dijkstra(startId, destination.id);
 
     if(!path) continue;
 
-    let distance = 0;
+    const preference = indoorPathPreference(path);
+    if(!preference) continue;
 
-    for(let i = 0; i < path.length - 1; i++){
-      const a = nodeById(path[i]);
-      const b = nodeById(path[i + 1]);
-
-      if(!a || !b) continue;
-
-      // Vertical transitions already have their own graph cost.
-      if(a.floor !== b.floor){
-        distance += 0.02;
-      }else{
-        distance += indoorDistanceMeters(a, b);
-      }
-    }
-
-    if(distance < bestDistance){
-      bestDistance = distance;
+    if(preference.score < bestScore){
+      bestScore = preference.score;
       bestDestination = destination;
       bestRoute = path;
     }
@@ -1817,6 +1835,91 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
   describeRoute(routeMeters, verticalSeconds);floorButtons();drawBaseMap();updateProgressUI();
 }
 
+function spatialDistanceText(distance){
+  if(distance<1){
+    return localizedInstruction('less than 1 m','أقل من متر','פחות ממטר');
+  }
+  const rounded=Math.max(1,Math.round(distance));
+  return localizedInstruction(
+    `about ${rounded} m`,
+    `حوالي ${rounded} متر`,
+    `כ-${rounded} מ׳`
+  );
+}
+
+function updateSpatialInstruction(){
+  if(routeNodes.length<2 || progressIndex>=routeNodes.length-1) return;
+
+  const current=routeNodes[progressIndex];
+  const next=routeNodes[progressIndex+1];
+  const targetIndex=CampusWheelchairNavigation.targetCheckpoint(
+    routeNodes,
+    {index:progressIndex,t:progressT},
+    1
+  );
+  if(targetIndex===null) return;
+
+  if(current.floor!==next.floor){
+    const target=routeNodes[targetIndex];
+    const method=(current.type==='elevator'||next.type==='elevator')
+      ? localizedInstruction('elevator','المصعد','מעלית')
+      : localizedInstruction('stairs','الدرج','מדרגות');
+    $('instruction').textContent=localizedInstruction(
+      `Take the ${method} to Floor ${floorLabel(target.floor)}`,
+      `استخدم ${method} إلى ${localizedFloor(target.floor)}`,
+      `השתמש ב${method} כדי להגיע אל ${localizedFloor(target.floor)}`
+    );
+    $('subInstruction').textContent=localizedInstruction(
+      'Continue from the marked point on the new floor.',
+      'تابع من النقطة المحددة في الطابق الجديد.',
+      'המשך מהנקודה המסומנת בקומה החדשה.'
+    );
+    return;
+  }
+
+  const target=routeNodes[targetIndex];
+  const distance=CampusWheelchairNavigation.distanceToCheckpoint(
+    routeNodes,
+    {index:progressIndex,t:progressT},
+    targetIndex
+  );
+  const distanceText=spatialDistanceText(distance);
+  const currentTurn=progressT===0 ? wheelchairTurnAt(progressIndex) : 0;
+
+  $('instruction').textContent=currentTurn>0
+    ? localizedInstruction('Turn right, then continue','انعطف يمينًا، ثم تابع','פנה ימינה והמשך')
+    : currentTurn<0
+      ? localizedInstruction('Turn left, then continue','انعطف يسارًا، ثم تابع','פנה שמאלה והמשך')
+      : localizedInstruction('Continue straight','تابع للأمام','המשך ישר');
+
+  if(targetIndex===routeNodes.length-1){
+    const label=target._displayLabel||target.label;
+    $('subInstruction').textContent=localizedInstruction(
+      `${distanceText} to ${label}`,
+      `${distanceText} حتى ${localizedNodeLabel(label)}`,
+      `${distanceText} עד ${localizedNodeLabel(label)}`
+    );
+    return;
+  }
+
+  if(['elevator','stairs','ramp'].includes(target.type)){
+    const checkpoint=wheelchairCheckpointName(targetIndex);
+    $('subInstruction').textContent=localizedInstruction(
+      `${distanceText} to ${checkpoint}`,
+      `${distanceText} حتى ${checkpoint}`,
+      `${distanceText} עד ${checkpoint}`
+    );
+    return;
+  }
+
+  const targetTurn=wheelchairTurnAt(targetIndex);
+  $('subInstruction').textContent=targetTurn>0
+    ? localizedInstruction(`${distanceText}, then turn right`,`${distanceText}، ثم انعطف يمينًا`,`${distanceText}, ואז פנה ימינה`)
+    : targetTurn<0
+      ? localizedInstruction(`${distanceText}, then turn left`,`${distanceText}، ثم انعطف يسارًا`,`${distanceText}, ואז פנה שמאלה`)
+      : localizedInstruction(`${distanceText} to the next point`,`${distanceText} حتى النقطة التالية`,`${distanceText} עד הנקודה הבאה`);
+}
+
 
 function updateTurnInstruction(){
   if(navMode === 'wheelchair'){
@@ -1834,6 +1937,11 @@ function updateTurnInstruction(){
   }
   if(navMode === 'sensor') $('subInstruction').textContent=localizedInstruction('Estimated position on the planned route.','موقع تقديري على المسار المحدد.','מיקום משוער לאורך המסלול המתוכנן.');
   if(routeNodes.length<2 || progressIndex>=routeNodes.length-1) return;
+
+  if(selectedRoutingProfile()==='spatial'){
+    updateSpatialInstruction();
+    return;
+  }
 
   const a=routeNodes[progressIndex];
   const b=routeNodes[progressIndex+1];

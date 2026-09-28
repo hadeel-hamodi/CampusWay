@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),{test}=require('node:test');
 const root=path.join(__dirname,'..');
 const nav=fs.readFileSync(path.join(root,'wayframe/navigation-demo.html'),'utf8');
 const tester=fs.readFileSync(path.join(root,'wayframe/sensor-test.html'),'utf8');
-  const modules=['step-detector.js','heading-tracker.js','route-progress.js','wheelchair-navigation.js'];
+  const modules=['step-detector.js','heading-tracker.js','route-progress.js','wheelchair-navigation.js','route-planner.js'];
 function between(source,start,end){
   const a=source.indexOf(start),b=source.indexOf(end,a);assert.ok(a>=0&&b>a,start);return source.slice(a,b);
 }
@@ -26,6 +26,7 @@ function harness(testPage=false,permission){
       function localizedInstruction(en){return en;} function it(key){return key;}
       function drawBaseMap(){} function floorButtons(){} function followNode(){}
       function currentHeading(){return 0;} function describeRoute(){}
+      let testProfile='general'; function selectedRoutingProfile(){return testProfile;}
       function resolveSelection(value){return value;} function selectionLabel(value){return value;}
       let testNodes=[{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:0}];
       let dijkstraCalls=0,dijkstraAccessible=[]; function dijkstra(){dijkstraCalls++;dijkstraAccessible.push(Boolean($('accessibleRoute').checked));return testNodes.map(n=>n.id);}
@@ -314,6 +315,33 @@ test('wheelchair turn instruction uses simplified checkpoints instead of noisy r
   h.element('wheelchairNextBtn').onclick();
   assert.equal(h.run('progressIndex'),4);
   assert.match(h.element('instruction').textContent,/Turn (right|left)/);
+});
+
+test('Spatial guidance holds one instruction until the next meaningful turn',()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'s',label:'Start',type:'room',floor:'floor500',x:0,y:0},
+    {id:'n1',label:'',type:'corridor',floor:'floor500',x:.01,y:0},
+    {id:'turn',label:'',type:'corridor',floor:'floor500',x:.02,y:0},
+    {id:'n3',label:'',type:'corridor',floor:'floor500',x:.02,y:.01},
+    {id:'t',label:'Room',type:'room',floor:'floor500',x:.02,y:.02}
+  ]);
+  h.run("testProfile='spatial'; updateTurnInstruction()");
+  assert.match(h.element('instruction').textContent,/Continue straight/);
+  assert.match(h.element('subInstruction').textContent,/then turn (right|left)/);
+});
+
+test('Spatial elevator guidance names the final floor of an uninterrupted ride',()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'lift-500',label:'Lift',type:'elevator',connectorId:'L',floor:'floor500',x:0,y:0},
+    {id:'lift-600',label:'Lift',type:'elevator',connectorId:'L',floor:'floor600',x:0,y:0},
+    {id:'lift-700',label:'Lift',type:'elevator',connectorId:'L',floor:'floor700',x:0,y:0},
+    {id:'t',label:'Room',type:'room',floor:'floor700',x:.02,y:0}
+  ]);
+  h.run("testProfile='spatial'; updateTurnInstruction()");
+  assert.match(h.element('instruction').textContent,/floor700/);
+  assert.doesNotMatch(h.element('instruction').textContent,/floor600/);
 });
 
 test('wheelchair floor confirmation stops at the lift and skips pass-through floors',async()=>{

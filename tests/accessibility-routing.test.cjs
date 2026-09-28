@@ -8,6 +8,7 @@ const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const navigation = fs.readFileSync(path.join(root, 'wayframe', 'navigation-demo.html'), 'utf8');
 const outdoor = fs.readFileSync(path.join(root, 'app', 'prototype', 'outdoor-routing.js'), 'utf8');
+const routePlanner = require('../wayframe/route-planner.js');
 
 function between(source, start, end) {
   const a = source.indexOf(start);
@@ -75,6 +76,7 @@ test('outdoor Mobility route excludes OSM steps while a general route may use th
   ] };
   const context = vm.createContext({
     fetch: async () => ({ok:true, json:async () => data}),
+    CampusRoutePlanner: routePlanner,
     console: {log() {}, warn() {}, error() {}}
   });
   vm.runInContext(`${outdoor};this.routing=CampusOutdoorRouting`, context);
@@ -85,7 +87,34 @@ test('outdoor Mobility route excludes OSM steps while a general route may use th
   assert.ok(accessible.edges.every(edge => edge.type !== 'steps'));
 });
 
-function indoorHarness(graph, accessible = true) {
+test('outdoor Spatial routing prefers fewer turns without changing General routing', async () => {
+  const data = {elements:[
+    {type:'node',id:1,lat:32.76000,lon:35.02000},
+    {type:'node',id:2,lat:32.76001,lon:35.02000},
+    {type:'node',id:3,lat:32.76001,lon:35.02004},
+    {type:'node',id:4,lat:32.76000,lon:35.02004},
+    {type:'node',id:5,lat:32.76004,lon:35.02005},
+    {type:'node',id:6,lat:32.76000,lon:35.02010},
+    {type:'way',id:20,nodes:[1,2,3,4,6],tags:{highway:'footway'}},
+    {type:'way',id:21,nodes:[1,5,6],tags:{highway:'footway'}}
+  ]};
+  const context = vm.createContext({
+    fetch:async()=>({ok:true,json:async()=>data}),
+    CampusRoutePlanner:routePlanner,
+    console:{log(){},warn(){},error(){}}
+  });
+  vm.runInContext(`${outdoor};this.routing=CampusOutdoorRouting`, context);
+  const general = await context.routing.route(32.76000,35.02000,32.76000,35.02010);
+  const spatial = await context.routing.route(
+    32.76000,35.02000,32.76000,35.02010,
+    {preferFewerTurns:true}
+  );
+  assert.equal(general.edges.length, 4);
+  assert.equal(spatial.edges.length, 2);
+  assert.ok(spatial.distance > general.distance);
+});
+
+function indoorHarness(graph, accessible = true, profile = 'general') {
   const elements = new Map();
   const element = id => {
     if(!elements.has(id)) elements.set(id, {
@@ -98,7 +127,13 @@ function indoorHarness(graph, accessible = true) {
   for(const id of ['fromFloor','toFloor']) element(id).value = id === 'fromFloor' ? 'floor1' : 'floor2';
   element('from').value = 'a';
   element('to').value = 'b';
-  const context = vm.createContext({document:{getElementById:element}, console:{log(){}}, GRAPH:graph});
+  const context = vm.createContext({
+    document:{getElementById:element},
+    console:{log(){}},
+    GRAPH:graph,
+    CampusRoutePlanner:routePlanner,
+    sessionStorage:{getItem(key){return key === 'accessibilityProfile' ? profile : null;}}
+  });
   const run = code => vm.runInContext(code, context);
   run(`
     const $=id=>document.getElementById(id);
@@ -166,6 +201,49 @@ test('accessible indoor route uses elevators and never stair nodes', () => {
   const pathIds = Array.from(h.run('dijkstra("a","b")'));
   assert.deepEqual(pathIds, ['a','e1','e2','b']);
   assert.ok(pathIds.every(id => h.run(`nodeById(${JSON.stringify(id)}).type`) !== 'stairs'));
+});
+
+test('Spatial indoor routing chooses fewer turns while General keeps the shortest path', () => {
+  const graph = {floors:{floor1:{nodes:[
+    {id:'s',type:'entrance',floor:'floor1',x:0,y:0},
+    {id:'a',type:'corridor',floor:'floor1',x:0,y:.01},
+    {id:'b',type:'corridor',floor:'floor1',x:.04,y:.01},
+    {id:'c',type:'corridor',floor:'floor1',x:.04,y:0},
+    {id:'m',type:'corridor',floor:'floor1',x:.05,y:.04},
+    {id:'t',type:'room',floor:'floor1',x:.1,y:0}
+  ],connections:[
+    {from:'s',to:'a'}, {from:'a',to:'b'},
+    {from:'b',to:'c'}, {from:'c',to:'t'},
+    {from:'s',to:'m'}, {from:'m',to:'t'}
+  ]}}};
+  const general = indoorHarness(graph, false, 'general');
+  const spatial = indoorHarness(graph, false, 'spatial');
+  assert.deepEqual(
+    Array.from(general.run('dijkstra("s","t")')),
+    ['s','a','b','c','t']
+  );
+  assert.deepEqual(
+    Array.from(spatial.run('dijkstra("s","t")')),
+    ['s','m','t']
+  );
+});
+
+test('Spatial still respects stair-free routing when accessibility is enabled', () => {
+  const graph = {floors:{
+    floor1:{nodes:[
+      {id:'a',type:'entrance',floor:'floor1',x:0,y:0},
+      {id:'s1',type:'stairs',connectorId:'X',floor:'floor1',x:1,y:0},
+      {id:'e1',type:'elevator',connectorId:'X',floor:'floor1',x:0,y:1}
+    ],connections:[{from:'a',to:'s1'},{from:'a',to:'e1'}]},
+    floor2:{nodes:[
+      {id:'s2',type:'stairs',connectorId:'X',floor:'floor2',x:1,y:0},
+      {id:'e2',type:'elevator',connectorId:'X',floor:'floor2',x:0,y:1},
+      {id:'b',type:'room',floor:'floor2',x:0,y:2}
+    ],connections:[{from:'s2',to:'b'},{from:'e2',to:'b'}]}
+  }};
+  const h = indoorHarness(graph, true, 'spatial');
+  const pathIds = Array.from(h.run('dijkstra("a","b")'));
+  assert.deepEqual(pathIds, ['a','e1','e2','b']);
 });
 
 test('current Madriga data reports no step-free route to floor minus one instead of using stairs', () => {

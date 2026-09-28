@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v24-start-room-search';
+const CACHE_NAME = 'campusway-v25-spatial-routing';
 
 const APP_FILES = [
 './',
@@ -24,6 +24,7 @@ const APP_FILES = [
   './wayframe/heading-tracker.js',
   './wayframe/route-progress.js',
   './wayframe/wheelchair-navigation.js',
+  './wayframe/route-planner.js',
   './wayframe/sensor-test.html',
 
   './buildings/education/education-indoor-graph.json',
