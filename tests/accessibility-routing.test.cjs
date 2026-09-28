@@ -50,7 +50,8 @@ test('saved Mobility profile stays selected when profile buttons are rebuilt', (
       {id:'spatial', label:'Spatial', sub:'Simple'},
       {id:'mental', label:'Mental', sub:'Quiet'}
     ]},
-    showAlert() {}, speak() {}, routeTo() {}, currentOutdoorDestination: null
+    showAlert() {}, speak() {}, routeTo() {}, updateRestSpaceServiceButton() {},
+    currentOutdoorDestination: null
   });
   const state = between(index, 'const PROFILE_IDS', 'let audioOn');
   const profiles = between(index, 'const ICONS =', 'function showAlert(');

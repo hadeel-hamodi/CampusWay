@@ -685,6 +685,11 @@ if(journeyStage === 'same-building'){
           destinations = [savedDestination];
         }
 
+    }else if(destinationContext.destinationType === 'rest-space'){
+      destinations = allNodes().filter(
+        node => CampusRoutePlanner.isSuggestedRestSpace(node)
+      );
+
     }else if(
       String(destinationContext.destinationLabel)
         .toLowerCase()
@@ -724,6 +729,10 @@ if(journeyStage === 'same-building'){
           const destination = best.destination;
 
           if(destination){
+            if(destinationContext.destinationDisplayLabel){
+              destination._displayLabel =
+                destinationContext.destinationDisplayLabel;
+            }
             $('toFloor').value = destination.floor;
 
             fillLocationSelect(
@@ -893,7 +902,12 @@ if(transferEntranceId){
 
 let matchingDestinations = [];
 
-if(
+if(context.destinationType === 'rest-space'){
+  matchingDestinations = allNodes().filter(
+    node => CampusRoutePlanner.isSuggestedRestSpace(node)
+  );
+
+}else if(
   String(context.destinationLabel)
     .toLowerCase()
     .includes('restroom')
@@ -957,6 +971,10 @@ if(
           matchingDestinations[0];
 
         if(destination){
+          if(context.destinationDisplayLabel){
+            destination._displayLabel =
+              context.destinationDisplayLabel;
+          }
           $('toFloor').value = destination.floor;
 
           fillLocationSelect(
@@ -965,6 +983,7 @@ if(
             'Choose destination...'
           );
 
+          ensureNodeOption('to', destination);
           $('to').value = destination.id;
         }
       }
@@ -1040,7 +1059,8 @@ function resolveSelection(value){
 
 function selectionLabel(value){
   if(virtualDestinations.has(value)) return virtualDestinations.get(value).label;
-  return nodeById(value)?.label || value;
+  const node=nodeById(value);
+  return node?._displayLabel || node?.label || value;
 }
 
 function userFacingLocationsForFloor(floorId){
@@ -1111,7 +1131,7 @@ function fillLocationSelect(floorId, selectId, placeholder){
   const items=userFacingLocationsForFloor(floorId);
 
   const options=items.map(n=>{
-    let label=n.label;
+    let label=n._displayLabel||n.label;
     if(n.type==='restroom') label += ' — Restroom';
     else if(n.type==='entrance') label += ' — Entrance';
     else if(n.type==='virtual-elevator') label = 'Elevators';
@@ -1135,7 +1155,7 @@ function ensureNodeOption(selectId, node){
 
   if(alreadyExists) return;
 
-  let label = node.label || node.type;
+  let label = node._displayLabel || node.label || node.type;
 
   if(node.type === 'elevator'){
     label = 'Elevator';

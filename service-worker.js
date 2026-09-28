@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v25-spatial-routing';
+const CACHE_NAME = 'campusway-v26-rest-spaces';
 
 const APP_FILES = [
 './',

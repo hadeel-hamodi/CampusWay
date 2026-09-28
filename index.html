@@ -573,8 +573,8 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
     <span id="lbl-service-library">Library</span>
   </button>
 
-  <button class="a11y-btn" onclick="findNearbyService('landmark')">
-    <span style="font-size:18px;">📍</span>
+  <button id="landmarkServiceBtn" class="a11y-btn" onclick="findNearbyService(currentProfile === 'mental' ? 'rest-space' : 'landmark')">
+    <span id="landmarkServiceIcon" style="font-size:18px;">📍</span>
     <span id="lbl-service-landmarks">Landmarks</span>
   </button>
 
@@ -666,12 +666,12 @@ const T = {
       {id:'mobility',label:'Mobility',         sub:'Wheelchair / crutches — avoids stairs'},
       {id:'visual',  label:'Visual Impairment',sub:'Follows tactile guide paths'},
       {id:'spatial', label:'Spatial / Navigation',sub:'Fewer turns, simpler directions'},
-      {id:'mental',  label:'Mental Health Support',sub:'Routes to quiet space on request'},
+      {id:'mental',  label:'Mental Health Support',sub:'Finds suggested places for a break'},
     ],
     alerts:{
       mobility:'Stairs are excluded from accessible indoor routes. If no step-free route is mapped, CampusWay will tell you.',
       visual:'Tactile guide path active from Carmel Gate to Main Building.',
-      mental:'Quiet zones (libraries, garden) will be suggested near your route.',
+      mental:'Use Rest Spaces below to find a mapped place for a break. Availability and noise levels may change.',
       spatial:'Simpler routing active — prefers fewer meaningful turns while also considering route length.',
     },
     voices:['US English','UK English','Default'],
@@ -684,7 +684,8 @@ const T = {
     removeFromFav:'Remove',
     langSwitch:'🌐 Language',
     legendElevator:'Elevator', legendStairs:'Stairs',
-    servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks',serviceShops:'Shops', serviceShelters:'Shelters',
+    servicesNearMe:'Services Near Me', serviceRestrooms:'Restrooms', serviceFood:'Food', serviceClinic:'Clinic', serviceGym:'Gym', serviceLibrary:'Library', serviceLandmarks:'Landmarks', serviceRestSpaces:'Rest Spaces', serviceShops:'Shops', serviceShelters:'Shelters',
+    suggestedRestSpace:'Suggested rest space', noRestSpace:'No mapped rest space can be reached from this starting point.',
     continueIndoors:'Continue indoors →', switchingIndoor:'Switching to indoor mode...', room:'Room',
     yourLocation:'Your location', hour:'hr', hours:'hours', noBuildingOrRoom:'No matching building or room found.',
     startNotMapped:'This starting point is not mapped yet. Choose a listed room or start from the building.',
@@ -719,12 +720,12 @@ const T = {
       {id:'mobility',label:'ניידות',              sub:'כיסא גלגלים / קביים — ללא מדרגות'},
       {id:'visual',  label:'לקות ראייה',          sub:'עוקב אחרי נתיבי מישוש'},
       {id:'spatial', label:'ניווט מרחבי',          sub:'פחות פניות, הוראות פשוטות'},
-      {id:'mental',  label:'תמיכה נפשית',          sub:'מסלולים לאזורי שקט לפי בקשה'},
+      {id:'mental',  label:'תמיכה נפשית',          sub:'מציע מקומות להפסקה'},
     ],
     alerts:{
       mobility:'מדרגות אינן נכללות במסלולים נגישים בתוך הבניינים. אם לא מופה מסלול ללא מדרגות, CampusWay יודיע לך.',
       visual:'נתיב מישוש פעיל משער הכרמל לבניין הראשי.',
-      mental:'אזורים שקטים (ספריות, גן) יוצעו ליד המסלול שלך.',
+      mental:'השתמש בכפתור מקומות מנוחה למטה כדי למצוא מקום ממופה להפסקה. רמת הרעש והעומס עשויות להשתנות.',
       spatial:'ניווט פשוט יותר פעיל — מעדיף פחות פניות משמעותיות תוך התחשבות גם באורך המסלול.',
     },
     voices:['עברית','אנגלית','ברירת מחדל'],
@@ -737,7 +738,8 @@ const T = {
     saveToFav:'⭐ שמור למועדפים',
     langSwitch:'🌐 שפה',
     removeFromFav:'הסר',
-    servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון',serviceShops:'חנויות', serviceShelters:'מרחבים מוגנים',
+    servicesNearMe:'שירותים בקרבתי', serviceRestrooms:'שירותים', serviceFood:'אוכל', serviceClinic:'מרפאה', serviceGym:'חדר כושר', serviceLibrary:'ספרייה', serviceLandmarks:'נקודות ציון', serviceRestSpaces:'מקומות מנוחה', serviceShops:'חנויות', serviceShelters:'מרחבים מוגנים',
+    suggestedRestSpace:'מקום מנוחה מוצע', noRestSpace:'לא נמצא מקום מנוחה ממופה שניתן להגיע אליו מנקודת המוצא הזו.',
     continueIndoors:'המשך לניווט בתוך הבניין ←', switchingIndoor:'עובר למצב ניווט בתוך הבניין...', room:'חדר',
     yourLocation:'המיקום שלך', hour:'שעה', hours:'שעות', noBuildingOrRoom:'לא נמצא בניין או חדר תואם.',
     startNotMapped:'נקודת המוצא הזו עדיין לא מופתה. בחר חדר מהרשימה או התחל מהבניין.',
@@ -772,12 +774,12 @@ const T = {
       {id:'mobility',label:'إعاقة حركية',           sub:'كرسي متحرك / عكازات — تجنب السلالم'},
       {id:'visual',  label:'إعاقة بصرية',           sub:'يتبع مسارات اللمس'},
       {id:'spatial', label:'صعوبة في الملاحة',       sub:'منعطفات أقل، تعليمات أبسط'},
-      {id:'mental',  label:'الصحة النفسية',          sub:'مسارات إلى أماكن هادئة عند الطلب'},
+      {id:'mental',  label:'الصحة النفسية',          sub:'يقترح أماكن للاستراحة'},
     ],
     alerts:{
       mobility:'يتم استبعاد الدرج من المسارات المهيأة داخل المباني. إذا لم يكن هناك مسار بدون درج على الخريطة، سيخبرك CampusWay.',
       visual:'مسار لمسي نشط من بوابة الكرمل إلى المبنى الرئيسي.',
-      mental:'ستُقترح مناطق هادئة (مكتبات، حدائق) بالقرب من مسارك.',
+      mental:'استخدم زر أماكن الاستراحة أدناه للعثور على مكان مربوط للاستراحة. قد يتغير الازدحام ومستوى الضوضاء.',
       spatial:'تم تفعيل المسار الأبسط — يفضّل منعطفات واضحة أقل مع أخذ طول المسار بالحسبان.',
     },
     voices:['عربية','إنجليزية','افتراضي'],
@@ -790,7 +792,8 @@ const T = {
     saveToFav:'⭐ حفظ في المفضلة',
     langSwitch:'🌐 لغة',
     removeFromFav:'إزالة',
-    servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم',serviceShops:'محلات', serviceShelters:'ملاجئ',
+    servicesNearMe:'الخدمات القريبة مني', serviceRestrooms:'مراحيض', serviceFood:'طعام', serviceClinic:'عيادة', serviceGym:'صالة رياضية', serviceLibrary:'مكتبة', serviceLandmarks:'معالم', serviceRestSpaces:'أماكن استراحة', serviceShops:'محلات', serviceShelters:'ملاجئ',
+    suggestedRestSpace:'مكان استراحة مقترح', noRestSpace:'لا يوجد مكان استراحة مربوط يمكن الوصول إليه من نقطة البداية هذه.',
     continueIndoors:'تابع إلى الداخل ←', switchingIndoor:'جارٍ الانتقال إلى وضع الملاحة داخل المبنى...', room:'غرفة',
     yourLocation:'موقعك', hour:'ساعة', hours:'ساعات', noBuildingOrRoom:'لم يتم العثور على مبنى أو غرفة مطابقة.',
     startNotMapped:'نقطة البداية هذه غير مربوطة بالمسارات بعد. اختر غرفة من القائمة أو ابدأ من المبنى.',
@@ -873,6 +876,21 @@ function localizedBuildingNameByEnglishName(name){
   return building ? localizedBuildingName(building) : name;
 }
 
+function updateRestSpaceServiceButton(){
+  const mentalProfile = currentProfile === 'mental';
+  const button = document.getElementById('landmarkServiceBtn');
+  const icon = document.getElementById('landmarkServiceIcon');
+  const label = document.getElementById('lbl-service-landmarks');
+
+  if(!button || !icon || !label) return;
+
+  icon.textContent = mentalProfile ? '🌿' : '📍';
+  label.textContent = mentalProfile
+    ? t.serviceRestSpaces
+    : t.serviceLandmarks;
+  button.title = label.textContent;
+}
+
 function applyTranslations(){
   document.getElementById('lbl-destination').textContent = t.destination;
   document.getElementById('searchInput').placeholder = t.searchPlaceholder;
@@ -894,7 +912,7 @@ function applyTranslations(){
   document.getElementById('lbl-service-clinic').textContent = t.serviceClinic;
   document.getElementById('lbl-service-gym').textContent = t.serviceGym;
   document.getElementById('lbl-service-library').textContent = t.serviceLibrary;
-  document.getElementById('lbl-service-landmarks').textContent = t.serviceLandmarks;
+  updateRestSpaceServiceButton();
   document.getElementById('lbl-continue-indoor').textContent = t.continueIndoors;
   document.getElementById('lbl-switching-indoor').textContent = t.switchingIndoor;
 }
@@ -1013,6 +1031,7 @@ function buildProfiles(){
       btn.classList.add('active');
       currentProfile = p.id;
       sessionStorage.setItem('accessibilityProfile', currentProfile);
+      updateRestSpaceServiceButton();
       showAlert(p.id);
       speak(p.label + '. ' + p.sub);
       if(currentOutdoorDestination){
@@ -1024,6 +1043,7 @@ function buildProfiles(){
     };
     el.appendChild(btn);
   });
+  updateRestSpaceServiceButton();
 }
 
 function showAlert(profileId){
@@ -1531,17 +1551,54 @@ function findNearbyIndoorService(type){
 
     if(!building) continue;
 
+    let reachableNodeIds = null;
+
+    if(type === 'rest-space'){
+      const routeGraph = buildIndoorEtaGraph(item.graph, false);
+      const configuredEntrances = BUILDING_ENTRANCES[item.buildingKey] || [];
+      const startNodeIds = (
+        customStart?.buildingKey === item.buildingKey &&
+        customStart?.nodeId
+      )
+        ? [customStart.nodeId]
+        : configuredEntrances.map(entrance => entrance.nodeId);
+
+      reachableNodeIds = new Set();
+      const queue = startNodeIds.filter(id => routeGraph.byId.has(id));
+
+      while(queue.length){
+        const current = queue.shift();
+        if(reachableNodeIds.has(current)) continue;
+        reachableNodeIds.add(current);
+
+        for(const edge of (routeGraph.adjacency.get(current) || [])){
+          if(!reachableNodeIds.has(edge.id)) queue.push(edge.id);
+        }
+      }
+    }
+
     for(const [floorKey, floor] of Object.entries(item.graph.floors)){
 
       for(const node of (floor.nodes || [])){
 
-        if(node.type === type){
+        const matchesType = type === 'rest-space'
+          ? CampusRoutePlanner.isSuggestedRestSpace(node)
+          : node.type === type;
+
+        if(
+          matchesType &&
+          (!reachableNodeIds || reachableNodeIds.has(node.id))
+        ){
 
           matches.push({
             node,
             floor: floorKey,
             building,
             buildingKey: item.buildingKey,
+            serviceType: type,
+            displayLabel: type === 'rest-space'
+              ? t.suggestedRestSpace
+              : String(node.label || node.type).trim(),
             distance: Math.hypot(
               building.lat - start.lat,
               building.lng - start.lng
@@ -1554,7 +1611,11 @@ function findNearbyIndoorService(type){
   }
 
   if(!matches.length){
-    alert(`No ${type} has been mapped yet.`);
+    alert(
+      type === 'rest-space'
+        ? t.noRestSpace
+        : `No ${type} has been mapped yet.`
+    );
     return;
   }
 
@@ -1569,13 +1630,17 @@ function routeToIndoorService(match){
 
   const label =
     String(match.node.label || match.node.type).trim();
+  const restSpace = match.serviceType === 'rest-space';
+  const displayLabel = match.displayLabel || label;
 
   sessionStorage.setItem(
     'indoorContext',
     JSON.stringify({
       entranceId: null,
       startNodeId: null,
-      destinationLabel: label,
+      destinationLabel: restSpace ? displayLabel : label,
+      destinationDisplayLabel: displayLabel,
+      destinationType: restSpace ? 'rest-space' : match.node.type,
       buildingKey: match.buildingKey
     })
   );
@@ -1586,7 +1651,7 @@ function routeToIndoorService(match){
   );
 
   document.getElementById('searchInput').value =
-    `${label} — ${localizedBuildingName(match.building)}`;
+    `${displayLabel} — ${localizedBuildingName(match.building)}`;
 
   searchSuggestions.style.display = 'none';
 
@@ -1607,7 +1672,8 @@ function findNearbyService(type){
   if(
     type === 'gym' ||
     type === 'library' ||
-    type === 'landmark'
+    type === 'landmark' ||
+    type === 'rest-space'
   ){
     findNearbyIndoorService(type);
     return;
@@ -3047,6 +3113,7 @@ const isRestroomRoute =
   name.toLowerCase().includes('cell near the exit');
 
 let displayDestination;
+let destinationType = '';
 
 if(isRestroomRoute){
   displayDestination = 'Nearest restroom';
@@ -3056,6 +3123,9 @@ if(isRestroomRoute){
     const indoorContext = JSON.parse(
       sessionStorage.getItem('indoorContext') || 'null'
     );
+
+    destinationType =
+      indoorContext?.destinationType || '';
 
     displayDestination =
       indoorContext?.destinationLabel ||
@@ -3072,7 +3142,10 @@ if(isRestroomRoute){
 }
 
 if(sameBuilding && displayDestination){
-  if(!/^room\s/i.test(displayDestination)){
+  if(
+    (!destinationType || destinationType === 'room') &&
+    !/^room\s/i.test(displayDestination)
+  ){
     displayDestination = `Room ${displayDestination}`;
   }
 

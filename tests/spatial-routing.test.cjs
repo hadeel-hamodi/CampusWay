@@ -111,3 +111,11 @@ test('Spatial never returns a loop to avoid a turn at duplicate map points', () 
   });
   assert.deepEqual(result.nodes, ['s','x','t']);
 });
+
+test('suggested rest spaces include landmarks, libraries, gardens and terraces', () => {
+  assert.equal(CampusRoutePlanner.isSuggestedRestSpace({type:'landmark',label:'Node 41'}), true);
+  assert.equal(CampusRoutePlanner.isSuggestedRestSpace({type:'library',label:'Library'}), true);
+  assert.equal(CampusRoutePlanner.isSuggestedRestSpace({type:'food',label:'Garden'}), true);
+  assert.equal(CampusRoutePlanner.isSuggestedRestSpace({type:'room',label:'West terrace'}), true);
+  assert.equal(CampusRoutePlanner.isSuggestedRestSpace({type:'food',label:'Cafe'}), false);
+});

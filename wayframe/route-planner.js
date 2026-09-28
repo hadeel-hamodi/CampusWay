@@ -9,6 +9,15 @@
   const DEFAULT_TURN_THRESHOLD_DEGREES = 35;
   const DEFAULT_TURN_PENALTY_METERS = 6;
 
+  function isSuggestedRestSpace(node) {
+    if (!node) return false;
+    const type = String(node.type || '').trim().toLowerCase();
+    const label = String(node.label || '').trim().toLowerCase();
+    return type === 'landmark' ||
+      type === 'library' ||
+      /(^|\b)(garden|terrace)(\b|$)/i.test(label);
+  }
+
   function nodeIds(adapter) {
     const values = typeof adapter.nodeIds === 'function'
       ? adapter.nodeIds()
@@ -336,6 +345,7 @@
     findPath,
     pathMetrics,
     turnMagnitudeDegrees,
+    isSuggestedRestSpace,
     DEFAULT_TURN_THRESHOLD_DEGREES,
     DEFAULT_TURN_PENALTY_METERS
   };
