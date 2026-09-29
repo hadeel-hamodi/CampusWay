@@ -250,20 +250,13 @@ function findClosestEdge(lat, lng){
 
 function applyCampusCorrections(){
 
-// --------------------------------------------------
-// Carmel Gate <-> Multi-Purpose zebra crossing
-// --------------------------------------------------
 
-addCampusNode(
-  'campus_carmel_crossing_gate',
-  32.759171,
-  35.021342
-);
 
+// Carmel Gate crossing — campus side
 addCampusNode(
   'campus_carmel_crossing_campus',
-  32.759192,
-  35.021385
+  32.75922876009188,
+  35.02143144607545
 );
 
 // Insert gate side into the existing service-road segment
@@ -272,24 +265,6 @@ removeEdge(
   1387533543
 );
 
-addEdge(
-  1447013831,
-  'campus_carmel_crossing_gate',
-  'service'
-);
-
-addEdge(
-  'campus_carmel_crossing_gate',
-  1387533543,
-  'service'
-);
-
-// The actual zebra crossing
-addEdge(
-  'campus_carmel_crossing_gate',
-  'campus_carmel_crossing_campus',
-  'footway'
-);
 
 // Insert campus side into the existing footway
 removeEdge(
@@ -309,16 +284,132 @@ addEdge(
   'footway'
 );
 
+// ==================================================
+// CARMEL GATE — ADDITIONAL WALKING PATH
+// ==================================================
+
+addCampusNode(
+  'campus_carmel_path_1',
+  32.75897782327304,
+  35.02154342830181
+);
+
+addCampusNode(
+  'campus_carmel_path_2',
+  32.759147558142494,
+  35.021310076117516
+);
+
+// Carmel path — intermediate point between path 2 and path 3
+addCampusNode(
+  'campus_carmel_path_2_5',
+  32.7596308214307,
+  35.02070356160403
+);
+
+addCampusNode(
+  'campus_carmel_path_3',
+  32.759864275568546,
+  35.02045042812825
+);
+
+addCampusNode(
+  'campus_carmel_path_4',
+  32.76002822880308,
+  35.020339787006385
+);
+
+// Carmel path 2 → campus side of the crossing
+addEdge(
+  'campus_carmel_path_2',
+  'campus_carmel_crossing_campus',
+  'footway'
+);
+
+// Carmel Gate OSM path → custom path 1
+addEdge(
+  2065458945,
+  'campus_carmel_path_1',
+  'footway'
+);
+
+// Custom path 1 → custom path 2
+addEdge(
+  'campus_carmel_path_1',
+  'campus_carmel_path_2',
+  'footway'
+);
+
+// Path 2 → intermediate point
+addEdge(
+  'campus_carmel_path_2',
+  'campus_carmel_path_2_5',
+  'footway'
+);
+
+// Intermediate point → path 3
+addEdge(
+  'campus_carmel_path_2_5',
+  'campus_carmel_path_3',
+  'footway'
+);
+
+// Carmel path 3 → Carmel path 4
+addEdge(
+  'campus_carmel_path_3',
+  'campus_carmel_path_4',
+  'footway'
+);
+
+// Carmel path 4 → existing OSM path
+addEdge(
+  'campus_carmel_path_4',
+  7676581028,
+  'footway'
+);
+
+// Carmel path 2.5 → existing OSM path
+addEdge(
+  'campus_carmel_path_2_5',
+  1446999294,
+  'footway'
+);
+
 // --------------------------------------------------
 // Main Building <-> Education Building zebra crossing
 // Verified physically on campus
 // --------------------------------------------------
 
-// West side of crossing
+// ==================================================
+// MAIN BUILDING — MAIN ENTRANCE
+// ==================================================
+
+// Main Building main entrance
+addCampusNode(
+  'campus_main_entrance',
+  32.762029618113814,
+  35.01840457320214
+);
+
+// Path point beside the Main entrance
+addCampusNode(
+  'campus_main_entrance_path',
+  32.76198944133903,
+  35.01835159957409
+);
+
+// Main entrance → entrance path
+addEdge(
+  'campus_main_entrance',
+  'campus_main_entrance_path',
+  'footway'
+);
+
+// Education side of the Main ↔ Education zebra crossing
 addCampusNode(
   'campus_main_education_crossing_west',
-  32.76173888526047,
-  35.01856225354481
+  32.761717,
+  35.018604
 );
 
 // Split existing west-side footway
@@ -327,42 +418,23 @@ removeEdge(
   9255990878
 );
 
-addEdge(
-  9255990877,
-  'campus_main_education_crossing_west',
-  'footway'
-);
 
-addEdge(
-  'campus_main_education_crossing_west',
-  9255990878,
-  'footway'
-);
-
-
-// East side of crossing
+// Main side of the Main ↔ Education zebra crossing
 addCampusNode(
   'campus_main_education_crossing_east',
-  32.76179346536284,
-  35.018798207986364
+  32.76176078580541,
+  35.01864949241281
 );
 
+addEdge(
+  'campus_main_education_crossing_east',
+  'campus_main_entrance_path',
+  'footway'
+);
 // Split existing east-side segment
 removeEdge(
   7674525963,
   7674525964
-);
-
-addEdge(
-  7674525963,
-  'campus_main_education_crossing_east',
-  'service'
-);
-
-addEdge(
-  'campus_main_education_crossing_east',
-  7674525964,
-  'service'
 );
 
 
@@ -370,6 +442,30 @@ addEdge(
 addEdge(
   'campus_main_education_crossing_west',
   'campus_main_education_crossing_east',
+  'footway'
+);
+
+// --------------------------------------------------
+// Education-side zebra approach
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_main_education_crossing_approach',
+  32.76174358727667,
+  35.01856734976173
+);
+
+// New approach → Education side of zebra
+addEdge(
+  'campus_main_education_crossing_approach',
+  'campus_main_education_crossing_west',
+  'footway'
+);
+
+// New approach → existing OSM node
+addEdge(
+  'campus_main_education_crossing_approach',
+  9255990878,
   'footway'
 );
 
@@ -469,31 +565,62 @@ addCampusNode(
   35.0205183
 );
 
+// Multi-Purpose sidewalk → lower Madriga path
+addEdge(
+  'campus_multi_sidewalk_top',
+  'campus_madriga_downhill_1',
+  'footway'
+);
+
+// Lower Madriga path → existing OSM street
+addEdge(
+  'campus_madriga_downhill_1',
+  7676581029,
+  'footway'
+);
+
+addEdge(
+  'campus_multi_sidewalk_top',
+  1446999294,
+  'footway'
+);
+
+// Madriga upper bump
 addCampusNode(
-  'campus_multi_sidewalk_bottom',
-  32.75974247348604,
-  35.02085745334626
+  'campus_madriga_upper_bump',
+  32.76041069119393,
+  35.02074413001538
 );
 
+// ==================================================
+// MADRIGA UPPER BUMP JUNCTION
+// ==================================================
+
+// Junction beside the upper bump
+addCampusNode(
+  'campus_madriga_upper_bump_junction',
+  32.76037826724371,
+  35.020787883549936
+);
+
+// Junction → upper bump
 addEdge(
-  'campus_multi_sidewalk_top',
-  1446999294,
+  'campus_madriga_upper_bump_junction',
+  'campus_madriga_upper_bump',
   'footway'
 );
 
+// Junction → lower existing OSM street node
 addEdge(
-  'campus_multi_sidewalk_bottom',
-  1446999294,
+  'campus_madriga_upper_bump_junction',
+  7676581029,
   'footway'
 );
 
-// --------------------------------------------------
-// Main -> Multi-Purpose sidewalk connection
-// --------------------------------------------------
-
+// Junction → upper existing OSM street node
 addEdge(
-  'campus_multi_sidewalk_top',
-  1447013834,
+  'campus_madriga_upper_bump_junction',
+  7676581030,
   'footway'
 );
 
@@ -501,40 +628,8 @@ addEdge(
 // Terrace Building Floor 1 standard approach
 // Uses the physical bump / step near the building
 // --------------------------------------------------
-addCampusNode(
-  'campus_madriga_bump_approach',
-  32.760134,
-  35.020528
-);
 
-addCampusNode(
-  'campus_madriga_bump_step',
-  32.760156,
-  35.020547
-);
 
-addEdge(
-  'campus_multi_sidewalk_top',
-  'campus_madriga_bump_approach',
-  'footway'
-);
-
-addEdge(
-  'campus_madriga_bump_approach',
-  'campus_madriga_bump_step',
-  'steps'
-);
-
-addCampusNode(
-  'campus_madriga_upper_path_1',
-  32.760357,
-  35.020812
-);
-addEdge(
-  'campus_madriga_bump_step',
-  'campus_madriga_upper_path_1',
-  'footway'
-);
 
 addCampusNode(
   'campus_madriga_upper_path_2',
@@ -542,39 +637,25 @@ addCampusNode(
   35.0210254
 );
 
-addEdge(
-  'campus_madriga_upper_path_1',
-  'campus_madriga_upper_path_2',
-  'footway'
-);
 
+
+// Madriga Floor 1 — Entrance 1
 addCampusNode(
   'campus_madriga_floor1_entrance',
-  32.760836,
-  35.021125
+  32.76074663081821,
+  35.0210782326758
 );
 
-addEdge(
-  'campus_madriga_upper_path_2',
-  'campus_madriga_floor1_entrance',
-  'footway'
-);
-
+// Madriga Floor 1 — Entrance 2
 addCampusNode(
   'campus_madriga_floor1_entrance_2',
-  32.760767,
-  35.021029
+  32.76069263808956,
+  35.021016374230385
 );
 
 addEdge(
   'campus_madriga_upper_path_2',
   'campus_madriga_floor1_entrance_2',
-  'footway'
-);
-
-addEdge(
-  'campus_madriga_floor1_entrance_2',
-  'campus_madriga_floor1_entrance',
   'footway'
 );
 
@@ -600,12 +681,6 @@ addCampusNode(
   35.021330
 );
 
-addCampusNode(
-  'campus_madriga_access_approach',
-  32.760746,
-  35.021080
-);
-
 addEdge(
   1446999286,
   'campus_madriga_access_straight',
@@ -624,15 +699,10 @@ addEdge(
   'footway'
 );
 
+// Accessible path → corrected Madriga Floor 1 Entrance 1
 addEdge(
   'campus_madriga_access_mid',
-  'campus_madriga_access_approach',
-  'footway'
-);
-
-addEdge(
-  'campus_madriga_access_approach',
-  'campus_madriga_floor1_entrance_2',
+  'campus_madriga_floor1_entrance',
   'footway'
 );
 
@@ -651,63 +721,48 @@ addEdge(
 // Floor -1 entrance
 // --------------------------------------------------
 
-addCampusNode(
-  'campus_madriga_downhill_start',
-  32.75967706118779,
-  35.02092182636262
-);
 
+// Corrected Madriga lower path point
 addCampusNode(
   'campus_madriga_downhill_1',
-  32.76012592392313,
-  35.02048462629319
+  32.760128179509074,
+  35.02048278227449
 );
 
-addCampusNode(
-  'campus_madriga_downhill_2',
-  32.7604620055954,
-  35.02087354660035
-);
 
-addCampusNode(
-  'campus_madriga_downhill_3',
-  32.76073944118784,
-  35.021190047264106
-);
-
-addCampusNode(
-  'campus_madriga_downhill_4',
-  32.76084545293389,
-  35.021321475505836
-);
-
-addEdge(
-  'campus_multi_sidewalk_bottom',
-  'campus_madriga_downhill_start',
-  'footway'
-);
-
-addEdge(
-  'campus_madriga_downhill_start',
-  'campus_madriga_downhill_1',
-  'footway'
-);
-
+// Madriga lower path → existing OSM street
 addEdge(
   'campus_madriga_downhill_1',
-  'campus_madriga_downhill_2',
+  7676581029,
   'footway'
 );
 
+// New Madriga upper-path junction
+addCampusNode(
+  'campus_madriga_upper_path_junction',
+  32.76068136023086,
+  35.021034646779306
+);
+
+
+// New junction → upper bump
 addEdge(
-  'campus_madriga_downhill_2',
-  'campus_madriga_downhill_3',
+  'campus_madriga_upper_path_junction',
+  'campus_madriga_upper_bump',
   'footway'
 );
 
+// New junction → existing upper-path node
 addEdge(
-  'campus_madriga_downhill_3',
-  'campus_madriga_downhill_4',
+  'campus_madriga_upper_path_junction',
+  'campus_madriga_upper_path_2',
+  'footway'
+);
+
+// Connect Multi-Purpose sidewalk directly to the Madriga lower path
+addEdge(
+  'campus_multi_sidewalk_top',
+  'campus_madriga_downhill_1',
   'footway'
 );
 
@@ -717,18 +772,25 @@ addCampusNode(
   35.021283
 );
 
+// Madriga Floor -1 entrance → existing OSM path
 addEdge(
-  'campus_madriga_downhill_4',
   'campus_madriga_floor_minus1_entrance',
+  7676581031,
   'footway'
 );
+
+
 
 // --------------------------------------------------
 // Multi-Purpose Building Floor 1 entrance (n2)
 // Connects the Terrace-side pedestrian route to the
 // Multi-Purpose Building entrance
 // --------------------------------------------------
+// ==================================================
+// MADRIGA ↔ MULTI-PURPOSE CONNECTION
+// ==================================================
 
+// Existing approach points
 addCampusNode(
   'campus_multi_entrance_approach_1',
   32.76036501571282,
@@ -747,18 +809,17 @@ addCampusNode(
   35.02127051353455
 );
 
+
+// Correct Multi-Purpose connection point.
+// Replaces the old campus_multi_access_entrance position.
 addCampusNode(
   'campus_multi_access_entrance',
-  32.760360504552914,
-  35.0214770436287
+  32.760402655694335,
+  35.02152448520065
 );
 
-addEdge(
-  'campus_madriga_access_mid',
-  'campus_multi_entrance_approach_1',
-  'footway'
-);
 
+// Keep the existing lower approach connection.
 addEdge(
   'campus_multi_entrance_approach_1',
   'campus_multi_entrance_approach_2',
@@ -771,12 +832,6 @@ addEdge(
   'footway'
 );
 
-addEdge(
-  'campus_multi_entrance_approach_1',
-  'campus_multi_access_entrance',
-  'footway'
-);
-
 // --------------------------------------------------
 // Madriga / Gym path -> Student House Floor 1
 // Continues along the pedestrian street instead of
@@ -784,39 +839,16 @@ addEdge(
 // --------------------------------------------------
 
 addCampusNode(
-  'campus_student_path_1',
-  32.76087928644331,
-  35.021359026432044
-);
-
-addCampusNode(
-  'campus_student_path_2',
-  32.7608999,
-  35.0214103
-);
-
-addCampusNode(
-  'campus_student_path_3',
-  32.7609917,
-  35.0215113
-);
-
-addCampusNode(
-  'campus_student_path_4',
-  32.7610641,
-  35.0215991
-);
-
-addCampusNode(
-  'campus_student_path_5',
-  32.7611487,
-  35.0217306
-);
-
-addCampusNode(
   'campus_student_path_turn',
   32.7612645,
   35.0217117
+);
+
+// Existing OSM Student House path → remaining custom Student path
+addEdge(
+  7676581033,
+  'campus_student_path_turn',
+  'footway'
 );
 
 addCampusNode(
@@ -839,44 +871,8 @@ addCampusNode(
 
 addCampusNode(
   'campus_student_floor1_entrance',
-  32.761673,
-  35.021330
-);
-
-addEdge(
-  'campus_madriga_downhill_4',
-  'campus_student_path_1',
-  'footway'
-);
-
-addEdge(
-  'campus_student_path_1',
-  'campus_student_path_2',
-  'footway'
-);
-
-addEdge(
-  'campus_student_path_2',
-  'campus_student_path_3',
-  'footway'
-);
-
-addEdge(
-  'campus_student_path_3',
-  'campus_student_path_4',
-  'footway'
-);
-
-addEdge(
-  'campus_student_path_4',
-  'campus_student_path_5',
-  'footway'
-);
-
-addEdge(
-  'campus_student_path_5',
-  'campus_student_path_turn',
-  'footway'
+  32.761715533931685,
+  35.021285265684135
 );
 
 addEdge(
@@ -903,68 +899,543 @@ addEdge(
   'footway'
 );
 
-// Floor 6 / Teacher Buffet → stairs → existing street network
+// Approach 1 → corrected Multi-Purpose point.
+addEdge(
+  'campus_multi_entrance_approach_1',
+  'campus_multi_access_entrance',
+  'footway'
+);
 
-addCampusNode('campus_floor6_buffet_path_1',32.762246,35.019877);
-addCampusNode('campus_floor6_buffet_path_2',32.762205,35.019925);
-addCampusNode('campus_floor6_buffet_path_3',32.762169,35.019973);
-addCampusNode('campus_floor6_buffet_path_4',32.762141,35.020010);
-addCampusNode('campus_floor6_buffet_path_5',32.762049,35.020163);
-
-addCampusNode('campus_floor6_buffet_stairs_1_bottom',32.762025,35.020222);
-
-addCampusNode('campus_floor6_buffet_path_6',32.762030,35.020269);
-addCampusNode('campus_floor6_buffet_path_7',32.762049,35.020305);
-
-addCampusNode('campus_floor6_buffet_long_stairs_top',32.762059,35.020293);
-addCampusNode('campus_floor6_buffet_long_stairs_bottom',32.762102,35.020233);
-
-addCampusNode('campus_floor6_buffet_street_1',32.762127,35.020260);
-addCampusNode('campus_floor6_buffet_street_2',32.762140,35.020285);
-addCampusNode('campus_floor6_buffet_street_3',32.762110,35.020339);
-addCampusNode('campus_floor6_buffet_street_4',32.762087,35.020365);
-addCampusNode('campus_floor6_buffet_street_5',32.762068,35.020391);
-
-
-// Walking path from Floor 6
-addEdge('campus_floor6_buffet_path_1','campus_floor6_buffet_path_2','footway');
-addEdge('campus_floor6_buffet_path_2','campus_floor6_buffet_path_3','footway');
-addEdge('campus_floor6_buffet_path_3','campus_floor6_buffet_path_4','footway');
-addEdge('campus_floor6_buffet_path_4','campus_floor6_buffet_path_5','footway');
-
-// First broad stairs
-addEdge('campus_floor6_buffet_path_5','campus_floor6_buffet_stairs_1_bottom','steps');
-
-// Between the two stair sections
-addEdge('campus_floor6_buffet_stairs_1_bottom','campus_floor6_buffet_path_6','footway');
-addEdge('campus_floor6_buffet_path_6','campus_floor6_buffet_path_7','footway');
-addEdge('campus_floor6_buffet_path_7','campus_floor6_buffet_long_stairs_top','footway');
-
-// Long stairs
-addEdge('campus_floor6_buffet_long_stairs_top','campus_floor6_buffet_long_stairs_bottom','steps');
-
-// Street after stairs
-addEdge('campus_floor6_buffet_long_stairs_bottom','campus_floor6_buffet_street_1','footway');
-addEdge('campus_floor6_buffet_street_1','campus_floor6_buffet_street_2','footway');
-addEdge('campus_floor6_buffet_street_2','campus_floor6_buffet_street_3','footway');
-addEdge('campus_floor6_buffet_street_3','campus_floor6_buffet_street_4','footway');
-addEdge('campus_floor6_buffet_street_4','campus_floor6_buffet_street_5','footway');
-
-// Join existing outdoor network
-addEdge('campus_floor6_buffet_street_5',7674525954,'footway');
-
-addCampusNode('campus_floor6_buffet_entrance',32.76266,35.01942);
-addEdge('campus_floor6_buffet_entrance','campus_floor6_buffet_path_1','footway');
+// --------------------------------------------------
+// Floor 6 / Teacher Buffet → stairs
+// --------------------------------------------------
 
 addCampusNode(
-  'campus_upper_direct_path',
-  32.761650686969745,
-  35.02095669507981
+  'campus_floor6_buffet_path_1',
+  32.762246,
+  35.019877
+);
+
+addCampusNode(
+  'campus_floor6_buffet_path_2',
+  32.762205,
+  35.019925
+);
+
+addCampusNode(
+  'campus_floor6_buffet_path_3',
+  32.762169,
+  35.019973
+);
+
+addCampusNode(
+  'campus_floor6_buffet_path_4',
+  32.762141,
+  35.020010
+);
+
+addCampusNode(
+  'campus_floor6_buffet_path_5',
+  32.762049,
+  35.020163
+);
+
+addCampusNode(
+  'campus_floor6_buffet_stairs_1_bottom',
+  32.762025,
+  35.020222
+);
+
+addCampusNode(
+  'campus_floor6_buffet_path_6',
+  32.762030,
+  35.020269
+);
+
+addCampusNode(
+  'campus_floor6_buffet_path_7',
+  32.762049,
+  35.020305
+);
+
+addCampusNode(
+  'campus_floor6_buffet_long_stairs_top',
+  32.762059,
+  35.020293
+);
+
+addCampusNode(
+  'campus_floor6_buffet_long_stairs_bottom',
+  32.762102,
+  35.020233
+);
+
+
+
+// --------------------------------------------------
+// Walking path from Floor 6
+// --------------------------------------------------
+
+addEdge(
+  'campus_floor6_buffet_path_1',
+  'campus_floor6_buffet_path_2',
+  'footway'
 );
 
 addEdge(
-  7674525954,
-  'campus_upper_direct_path',
+  'campus_floor6_buffet_path_2',
+  'campus_floor6_buffet_path_3',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_buffet_path_3',
+  'campus_floor6_buffet_path_4',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_buffet_path_4',
+  'campus_floor6_buffet_path_5',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// First broad stairs
+// --------------------------------------------------
+
+addEdge(
+  'campus_floor6_buffet_path_5',
+  'campus_floor6_buffet_stairs_1_bottom',
+  'steps'
+);
+
+
+// --------------------------------------------------
+// Between the two stair sections
+// --------------------------------------------------
+
+addEdge(
+  'campus_floor6_buffet_stairs_1_bottom',
+  'campus_floor6_buffet_path_6',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_buffet_path_6',
+  'campus_floor6_buffet_path_7',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_buffet_path_7',
+  'campus_floor6_buffet_long_stairs_top',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// Long stairs
+// --------------------------------------------------
+
+addEdge(
+  'campus_floor6_buffet_long_stairs_top',
+  'campus_floor6_buffet_long_stairs_bottom',
+  'steps'
+);
+
+
+// --------------------------------------------------
+// Teacher Buffet entrance
+// --------------------------------------------------
+
+// Actual Teacher Buffet entrance
+addCampusNode(
+  'campus_floor6_buffet_entrance',
+  32.76261380046798,
+  35.01934535801411
+);
+
+
+addCampusNode(
+  'campus_floor6_buffet_path_start',
+  32.76264044382852, 
+  35.01938190311194
+);
+
+addEdge(
+  'campus_floor6_buffet_path_start',
+  'campus_floor6_buffet_path_1',
+  'footway'
+);
+
+addEdge(
+  'campus_floor6_buffet_path_start',
+  'campus_floor6_buffet_entrance',
+  'footway'
+);
+
+// ==================================================
+// EDUCATION BUILDING — ENTRANCE PATH
+// ==================================================
+
+// Path point from the Education-side zebra approach
+addCampusNode(
+  'campus_education_entrance_path',
+  32.761998181551235,
+  35.01823073253036
+);
+
+// Zebra approach → Education entrance path
+addEdge(
+  'campus_main_education_crossing_approach',
+  'campus_education_entrance_path',
+  'footway'
+);
+
+
+// Education Building entrance
+addCampusNode(
+  'campus_education_entrance',
+  32.76199099202191,
+  35.01822151243687
+);
+
+// Entrance path → Education Building entrance
+addEdge(
+  'campus_education_entrance_path',
+  'campus_education_entrance',
+  'footway'
+);
+
+// --------------------------------------------------
+// Education Building — upper path connection
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_education_upper_path',
+  32.76225672227881,
+  35.01790568232537
+);
+
+// Upper path → Education entrance path
+addEdge(
+  'campus_education_upper_path',
+  'campus_education_entrance_path',
+  'footway'
+);
+
+// Upper Education path → existing OSM node
+addEdge(
+  'campus_education_upper_path',
+  1936600040,
+  'footway'
+);
+
+// Upper Education path → existing OSM node
+addEdge(
+  'campus_education_upper_path',
+  9255990879,
+  'footway'
+);
+
+// ==================================================
+// HEALTH BUILDING — ENTRANCE
+// ==================================================
+
+// Path point outside the Health Building
+addCampusNode(
+  'campus_health_entrance_path',
+  32.76263635569437,
+  35.01741886138917
+);
+
+// Health Building entrance
+addCampusNode(
+  'campus_health_entrance',
+  32.76262733360449,
+  35.01740377396346
+);
+
+// Path → Health Building entrance
+addEdge(
+  'campus_health_entrance_path',
+  'campus_health_entrance',
+  'footway'
+);
+
+// Health entrance path → existing OSM path
+addEdge(
+  'campus_health_entrance_path',
+  7674525969,
+  'footway'
+);
+
+// ==================================================
+// SHOPS — WALKING PATH
+// ==================================================
+
+addCampusNode(
+  'campus_shops_path_1',
+  32.762087839162284,
+  35.01831136643887
+);
+
+addCampusNode(
+  'campus_shops_path_2',
+  32.7622003688219,
+  35.01817117956316
+);
+
+addCampusNode(
+  'campus_shops_path_3',
+  32.762261797225605,
+  35.018097795546055
+);
+
+addCampusNode(
+  'campus_shops_path_4',
+  32.76231959521031,
+  35.01802437007428
+);
+
+// --------------------------------------------------
+// Connect the shops walking path
+// --------------------------------------------------
+
+addEdge(
+  'campus_shops_path_1',
+  'campus_shops_path_2',
+  'footway'
+);
+
+addEdge(
+  'campus_shops_path_2',
+  'campus_shops_path_3',
+  'footway'
+);
+
+addEdge(
+  'campus_shops_path_3',
+  'campus_shops_path_4',
+  'footway'
+);
+
+
+// Main Building entrance → shops walking path
+addEdge(
+  'campus_main_entrance',
+  'campus_shops_path_1',
+  'footway'
+);
+// --------------------------------------------------
+// Connect the shops walking path
+// --------------------------------------------------
+
+addEdge(
+  'campus_shops_path_1',
+  'campus_shops_path_2',
+  'footway'
+);
+
+addEdge(
+  'campus_shops_path_2',
+  'campus_shops_path_3',
+  'footway'
+);
+
+addEdge(
+  'campus_shops_path_3',
+  'campus_shops_path_4',
+  'footway'
+);
+
+addEdge(
+  'campus_shops_path_4',
+  'campus_shops_path_5',
+  'footway'
+);
+
+// Shops walking path → existing OSM path
+addEdge(
+  'campus_shops_path_4',
+  1447013850,
+  'footway'
+);
+
+// --------------------------------------------------
+// Main entrance area — additional walking path
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_main_entrance_path_2',
+  32.76200311554159,
+  35.018428713083274
+);
+
+addCampusNode(
+  'campus_main_entrance_path_3',
+  32.76193826878911,
+  35.01850917935372
+);
+
+// --------------------------------------------------
+// Main entrance — lower path
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_main_entrance_path_4',
+  32.761760644833885,
+  35.018649995327
+);
+
+// Main entrance → path 2
+addEdge(
+  'campus_main_entrance',
+  'campus_main_entrance_path_2',
+  'footway'
+);
+
+// Path 2 → path 3
+addEdge(
+  'campus_main_entrance_path_2',
+  'campus_main_entrance_path_3',
+  'footway'
+);
+
+// Main entrance path → existing OSM node
+addEdge(
+  'campus_main_entrance_path_3',
+  1447013848,
+  'footway'
+);
+
+// Existing OSM node → final Main entrance path point
+addEdge(
+  1447013848,
+  'campus_main_entrance_path_4',
+  'footway'
+);
+
+// Remove the incorrect OSM connection
+removeEdge(
+  7674525968,
+  7674525967
+);
+
+// Remove the incorrect OSM connection
+removeEdge(
+  1936599988,
+  1447013839
+);
+
+// ==================================================
+// SHOPS / SERVICES — ROUTING NODES
+// ==================================================
+
+// Pilates
+addCampusNode(
+  'campus_pilates',
+  32.7619496126406,
+  35.01851761915848
+);
+
+// Main entrance path → Pilates
+addEdge(
+  'campus_main_entrance_path_3',
+  'campus_pilates',
+  'footway'
+);
+
+// ==================================================
+// SHOPS — ROUTING NODES AND PATH CONNECTIONS
+// ==================================================
+
+// --------------------------------------------------
+// CopyMedia
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_copy_media',
+  32.762012171708015,
+  35.01843857639663
+);
+
+// Main entrance path 2 → CopyMedia
+addEdge(
+  'campus_main_entrance_path_2',
+  'campus_copy_media',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// Cafe Joe
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_cafe_joe',
+  32.76209941318289,
+  35.01832407982546
+);
+
+// Shops path 1 → Cafe Joe
+addEdge(
+  'campus_shops_path_1',
+  'campus_cafe_joe',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// Kravitz
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_kravitz',
+  32.762213795867176,
+  35.018188773780736
+);
+
+// Shops path 2 → Kravitz
+addEdge(
+  'campus_shops_path_2',
+  'campus_kravitz',
+  'footway'
+);
+
+
+// --------------------------------------------------
+// Delta
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_delta',
+  32.762326499120036,
+  35.01803209861204
+);
+
+addEdge(
+  'campus_shops_path_4',
+  'campus_delta',
+  'footway'
+);
+
+// --------------------------------------------------
+// 700
+// --------------------------------------------------
+
+addCampusNode(
+  'campus_700',
+  32.76227022909617,
+  35.01810845451287
+);
+
+// Shops path 3 → 700
+addEdge(
+  'campus_shops_path_3',
+  'campus_700',
   'footway'
 );
 
@@ -985,53 +1456,15 @@ addEdge(
 // --------------------------------------------------
 
 addCampusNode(
-  'campus_main_floor600_path_1',
-  32.762492,
-  35.019540
+  'campus_main_floor600_garden_junction',
+  32.76193319382387,
+  35.01979261636735
 );
 
 addCampusNode(
-  'campus_main_floor600_path_2',
-  32.762447,
-  35.019613
-);
-
-addCampusNode(
-  'campus_main_floor600_path_3',
-  32.762391,
-  35.019701
-);
-
-addCampusNode(
-  'campus_main_floor600_path_4',
-  32.762333,
-  35.019774
-);
-
-addCampusNode(
-  'campus_main_floor600_junction',
-  32.762144,
-  35.020028
-);
-
-
-// Connect the corridor from Main Floor 600
-addEdge(
-  'campus_main_floor600_path_1',
-  'campus_main_floor600_path_2',
-  'footway'
-);
-
-addEdge(
-  'campus_main_floor600_path_2',
-  'campus_main_floor600_path_3',
-  'footway'
-);
-
-addEdge(
-  'campus_main_floor600_path_3',
-  'campus_main_floor600_path_4',
-  'footway'
+  'campus_main_floor600_stairs_approach',
+  32.76212110831576,
+  35.02004289999605
 );
 
 addEdge(
@@ -1042,148 +1475,43 @@ addEdge(
 
 
 // --------------------------------------------------
-// 2. ROAD AFTER THE FLOOR 6 STAIRS
+// 3. ACCESSIBLE ROAD TOWARD STUDENT HOUSE
 //
-// This section continues from the stairs down
-// toward Student House.
+// Remaining mapped portion of the step-free route.
 // --------------------------------------------------
-
-addCampusNode(
-  'campus_floor6_road_1',
-  32.7622378,
-  35.0202275
-);
-
-addCampusNode(
-  'campus_floor6_road_2',
-  32.7621881,
-  35.0202940
-);
-
-addCampusNode(
-  'campus_floor6_road_3',
-  32.7620766,
-  35.0204323
-);
-
-
-// --------------------------------------------------
-// 3. ROUTE SPLIT TOWARD STUDENT HOUSE
-//
-// At this point there are two possible routes:
-//
-// - shorter route using stairs
-// - longer step-free road for accessible routing
-//
-// The shorter stair branch still needs to be mapped.
-// --------------------------------------------------
-
-addCampusNode(
-  'campus_floor6_route_split',
-  32.7619499,
-  35.0205711
-);
-
-
-// --------------------------------------------------
-// 4. EXISTING CONNECTION FROM FLOOR 6 STAIRS
-// --------------------------------------------------
-
-addEdge(
-  'campus_floor6_buffet_long_stairs_bottom',
-  'campus_floor6_road_1',
-  'footway'
-);
-
-addEdge(
-  'campus_floor6_road_1',
-  'campus_floor6_road_2',
-  'service'
-);
-
-addEdge(
-  'campus_floor6_road_2',
-  'campus_floor6_road_3',
-  'footway'
-);
-
-addEdge(
-  'campus_floor6_road_3',
-  'campus_floor6_route_split',
-  'footway'
-);
-
-
-// --------------------------------------------------
-// 5. CORRECTED ROAD CONNECTION AFTER LONG STAIRS
-//
-// Direct connection added to avoid the incorrect
-// detour through road_1 / road_2.
-//
-// The older road_1 / road_2 connection is kept for
-// now until the route is fully verified.
-// --------------------------------------------------
-
-addEdge(
-  'campus_floor6_buffet_long_stairs_bottom',
-  'campus_floor6_buffet_street_3',
-  'footway'
-);
-
-addEdge(
-  'campus_floor6_buffet_street_3',
-  'campus_floor6_road_3',
-  'service'
-);
-
-
-// --------------------------------------------------
-// 6. ACCESSIBLE ROAD TOWARD STUDENT HOUSE
-//
-// Longer step-free route from the split.
-// --------------------------------------------------
-
-addCampusNode(
-  'campus_floor6_access_road_1',
-  32.7618664,
-  35.0207060
-);
-
-addEdge(
-  'campus_floor6_route_split',
-  'campus_floor6_access_road_1',
-  'service'
-);
-
-
-addCampusNode(
-  'campus_floor6_access_road_2',
-  32.7616119,
-  35.0210267
-);
-
-addEdge(
-  'campus_floor6_access_road_1',
-  'campus_floor6_access_road_2',
-  'service'
-);
-
 
 addCampusNode(
   'campus_floor6_access_road_3',
-  32.7615840,
-  35.0211337
+  32.761546931732376,
+  35.02112567424775
+);
+
+// Corrected accessible road → existing OSM path
+addEdge(
+  'campus_floor6_access_road_3',
+  1936600008,
+  'footway'
+);
+
+// --------------------------------------------------
+// Main Floor 600 — garden junction → stairs approach
+// → outside elevator
+// --------------------------------------------------
+
+addEdge(
+  'campus_main_floor600_garden_junction',
+  'campus_main_floor600_stairs_approach',
+  'footway'
 );
 
 addEdge(
-  'campus_floor6_access_road_2',
-  'campus_floor6_access_road_3',
-  'service'
+  'campus_main_floor600_stairs_approach',
+  'campus_main_floor600_elevator',
+  'footway'
 );
 
-
 // --------------------------------------------------
-// 7. PEDESTRIAN GAP AFTER THE ACCESSIBLE ROAD
+// 4. PEDESTRIAN GAP AFTER THE ACCESSIBLE ROAD
 //
 // Leave the road through the pedestrian gap and
 // continue toward Student House.
@@ -1227,8 +1555,9 @@ addEdge(
   'footway'
 );
 
+
 // --------------------------------------------------
-// 8. MAIN FLOOR 600 EXIT → OUTDOOR CORRIDOR
+// 5. MAIN FLOOR 600 EXIT → OUTDOOR CORRIDOR
 //
 // Connect the Main Building Floor 600 exit to the
 // first point of the walking path toward Student House.
@@ -1240,23 +1569,17 @@ addCampusNode(
   35.019778
 );
 
-addEdge(
-  'campus_main_floor600_exit',
-  'campus_main_floor600_path_1',
-  'footway'
-);
-// 9. ELEVATOR BRANCH
+
+// --------------------------------------------------
+// 6. ELEVATOR BRANCH
+//
 // From the Floor 600 corridor to the elevator door.
+// --------------------------------------------------
+
 addCampusNode(
   'campus_main_floor600_elevator',
   32.762211,
   35.020120
-);
-
-addEdge(
-  'campus_main_floor600_junction',
-  'campus_main_floor600_elevator',
-  'footway'
 );
 
 // The elevator comes out at the same point where
@@ -1266,36 +1589,20 @@ addEdge(
   'campus_floor6_buffet_long_stairs_bottom',
   'elevator'
 );
-// --------------------------------------------------
-// 10. MAIN CORRIDOR → EXISTING STAIR ROUTE
-//
-// Continuing FORWARD from the Main Floor 600 corridor
-// joins the already-mapped Floor 6 stair route.
-//
-// From here the existing route continues:
-// path_4 → path_5 → first stairs → path_6/path_7
-// → long stairs → road toward Student House.
-// --------------------------------------------------
-
-addEdge(
-  'campus_main_floor600_junction',
-  'campus_floor6_buffet_path_4',
-  'footway'
-);
 
 // ==================================================
 // MAIN FLOOR 600 — GARDEN CAFÉ ENTRANCE PATH
 // ==================================================
 //
 // Garden Café entrance → new path point →
-// existing SMALL stairs.
+// existing small stairs.
 // Reuses the existing stairs/elevator route.
 // ==================================================
 
 addCampusNode(
   'campus_main_garden_path',
-  32.761781,
-  35.019993
+  32.761839024972105,
+  35.019914656877525
 );
 
 // Garden Café entrance → new path point
@@ -1305,7 +1612,7 @@ addEdge(
   'footway'
 );
 
-// New path point → TOP OF THE SMALL STAIRS
+// New path point → top of the small stairs
 addEdge(
   'campus_main_garden_path',
   'campus_floor6_buffet_path_5',
@@ -1313,6 +1620,31 @@ addEdge(
 );
 
 
+// --------------------------------------------------
+// Street point after the long stairs
+// --------------------------------------------------
+addCampusNode(
+  'campus_floor6_buffet_street',
+  32.762157055904055,
+  35.02030726522208
+);
+
+// Long stairs → new street point
+addEdge(
+  'campus_floor6_buffet_long_stairs_bottom',
+  'campus_floor6_buffet_street',
+  'footway'
+);
+
+// --------------------------------------------------
+// Floor 600 stairs approach → outside elevator
+// --------------------------------------------------
+
+addEdge(
+  'campus_main_floor600_stairs_approach',
+  'campus_main_floor600_elevator',
+  'footway'
+);
 /*
  // --------------------------------------------------
  // Accessible ramp: street <-> Rabin Floor 6 plaza
