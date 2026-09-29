@@ -30,12 +30,18 @@ const BUILDING_ENTRANCES = {
       lat: 32.761944,
       lng: 35.019778
     },
+{
+  // Main Building — Floor 700 main entrance
+  nodeId: 'floor700_n69',
+  lat: 32.762030745882676,
+  lng: 35.01840457320214,
+  primary: true
+},
   {
-    nodeId: 'floor700_n70',
-    lat: 32.761840,
-    lng: 35.018470,
-    primary: true
-  }
+  nodeId:'floor600_n88',
+  lat:32.762492,
+  lng:35.019540
+ },
   ],
 
   rabin: [
@@ -101,5 +107,42 @@ const BUILDING_ENTRANCES = {
       lat: 32.761930,
       lng: 35.018299
     }
-  ]
+  ],
+
+health: [
+  {
+    nodeId: 'campus_health_entrance',
+    lat: 32.76262733360449,
+    lng: 35.017403438687325,
+    primary: true
+  }
+],
+
+eshkol: [
+  {
+    nodeId: 'campus_eshkol_entrance',
+    lat: 32.76267455859602,
+    lng: 35.01776587218047,
+    primary: true
+  }
+],
+
+
+art: [
+  {
+    nodeId: 'campus_art_entrance',
+    lat: 32.76428061630684,
+    lng: 35.01731425523759,
+    primary: true
+  }
+],
+
+bloom: [
+  {
+    nodeId: 'campus_bloom_entrance',
+    lat: 32.764676452289365,
+    lng: 35.01625813543797,
+    primary: true
+  }
+]
 };

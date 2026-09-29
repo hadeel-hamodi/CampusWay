@@ -1636,6 +1636,20 @@ addEdge(
   'footway'
 );
 
+// Floor 600 buffet street → existing OSM walking network
+addEdge(
+  'campus_floor6_buffet_street',
+  7674525954,
+  'footway'
+);
+
+// Health/Education-side OSM path connection
+addEdge(
+  1447013850,
+  7674525968,
+  'footway'
+);
+
 // --------------------------------------------------
 // Floor 600 stairs approach → outside elevator
 // --------------------------------------------------
