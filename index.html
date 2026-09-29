@@ -1015,12 +1015,14 @@ const map = L.map('map', {
   zoomControl: true,
   attributionControl: false,
   minZoom: 15,
+  maxZoom: 23,
   maxBounds: campusBounds,
   maxBoundsViscosity: 1.0
 }).setView(center, 16);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
+   maxNativeZoom: 19,
+  maxZoom: 23,
   noWrap: true,
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
@@ -1028,23 +1030,88 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 map.getContainer().style.background = '#EAF3ED';
 
+// ==================================================
+// MAP COORDINATE PICKER
+// ==================================================
+// Click anywhere on the campus map to print the exact
+// latitude and longitude in the browser console.
+// ==================================================
+
+map.on('click', function(e){
+
+  console.log(
+    'MAP CLICK:',
+    e.latlng.lat,
+    e.latlng.lng
+  );
+
+  L.popup()
+    .setLatLng(e.latlng)
+    .setContent(
+      `${e.latlng.lat}, ${e.latlng.lng}`
+    )
+    .openOn(map);
+
+});
+
+// ==================================================
+// OUTDOOR ROUTING GRAPH DEBUG VIEW
+// ==================================================
+// OSM nodes + edges       = BLUE
+// CampusWay custom nodes  = RED
+// Edges touching a custom node = RED
+//
+// Run in console:
+//   showOutdoorDebugGraph()
+//
+// Click any node to see its exact ID.
+// ==================================================
+
+let outdoorDebugLayer = null;
+
 async function showOutdoorDebugGraph(){
 
   await CampusOutdoorRouting.load();
 
+  // Remove old debug overlay if we run this again.
+  if(outdoorDebugLayer){
+    map.removeLayer(outdoorDebugLayer);
+  }
+
+  outdoorDebugLayer = L.layerGroup().addTo(map);
+
   const debugGraph =
     CampusOutdoorRouting.getDebugGraph();
 
+  const nodeById =
+    new Map(
+      debugGraph.map(node => [node.id, node])
+    );
+
   const drawnEdges = new Set();
+
+
+  // --------------------------------------------------
+  // DRAW ROUTING EDGES
+  // --------------------------------------------------
 
   debugGraph.forEach(node => {
 
     node.connections.forEach(connection => {
 
+      const other =
+        nodeById.get(connection.node);
+
+      if(!other){
+        return;
+      }
+
       const key = [
-        node.id,
-        connection.node
-      ].sort().join('-');
+        String(node.id),
+        String(connection.node)
+      ]
+        .sort()
+        .join('|');
 
       if(drawnEdges.has(key)){
         return;
@@ -1052,14 +1119,9 @@ async function showOutdoorDebugGraph(){
 
       drawnEdges.add(key);
 
-      const other =
-        CampusOutdoorRouting.inspectNode(
-          connection.node
-        );
-
-      if(!other.coordinate){
-        return;
-      }
+      const customEdge =
+        String(node.id).startsWith('campus_') ||
+        String(connection.node).startsWith('campus_');
 
       L.polyline(
         [
@@ -1067,17 +1129,74 @@ async function showOutdoorDebugGraph(){
           other.coordinate
         ],
         {
-          color: '#ff0000',
-          weight: 3,
-          opacity: 0.8
+          color: customEdge
+            ? '#ff0000'
+            : '#2563eb',
+
+          weight: customEdge ? 4 : 2,
+
+          opacity: customEdge ? 0.9 : 0.5,
+
+          // Let map clicks pass through debug lines.
+          interactive: false
         }
-      ).addTo(map);
+      )
+      .addTo(outdoorDebugLayer);
+
     });
+
   });
 
+
+  // --------------------------------------------------
+  // DRAW ROUTING NODES
+  // --------------------------------------------------
+
+  debugGraph.forEach(node => {
+
+    const customNode =
+      String(node.id).startsWith('campus_');
+
+    const marker =
+      L.circleMarker(
+        node.coordinate,
+        {
+          radius: customNode ? 6 : 3,
+
+          color: customNode
+            ? '#ff0000'
+            : '#2563eb',
+
+          fillColor: customNode
+            ? '#ff0000'
+            : '#2563eb',
+
+          fillOpacity: customNode ? 1 : 0.7,
+
+          weight: 1,
+
+          // Let map clicks pass through debug dots.
+          interactive: false
+        }
+      );
+
+    marker.addTo(outdoorDebugLayer);
+
+  });
+
+
   console.log(
-    `Debug overlay: ${drawnEdges.size} OSM connections drawn`
+    `Debug overlay: ${debugGraph.length} routing nodes / ${drawnEdges.size} connections`
   );
+}
+
+// Remove the debug graph again without refreshing.
+function hideOutdoorDebugGraph(){
+
+  if(outdoorDebugLayer){
+    map.removeLayer(outdoorDebugLayer);
+    outdoorDebugLayer = null;
+  }
 }
 
 
@@ -3044,15 +3163,44 @@ const entranceKeyByBuilding = {
   'Rabin Building': 'rabin',
   'Student House': 'student',
   'Multi-Purpose Building': 'multi-purpose',
-  'Education and Science': 'education'
+  'Education and Science': 'education',
+  'Health Building': 'health',
+  'Eshkol Tower': 'eshkol',
+  'Art Building': 'art',
+  'Bloom Building': 'bloom',
 };
 
 const entranceKey = entranceKeyByBuilding[name];
+
 let activeSharedTransfer = null;
 
+// ==================================================
+// SELECTED SHORTEST OUTDOOR ROUTE
+// ==================================================
+// Declared here so it remains available after the
+// destination-entrance selection block.
+let selectedOutdoorRoute = null;
+
+// ==================================================
+// MAIN ↔ MADRIGA TRANSFER CHAIN
+// ==================================================
+// Use the Rabin bridge transfer in both directions.
+// ==================================================
+
+const chainStartKey =
+  customStart?.buildingKey ||
+  entranceKeyByBuilding[customStart?.label] ||
+  null;
+
 const usesMainToMadrigaChain =
-  customStart?.buildingKey === 'main' &&
-  entranceKey === 'madriga';
+  (
+    chainStartKey === 'main' &&
+    entranceKey === 'madriga'
+  ) ||
+  (
+    chainStartKey === 'madriga' &&
+    entranceKey === 'main'
+  );
 
 if(entranceKey){
   const entrances = BUILDING_ENTRANCES[entranceKey] || [];
@@ -3078,132 +3226,242 @@ const originBuildingKey =
 
   activeSharedTransfer = sharedTransfer;
 
-const preferredMainEntranceByOrigin = {
-  rabin: 'floor600_n86',
-  madriga: 'floor600_n86',
-  education: 'floor700_n70'
-};
-
-let preferredEntranceId =
-  sessionStorage.getItem('preferredDestinationEntrance') || null;
-
-sessionStorage.removeItem('preferredDestinationEntrance');
-
-if(entranceKey === 'main'){
-  preferredEntranceId =
-    preferredMainEntranceByOrigin[originBuildingKey];
-}else if(
-  originBuildingKey === 'main' &&
-  entranceKey === 'rabin'
-){
-  preferredEntranceId = 'floor7_n108';
-}else if(
-  originBuildingKey === 'madriga' &&
-  entranceKey === 'multi-purpose'
-){
-  preferredEntranceId = 'floor1_n2';
-}
-
-else if(
-  originBuildingKey === 'student' &&
-  entranceKey === 'madriga'
-){
-  preferredEntranceId = 'floorminus1_n1';
-}
-
-let routingEntrances = profileEntrances;
-
-if(preferredEntranceId){
-  const preferredEntrances = profileEntrances.filter(
-    entrance => entrance.nodeId === preferredEntranceId
-  );
-
-  if(preferredEntrances.length){
-    routingEntrances = preferredEntrances;
-  }
-}else if(
-  profileEntrances.some(entrance => entrance.primary)
-){
-  routingEntrances = profileEntrances.filter(
-    entrance => entrance.primary
-  );
-}
-
 // --------------------------------------------------
 // SELECT DESTINATION ENTRANCE
 // --------------------------------------------------
 //
-// Student House → Main Building:
-// Compare BOTH Floor 600 entrances using the actual
-// outdoor routing graph. This allows the router to use
-// whichever of our connected paths is genuinely shorter.
+// ==================================================
+// SHORTEST BUILDING ENTRANCE / EXIT SELECTION
+// ==================================================
 //
-// All other routes keep the existing entrance-selection
-// behaviour so we do not disturb working routes.
-// --------------------------------------------------
+// For normal building-to-building outdoor routing:
+//
+// 1. Test every usable exit from the origin building.
+// 2. Test every usable entrance to the destination building.
+// 3. Use the real outdoor routing graph for every combination.
+// 4. Choose the combination with the shortest walking route.
+//
+// This avoids destination-specific hard-coding.
+// ==================================================
 
 let selectedEntrance = null;
+let selectedOriginExit = null;
 
+
+// --------------------------------------------------
+// Get usable destination entrances
+// --------------------------------------------------
+const destinationEntrances = profileEntrances;
+
+
+// --------------------------------------------------
+// Get usable origin exits
+// --------------------------------------------------
+const originEntrances =
+  originBuildingKey && BUILDING_ENTRANCES[originBuildingKey]
+    ? BUILDING_ENTRANCES[originBuildingKey].filter(
+        entrance =>
+          currentProfile !== 'mobility' ||
+          (
+            !entrance.requiresStairs &&
+            !entrance.avoidForMobility
+          )
+      )
+    : [];
+
+// --------------------------------------------------
+// Compare actual outdoor routes
+// --------------------------------------------------
 if(
-  originBuildingKey === 'student' &&
-  entranceKey === 'main'
+  originEntrances.length &&
+  destinationEntrances.length &&
+  !sharedTransfer &&
+  !usesMainToMadrigaChain
 ){
-  const mainFloor600Entrances = profileEntrances.filter(
-    entrance =>
-      entrance.nodeId === 'floor600_n86' ||
-      entrance.nodeId === 'floor600_n88'
-  );
+  let shortestDistance = Infinity;
 
-  let bestRouteDistance = Infinity;
+  for(const originExit of originEntrances){
 
-  for(const entrance of mainFloor600Entrances){
-    try{
-      const candidateRoute = await CampusOutdoorRouting.route(
-        start.lat,
-        start.lng,
-        entrance.lat,
-        entrance.lng,
-        { avoidSteps: currentProfile === 'mobility' }
-      );
+    for(const destinationEntrance of destinationEntrances){
 
-      if(
-        candidateRoute &&
-        candidateRoute.distance < bestRouteDistance
-      ){
-        bestRouteDistance = candidateRoute.distance;
-        selectedEntrance = entrance;
+      try{
+        const candidateRoute =
+          await CampusOutdoorRouting.route(
+            originExit.lat,
+            originExit.lng,
+            destinationEntrance.lat,
+            destinationEntrance.lng,
+            {
+              avoidSteps: currentProfile === 'mobility'
+            }
+          );
+
+        if(
+          candidateRoute &&
+          candidateRoute.coordinates?.length > 1 &&
+          candidateRoute.distance < shortestDistance
+        ){
+          shortestDistance = candidateRoute.distance;
+
+          selectedOriginExit = originExit;
+          selectedEntrance = destinationEntrance;
+          selectedOutdoorRoute = candidateRoute;
+        }
+
+      }catch(error){
+        console.warn(
+          'Could not test entrance combination:',
+          originExit.nodeId,
+          '→',
+          destinationEntrance.nodeId,
+          error
+        );
       }
-    }catch(error){
-      console.warn(
-        'Could not test Main Floor 600 entrance:',
-        entrance.nodeId,
-        error
-      );
     }
   }
 }
 
-// Keep the existing behaviour for every other route.
+
+// --------------------------------------------------
+// Fallback destination entrance
+// --------------------------------------------------
+//
+// Used when the trip does not start from a mapped
+// building or no connected entrance combination exists.
+// --------------------------------------------------
 if(!selectedEntrance){
-  selectedEntrance = routingEntrances.reduce(
+  selectedEntrance = destinationEntrances.reduce(
     (nearest, entrance) => {
-      if(!nearest) return entrance;
 
-      const entranceDistance = CampusOutdoorRouting.distance(
-        [start.lat, start.lng],
-        [entrance.lat, entrance.lng]
-      );
+      if(!nearest){
+        return entrance;
+      }
 
-      const nearestDistance = CampusOutdoorRouting.distance(
-        [start.lat, start.lng],
-        [nearest.lat, nearest.lng]
-      );
+      const entranceDistance =
+        CampusOutdoorRouting.distance(
+          [start.lat, start.lng],
+          [entrance.lat, entrance.lng]
+        );
+
+      const nearestDistance =
+        CampusOutdoorRouting.distance(
+          [start.lat, start.lng],
+          [nearest.lat, nearest.lng]
+        );
 
       return entranceDistance < nearestDistance
         ? entrance
         : nearest;
     },
     null
+  );
+}
+
+// ==================================================
+// MAIN BUILDING — PRIMARY EXIT DESTINATIONS
+// ==================================================
+//
+// These destinations are physically reached from the
+// Floor 700 / primary side of Main Building.
+// Force the primary Main entrance as the origin exit.
+// ==================================================
+
+const mainPrimaryExitDestinations = [
+  'Eshkol Tower',
+  'Health Building',
+  'Bloom Building',
+  'Art Building'
+];
+
+if(
+  originBuildingKey === 'main' &&
+  mainPrimaryExitDestinations.includes(name)
+){
+  const primaryMainExit = (
+    BUILDING_ENTRANCES.main || []
+  ).find(
+    entrance => entrance.primary
+  );
+
+  if(primaryMainExit){
+
+    selectedOriginExit = primaryMainExit;
+
+    // Recalculate the outdoor route from the required
+    // primary exit to the already selected destination entrance.
+    if(selectedEntrance){
+      try{
+        selectedOutdoorRoute =
+          await CampusOutdoorRouting.route(
+            primaryMainExit.lat,
+            primaryMainExit.lng,
+            selectedEntrance.lat,
+            selectedEntrance.lng,
+            {
+              avoidSteps: currentProfile === 'mobility'
+            }
+          );
+      }catch(error){
+        console.warn(
+          'Could not route from Main primary exit:',
+          error
+        );
+
+        selectedOutdoorRoute = null;
+      }
+    }
+  }
+}
+
+// ==================================================
+// MADRIGA → MAIN — BRIDGE-SIDE MAIN ENTRANCE
+// ==================================================
+// This journey passes through Rabin and enters Main
+// from the Floor 600 bridge side.
+if(
+  originBuildingKey === 'madriga' &&
+  entranceKey === 'main'
+){
+  selectedEntrance = (
+    BUILDING_ENTRANCES.main || []
+  ).find(
+    entrance => entrance.nodeId === 'floor600_n86'
+  );
+}
+
+// ==================================================
+// APPLY SELECTED ORIGIN EXIT
+// ==================================================
+if(selectedOriginExit){
+
+  customStart.lat = selectedOriginExit.lat;
+  customStart.lng = selectedOriginExit.lng;
+  customStart.entranceId = selectedOriginExit.nodeId;
+
+  // Tell indoor routing which exit won.
+  try{
+    const startContext = JSON.parse(
+      sessionStorage.getItem('indoorStartContext') || '{}'
+    );
+
+    startContext.exitEntranceId =
+      selectedOriginExit.nodeId;
+
+    sessionStorage.setItem(
+      'indoorStartContext',
+      JSON.stringify(startContext)
+    );
+
+  }catch(error){
+    console.warn(
+      'Could not save selected origin exit:',
+      error
+    );
+  }
+
+  console.log(
+    'SELECTED ORIGIN EXIT:',
+    selectedOriginExit
   );
 }
 
@@ -3305,14 +3563,34 @@ const sameBuilding =
   entranceKey !== null &&
   startingBuildingKey === entranceKey;
 
-let outdoorResult = null;
+// Reuse the shortest route already found while comparing entrances.
+let outdoorResult = selectedOutdoorRoute || null;
 
-if(!activeSharedTransfer && !sameBuilding && !usesMainToMadrigaChain){
+
+if(
+  !outdoorResult &&
+  !activeSharedTransfer &&
+  !sameBuilding &&
+  !usesMainToMadrigaChain
+){
   try{
+
+    let outdoorStartLat = start.lat;
+    let outdoorStartLng = start.lng;
+
+    let outdoorDestinationLat = lat;
+    let outdoorDestinationLng = lng;
+
     outdoorResult = await CampusOutdoorRouting.route(
-      start.lat, start.lng, lat, lng,
-      { avoidSteps: currentProfile === 'mobility' }
+      outdoorStartLat,
+      outdoorStartLng,
+      outdoorDestinationLat,
+      outdoorDestinationLng,
+      {
+        avoidSteps: currentProfile === 'mobility'
+      }
     );
+
   }catch(error){
     console.error('Outdoor routing failed:', error);
   }
@@ -3334,7 +3612,13 @@ const usesMainRabinBridge =
   // Same building: no outdoor route needed
   waypoints = [];}
 
-  else if(usesMainToMadrigaChain){
+ // ==================================================
+// MAIN ↔ MADRIGA — DIRECTION-AWARE BRIDGE ROUTE
+// ==================================================
+// ==================================================
+// MAIN ↔ MADRIGA — DIRECTION-AWARE OUTDOOR SEGMENT
+// ==================================================
+else if(usesMainToMadrigaChain){
   const mainBridgeEnd = [
     32.761753,
     35.019978
@@ -3345,13 +3629,40 @@ const usesMainRabinBridge =
     35.020010
   ];
 
-  waypoints = [
-    [start.lat, start.lng],
-    mainBridgeEnd,
-    rabinBridgeEnd
-  ];
-}
+if(startingBuildingKey === 'madriga'){
 
+  // ==================================================
+  // MADRIGA → RABIN → MAIN
+  // ==================================================
+  // Madriga → Rabin is an indoor transfer.
+  // After reaching Rabin Floor 7, cross the bridge
+  // and enter Main through Floor 600.
+  waypoints = [
+    rabinBridgeEnd,
+    mainBridgeEnd,
+    [
+      BUILDING_ENTRANCES.main.find(
+        entrance =>
+          entrance.nodeId === 'floor600_n86'
+      ).lat,
+      BUILDING_ENTRANCES.main.find(
+        entrance =>
+          entrance.nodeId === 'floor600_n86'
+      ).lng
+    ]
+  ];
+
+  }else{
+
+    // Main → Rabin across the bridge.
+    // Rabin → Madriga continues through the indoor transfer.
+    waypoints = [
+      [start.lat, start.lng],
+      mainBridgeEnd,
+      rabinBridgeEnd
+    ];
+  }
+}
 else if(activeSharedTransfer){
   waypoints = [
     [start.lat, start.lng],
@@ -3432,44 +3743,108 @@ else if(activeSharedTransfer){
   );
 }
 
+// ==================================================
+// MAIN ↔ MADRIGA — INTERMEDIATE RABIN TRANSFER
+// ==================================================
 if(usesMainToMadrigaChain){
-  sessionStorage.setItem(
-    'intermediateIndoorTransfer',
-    JSON.stringify({
-      building: 'rabin',
-      startNodeId: 'floor7_n108',
-      destinationBuilding: 'madriga'
-    })
-  );
-}
 
+  if(startingBuildingKey === 'madriga'){
+
+    // Madriga → Rabin → Main
+    sessionStorage.setItem(
+      'intermediateIndoorTransfer',
+      JSON.stringify({
+        building: 'rabin',
+        startNodeId:
+          currentProfile === 'mobility'
+            ? 'floor5_n104'
+            : 'floor5_n204',
+        destinationNodeId: 'floor7_n108',
+        destinationBuilding: 'main'
+      })
+    );
+
+  }else{
+
+    // Main → Rabin → Madriga
+    // Keep the existing working direction unchanged.
+    sessionStorage.setItem(
+      'intermediateIndoorTransfer',
+      JSON.stringify({
+        building: 'rabin',
+        startNodeId: 'floor7_n108',
+        destinationBuilding: 'madriga'
+      })
+    );
+  }
+}
 const visualWaypoints = [...waypoints];
 
 if(waypoints.length > 1){
   const visualWaypoints = [...waypoints];
 
-  if(startingBuildingKey){
-  const startBuildingName = Object.keys(entranceKeyByBuilding).find(
-    name => entranceKeyByBuilding[name] === startingBuildingKey
-  );
+  // ==================================================
+// MAIN BUILDING → ESHKOL TOWER VISUAL ROUTE
+// ==================================================
+// ==================================================
+// VISUAL ROUTE START
+// ==================================================
+if(startingBuildingKey){
+  const startBuildingName =
+    Object.keys(entranceKeyByBuilding).find(
+      name =>
+        entranceKeyByBuilding[name] ===
+        startingBuildingKey
+    );
 
-  const startBuilding = CAMPUS_DATA.buildings.find(
-    building => building.name === startBuildingName
-  );
+  const startBuilding =
+    CAMPUS_DATA.buildings.find(
+      building =>
+        building.name === startBuildingName
+    );
 
   if(startBuilding){
-    visualWaypoints[0] = [
+    const startIcon = [
       startBuilding.lat,
       startBuilding.lng
     ];
+
+    if(
+      usesMainToMadrigaChain &&
+      startingBuildingKey === 'madriga'
+    ){
+      // Madriga → Rabin happens indoors.
+      // Keep the Rabin bridge waypoint and prepend
+      // Terrace so the full journey is visible.
+      visualWaypoints.unshift(startIcon);
+
+    }else{
+      // Normal route: replace the first route point
+      // with the visible building marker.
+      visualWaypoints[0] = startIcon;
+    }
   }
 }
 
+// ==================================================
+// VISUAL ROUTE DESTINATION
+// ==================================================
+if(
+  usesMainToMadrigaChain &&
+  startingBuildingKey === 'madriga'
+){
+  // Keep the real Main Floor 600 entrance in the route,
+  // then visually extend the line to the Main building marker.
+  visualWaypoints.push([
+    visualDestinationLat,
+    visualDestinationLng
+  ]);
+}else{
   visualWaypoints[visualWaypoints.length - 1] = [
     visualDestinationLat,
     visualDestinationLng
   ];
-  
+}
 
   routeLine = L.polyline(
     visualWaypoints,
