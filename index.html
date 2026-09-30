@@ -2371,7 +2371,11 @@ const SHARED_INDOOR_TRANSFERS = {
   }
 };
 
-function sharedIndoorTransfer(originBuilding, destinationBuilding){
+function sharedIndoorTransfer(
+  originBuilding,
+  destinationBuilding,
+  method = null
+){
   const connection =
     SHARED_INDOOR_TRANSFERS[
       `${originBuilding}:${destinationBuilding}`
@@ -2379,17 +2383,23 @@ function sharedIndoorTransfer(originBuilding, destinationBuilding){
 
   if(!connection) return null;
 
-    const mobilitySelected =
-      currentProfile === 'mobility' ||
-      sessionStorage.getItem(
-        'accessibilityProfile'
-      ) === 'mobility';
+  const mobilitySelected =
+    currentProfile === 'mobility';
 
-    return mobilitySelected
-      ? connection.mobility
-      : connection.standard;
+  if(mobilitySelected){
+    return connection.mobility;
+  }
+
+  if(method === 'elevator'){
+    return connection.mobility;
+  }
+
+  if(method === 'stairs'){
+    return connection.standard;
+  }
+
+  return connection.standard;
 }
-
 async function loadIndoorGraphForEta(buildingKey){
   const response = await fetch(
     `buildings/${buildingKey}/${buildingKey}-indoor-graph.json`
@@ -2539,7 +2549,7 @@ for(const [key, floors] of connectorGroups){
       nextNodes[nextNodes.length - 1];
 
     const weight =
-      key.startsWith('elevator:') ? 0.02 : 0.04;
+      key.startsWith('elevator:') ? 12 : 36;
 
     adjacency.get(a.id).push({
       id: b.id,
@@ -2684,6 +2694,61 @@ function calculateIndoorEtaSeconds(graph, path){
   }
 
   return (routeMeters / 1.2) + verticalSeconds;
+}
+
+async function indoorLegUsesElevator(buildingKey, startNodeId, endNodeId, accessible){
+  const graph = await loadIndoorGraphForEta(buildingKey);
+  const path = findIndoorEtaPath(graph, startNodeId, endNodeId, accessible);
+
+  if(!path) return false;
+
+  const nodesById = new Map(
+    indoorEtaNodes(graph).map(node => [node.id, node])
+  );
+
+  for(let i = 0; i < path.length - 1; i++){
+    const current = nodesById.get(path[i]);
+    const next = nodesById.get(path[i + 1]);
+
+    if(
+      current &&
+      next &&
+      current.floor !== next.floor &&
+      current.type === 'elevator' &&
+      next.type === 'elevator'
+    ){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function lastVerticalMoveWasElevator(buildingKey, startNodeId, endNodeId, accessible){
+  const graph = await loadIndoorGraphForEta(buildingKey);
+  const path = findIndoorEtaPath(graph, startNodeId, endNodeId, accessible);
+
+  if(!path) return false;
+
+  const byId = new Map(
+    indoorEtaNodes(graph).map(n => [n.id, n])
+  );
+
+  let last = null;
+
+  for(let i = 0; i < path.length - 1; i++){
+    const a = byId.get(path[i]);
+    const b = byId.get(path[i + 1]);
+
+    if(a && b && a.floor !== b.floor){
+      last =
+        a.type === 'elevator' && b.type === 'elevator'
+          ? 'elevator'
+          : 'stairs';
+    }
+  }
+
+  return last === 'elevator';
 }
 
 async function getIndoorLegEtaSeconds(
@@ -3509,30 +3574,7 @@ let usesMadrigaRabinRoute = false;
 // ==================================================
 // MADRIGA → RABIN TRANSFER ROUTE CANDIDATE
 // ==================================================
-//
-// When a journey starts inside Madriga, leaving directly
-// through a Madriga outdoor exit is not always best.
-//
-// Madriga is connected indoors to Rabin. Therefore we
-// also test:
-//
-//   current Madriga position
-//        ↓
-//   Madriga → Rabin indoor transfer
-//        ↓
-//   Rabin transfer node
-//        ↓
-//   each usable Rabin outdoor exit
-//        ↓
-//   destination entrance
-//
-// Rabin's bridge entrance is NOT forced here.
-// Every usable Rabin exit competes using total journey
-// time, including floor7_n108 and floor7_n109.
-//
-// floor7_n109 currently remains marked requiresStairs,
-// so the mobility profile will exclude it for now.
-// ==================================================
+
 
 if(
   originBuildingKey === 'madriga' &&
@@ -3540,13 +3582,35 @@ if(
   !sharedTransfer &&
   !usesMainToMadrigaChain
 ){
-  const madrigaToRabin =
-    sharedIndoorTransfer(
-      'madriga',
-      'rabin'
-    );
+ const madrigaToRabinOptions =
+  currentProfile === 'mobility'
+    ? [
+        sharedIndoorTransfer(
+          'madriga',
+          'rabin',
+          'elevator'
+        )
+      ]
+    : [
+        sharedIndoorTransfer(
+          'madriga',
+          'rabin',
+          'stairs'
+        ),
+        sharedIndoorTransfer(
+          'madriga',
+          'rabin',
+          'elevator'
+        )
+      ];
 
-  if(madrigaToRabin){
+for(const madrigaToRabin of madrigaToRabinOptions){
+
+  // TEMPORARY: Madriga and Rabin share the same elevator, so for Eshkol
+// always continue through it instead of switching to the stairs.
+if(entranceKey === 'eshkol' && madrigaToRabin.method === 'stairs'){
+  continue;
+}
 
     // ------------------------------------------------
     // Rabin exits allowed for the active profile
@@ -3588,6 +3652,30 @@ if(
               madrigaToRabin.originNodeId,
               currentProfile === 'mobility'
             );
+            
+
+            const arrivesByElevator =
+  madrigaStartNodeId === madrigaToRabin.originNodeId
+    ? madrigaToRabin.method === 'elevator'
+    : await indoorLegUsesElevator(
+        'madriga',
+        madrigaStartNodeId,
+        madrigaToRabin.originNodeId,
+        currentProfile === 'mobility'
+      );
+
+if(
+  arrivesByElevator &&
+  madrigaToRabin.method === 'stairs'
+){
+  continue;
+}
+
+console.log('TRANSFER CHECK', madrigaToRabin.method, {
+  arrivesByElevator,
+  madrigaIndoorSeconds,
+  originNodeId: madrigaToRabin.originNodeId
+});
 
 
       if(madrigaIndoorSeconds !== null){
@@ -3596,11 +3684,10 @@ if(
         // Cost of crossing Madriga ↔ Rabin transfer
         // --------------------------------------------
 
-        const transferSeconds =
-          madrigaToRabin.method === 'elevator'
-            ? 40
-            : 30;
-
+const transferSeconds =
+  madrigaToRabin.method === 'elevator'
+    ? (arrivesByElevator ? 10 : 40)
+    : 30;
 
         // --------------------------------------------
         // Test every usable Rabin exit
@@ -3886,6 +3973,19 @@ const directIndoorSeconds =
           entranceKey
       })
     );
+
+    const rabinTransfer = JSON.parse(
+  sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+);
+
+if(rabinTransfer?.building === 'rabin'){
+  rabinTransfer.startNodeId = 'floor5_n104';
+
+  sessionStorage.setItem(
+    'intermediateIndoorTransfer',
+    JSON.stringify(rabinTransfer)
+  );
+}
 
 
     // ----------------------------------------------
@@ -4600,10 +4700,21 @@ if(sameBuilding){
 };
 
 
-if(INDOOR_BUILDINGS[name]){
-  indoorBtn.style.display = 'block';
+// ==================================================
+// INDOOR JOURNEY BUTTON
+// ==================================================
+//
+// Indoor navigation may be needed at the START even
+// when the destination has no indoor graph.
+//
+// Example:
+// Terrace → Madriga/Rabin transfer → outdoors → Eshkol
+//
+// Eshkol does not need an indoor graph for the origin
+// indoor stages to be available.
+// ==================================================
 
-  let indoorStartContext = null;
+let indoorStartContext = null;
 
 try{
   indoorStartContext = customStart
@@ -4614,6 +4725,24 @@ try{
 }catch(error){
   indoorStartContext = null;
 }
+
+
+const hasOriginIndoorJourney =
+  Boolean(
+    indoorStartContext?.buildingKey &&
+    indoorStartContext?.startNodeId &&
+    indoorStartContext?.exitEntranceId
+  );
+
+const hasDestinationIndoorJourney =
+  Boolean(INDOOR_BUILDINGS[name]);
+
+
+if(
+  hasOriginIndoorJourney ||
+  hasDestinationIndoorJourney
+){
+  indoorBtn.style.display = 'block';
 
 if(
   sameBuilding &&
@@ -4631,7 +4760,13 @@ if(
 }else if(indoorStartContext && indoorStartContext.buildingKey){
   indoorBtn.dataset.stage = 'origin';
   indoorBtn.dataset.building = indoorStartContext.buildingKey;
-  indoorBtn.dataset.destinationBuilding = INDOOR_BUILDINGS[name];
+  // Destination may intentionally have no indoor graph.
+if(INDOOR_BUILDINGS[name]){
+  indoorBtn.dataset.destinationBuilding =
+    INDOOR_BUILDINGS[name];
+}else{
+  delete indoorBtn.dataset.destinationBuilding;
+}
 
   document.getElementById('lbl-continue-indoor').textContent =
     'Start indoor route →';
@@ -5540,7 +5675,14 @@ window.location.href =
   }`;
 }
 
-window.addEventListener('pageshow', () => {
+window.addEventListener('pageshow', (e) => {
+  console.log('PAGESHOW', {
+    persisted: e.persisted,
+    flag: sessionStorage.getItem('originIndoorComplete'),
+    stage: document.getElementById('continueIndoorBtn')?.dataset.stage,
+    dest: document.getElementById('continueIndoorBtn')?.dataset.destinationBuilding,
+    display: document.getElementById('continueIndoorBtn')?.style.display
+  });
   const transitionScreen =
     document.getElementById('indoorTransition');
 
@@ -5589,15 +5731,31 @@ window.addEventListener('pageshow', () => {
     return;
   }
 
-  const indoorBtn =
-    document.getElementById(
-      'continueIndoorBtn'
-    );
+ const indoorBtn =
+  document.getElementById(
+    'continueIndoorBtn'
+  );
 
-  const destinationBuilding =
-    indoorBtn.dataset.destinationBuilding;
+const destinationBuilding =
+  indoorBtn.dataset.destinationBuilding;
 
-    let intermediateTransfer = null;
+// ==================================================
+// NO DESTINATION INDOOR ROUTE
+// ==================================================
+if(!destinationBuilding){
+  indoorBtn.style.display = 'none';
+
+  delete indoorBtn.dataset.stage;
+  delete indoorBtn.dataset.building;
+
+  sessionStorage.removeItem(
+    'originIndoorComplete'
+  );
+
+  return;
+}
+
+let intermediateTransfer = null;
 
 try{
   intermediateTransfer = JSON.parse(

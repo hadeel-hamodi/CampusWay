@@ -663,7 +663,17 @@ if(journeyStage === 'same-building'){
   }
 
   }else if(journeyStage === 'intermediate'){
-  const startNode = nodeById('floor7_n108');
+  // Use the exact intermediate start selected by CampusWay.
+const intermediateTransfer = JSON.parse(
+  sessionStorage.getItem(
+    'intermediateIndoorTransfer'
+  ) || 'null'
+);
+
+const startNode = nodeById(
+  intermediateTransfer?.startNodeId ||
+  'floor7_n108'
+);
 
   if(startNode){
     $('fromFloor').value = startNode.floor;
@@ -677,10 +687,15 @@ if(journeyStage === 'same-building'){
     ensureNodeOption('from', startNode);
     $('from').value = startNode.id;
 
-    const destinationNode = nodeById(
-  $('accessibleRoute').checked
-    ? 'floor5_n104'
-    : 'floor5_n204'
+// Use the exact intermediate destination selected by CampusWay.
+// Fall back to the old Main ↔ Rabin transfer nodes when needed.
+const destinationNode = nodeById(
+  intermediateTransfer?.destinationNodeId ||
+  (
+    $('accessibleRoute').checked
+      ? 'floor5_n104'
+      : 'floor5_n204'
+  )
 );
 
 if(destinationNode){
@@ -1103,7 +1118,7 @@ for(const c of (f.connections||[])){
     for(let i=0;i<floors.length-1;i++){
       const aL=pf.get(floors[i]),bL=pf.get(floors[i+1]);
       const a=aL[aL.length-1],b=bL[bL.length-1];
-      const w=k.startsWith('elevator:')?.02:.04;
+      const w = k.startsWith('elevator:') ? 12 : 36;
       adj.get(a.id).push({id:b.id,w,kind:'vertical'});
       adj.get(b.id).push({id:a.id,w,kind:'vertical'});
     }
@@ -1809,6 +1824,42 @@ function handleDetectedStep(
   }
 }
 
+// ==================================================
+// CONTINUE OUTDOORS BUTTON
+// ==================================================
+// Returns the existing continuation button, or creates
+// it when the current journey branch has not created
+// one yet.
+// ==================================================
+
+function getOrCreateContinueButton(){
+  let btn =
+    document.getElementById('continueOutdoorBtn');
+
+  if(btn){
+    return btn;
+  }
+
+  btn = document.createElement('button');
+  btn.id = 'continueOutdoorBtn';
+
+  Object.assign(btn.style, {
+    marginTop: '12px',
+    padding: '10px 16px',
+    border: '0',
+    borderRadius: '10px',
+    background: '#00B09B',
+    color: 'white',
+    fontWeight: '700',
+    cursor: 'pointer'
+  });
+
+  $('routeCard').appendChild(btn);
+
+  return btn;
+}
+
+
 function completeNavigation(){
   navigationActive=false;
   progressIndex=routeNodes.length-1;
@@ -1873,11 +1924,26 @@ const usesIntermediateTransfer =
         ? 'Rabin'
         : 'Madriga'
     }...`;
+// ==================================================
+// CHOOSE THE NEXT INDOOR JOURNEY STAGE
+// ==================================================
+// If CampusWay stored another indoor building that
+// must be crossed before going outdoors, open that
+// building as an intermediate stage.
+// ==================================================
 
-  sessionStorage.setItem(
-    'journeyStage',
-    'destination'
-  );
+const intermediateTransfer = JSON.parse(
+  sessionStorage.getItem(
+    'intermediateIndoorTransfer'
+  ) || 'null'
+);
+
+sessionStorage.setItem(
+  'journeyStage',
+  intermediateTransfer?.building === destinationBuilding
+    ? 'intermediate'
+    : 'destination'
+);
 
   sessionStorage.setItem(
     'indoorBuilding',
@@ -1889,7 +1955,7 @@ const usesIntermediateTransfer =
   );
 
   setTimeout(() => {
-    window.location.assign(
+    window.location.replace(
       `./navigation-demo.html?building=${
         encodeURIComponent(destinationBuilding)
       }`
@@ -1966,34 +2032,98 @@ const usesIntermediateTransfer =
   };
 }
 
-if(sessionStorage.getItem('journeyStage') === 'intermediate'){
-sessionStorage.setItem(
-  'madrigaTransferEntrance',
-  'floor4_n43'
-);
+// ==================================================
+// FINISH INTERMEDIATE INDOOR STAGE
+// ==================================================
+// Some intermediate routes continue into another
+// indoor building, while others finish by going
+// back outdoors.
+// ==================================================
+
+if(
+  sessionStorage.getItem('journeyStage') === 'intermediate'
+){
+  const intermediateTransfer = JSON.parse(
+    sessionStorage.getItem(
+      'intermediateIndoorTransfer'
+    ) || 'null'
+  );
+
+  // ----------------------------------------------
+  // OLD FLOW: Rabin → Madriga
+  // ----------------------------------------------
+  if(
+    intermediateTransfer?.destinationBuilding === 'madriga'
+  ){
+    sessionStorage.setItem(
+      'madrigaTransferEntrance',
+      'floor4_n43'
+    );
+
+    sessionStorage.setItem(
+      'journeyStage',
+      'destination'
+    );
+
+    sessionStorage.setItem(
+      'indoorBuilding',
+      'madriga'
+    );
+
+    sessionStorage.removeItem(
+      'intermediateIndoorTransfer'
+    );
+
+    $('status').textContent =
+      'Switching to Madriga...';
+
+    setTimeout(() => {
+      window.location.assign(
+        './navigation-demo.html?building=madriga'
+      );
+    }, 400);
+
+    return;
+  }
+
+  // ----------------------------------------------
+  // NEW FLOW: intermediate building → outdoors
+  // Example: Madriga → Rabin → outdoors → Eshkol
+  // ----------------------------------------------
   sessionStorage.setItem(
-    'journeyStage',
-    'destination'
+    'originIndoorComplete',
+    'true'
   );
 
   sessionStorage.setItem(
-    'indoorBuilding',
-    'madriga'
+    'campusTransitionDirection',
+    'outdoor'
   );
 
+// ----------------------------------------------
+// SHOW CONTINUE OUTDOORS BUTTON
+// ----------------------------------------------
+$('status').textContent =
+  'Indoor section complete. Continue outdoors.';
+
+// Reuse the existing outdoor continuation button.
+const continueButton =
+  getOrCreateContinueButton();
+
+continueButton.style.display = 'block';
+continueButton.textContent = 'Continue outdoors →';
+
+continueButton.onclick = () => {
   sessionStorage.removeItem(
     'intermediateIndoorTransfer'
   );
 
-  $('status').textContent = 'Switching to Madriga...';
+  // Return directly to the CampusWay outdoor map.
 
-  setTimeout(() => {
-    window.location.assign(
-      './navigation-demo.html?building=madriga'
-    );
-  }, 400);
+  history.back();
+};
 
-  return;
+return;
 }
 }
 
