@@ -5,7 +5,8 @@ const BUILDING_ENTRANCES = {
    {
     nodeId: 'floor1_n49',
     lat: 32.760836,
-    lng: 35.021125
+    lng: 35.021125,
+    primary:true
     },
     {
     nodeId: 'floor1_n50',
@@ -45,11 +46,12 @@ const BUILDING_ENTRANCES = {
   ],
 
   rabin: [
-    {
-      nodeId: 'floor7_n108',
-    lat: 32.761569,
-    lng: 35.020316
-    },
+// Rabin Floor 7 — Main ↔ Rabin bridge entrance
+{ 
+  nodeId:'floor7_n108',
+  lat:32.7614978735074,
+  lng:35.02023115754128
+},
     {
       // Rabin Floor 6 entrance → plaza
       nodeId: 'floor6_n73',
@@ -78,7 +80,8 @@ const BUILDING_ENTRANCES = {
     {
       nodeId: 'floor4_n3',
       lat: 32.761740,
-      lng: 35.021127
+      lng: 35.021127,
+      primary:true
     }
   ],
 
@@ -106,7 +109,8 @@ const BUILDING_ENTRANCES = {
     {
       nodeId: 'floor3_n40',
       lat: 32.761930,
-      lng: 35.018299
+      lng: 35.018299,
+      primary:true
     }
   ],
 
