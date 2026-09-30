@@ -3255,10 +3255,19 @@ let selectedOriginExit = null;
 const destinationEntrances = profileEntrances;
 
 
-// --------------------------------------------------
-// Get usable origin exits
-// --------------------------------------------------
-const originEntrances =
+// ==================================================
+// GET USABLE ORIGIN EXITS
+// ==================================================
+//
+// If the user selected only a building as the origin,
+// use that building's primary entrance as the default.
+//
+// If the trip starts from a specific indoor location,
+// keep all usable exits so indoor routing can determine
+// which exit makes sense from the user's actual position.
+// ==================================================
+
+const allOriginEntrances =
   originBuildingKey && BUILDING_ENTRANCES[originBuildingKey]
     ? BUILDING_ENTRANCES[originBuildingKey].filter(
         entrance =>
@@ -3270,22 +3279,100 @@ const originEntrances =
       )
     : [];
 
+
 // --------------------------------------------------
-// Compare actual outdoor routes
+// Detect whether the origin is only a building
 // --------------------------------------------------
+//
+// Specific indoor-room starts contain entranceId.
+// Building-only selections do not.
+//
+const buildingOnlyOrigin =
+  Boolean(originBuildingKey) &&
+  !customStart?.entranceId;
+
+
+// --------------------------------------------------
+// Prefer the primary entrance for building-only starts
+// --------------------------------------------------
+const primaryOriginEntrance =
+  buildingOnlyOrigin
+    ? allOriginEntrances.find(
+        entrance => entrance.primary
+      )
+    : null;
+
+
+// --------------------------------------------------
+// Final origin exits to test
+// --------------------------------------------------
+const originEntrances = allOriginEntrances;
+
+// ==================================================
+// COMPARE COMPLETE ROUTES THROUGH EACH ORIGIN EXIT
+// ==================================================
+//
+// Do NOT choose an exit using outdoor distance alone.
+//
+// The route cost is:
+//
+//   indoor start → candidate origin exit
+//   +
+//   candidate origin exit → destination entrance
+//
+// For a specific room:
+//   use the actual room node as the indoor start.
+//
+// For a building-only start:
+//   use the building's primary entrance/node as the
+//   assumed indoor starting position.
+// ==================================================
+
 if(
   originEntrances.length &&
   destinationEntrances.length &&
   !sharedTransfer &&
   !usesMainToMadrigaChain
 ){
-  let shortestDistance = Infinity;
+  let shortestJourneySeconds = Infinity;
+
+  // --------------------------------------------------
+  // Determine the indoor starting node
+  // --------------------------------------------------
+
+  let indoorStartNodeId = null;
+
+  if(buildingOnlyOrigin){
+
+    // Building selected without a specific room:
+    // treat its primary entrance as the default
+    // position inside the building.
+    indoorStartNodeId =
+      primaryOriginEntrance?.nodeId || null;
+
+  }else{
+
+    // Specific indoor room:
+    // use the actual room/node selected by the user.
+    indoorStartNodeId =
+      customStart?.nodeId || null;
+  }
+
+
+  // --------------------------------------------------
+  // Test every origin exit + destination entrance
+  // --------------------------------------------------
 
   for(const originExit of originEntrances){
 
     for(const destinationEntrance of destinationEntrances){
 
       try{
+
+        // ----------------------------------------------
+        // 1. Outdoor part of this candidate journey
+        // ----------------------------------------------
+
         const candidateRoute =
           await CampusOutdoorRouting.route(
             originExit.lat,
@@ -3298,18 +3385,98 @@ if(
           );
 
         if(
-          candidateRoute &&
-          candidateRoute.coordinates?.length > 1 &&
-          candidateRoute.distance < shortestDistance
+          !candidateRoute ||
+          !candidateRoute.coordinates?.length ||
+          candidateRoute.coordinates.length < 2
         ){
-          shortestDistance = candidateRoute.distance;
+          continue;
+        }
 
-          selectedOriginExit = originExit;
-          selectedEntrance = destinationEntrance;
-          selectedOutdoorRoute = candidateRoute;
+
+        // ----------------------------------------------
+        // 2. Outdoor walking time
+        // ----------------------------------------------
+
+        const outdoorSeconds =
+          getOutdoorEtaSeconds(
+            candidateRoute.coordinates,
+            currentProfile === 'mobility'
+          );
+
+
+        // ----------------------------------------------
+        // 3. Indoor start → candidate exit
+        // ----------------------------------------------
+
+        let indoorSeconds = 0;
+
+        if(
+          originBuildingKey &&
+          indoorStartNodeId &&
+          indoorStartNodeId !== originExit.nodeId
+        ){
+          const candidateIndoorSeconds =
+            await getIndoorLegEtaSeconds(
+              originBuildingKey,
+              indoorStartNodeId,
+              originExit.nodeId,
+              currentProfile === 'mobility'
+            );
+
+          // If this exit cannot actually be reached from
+          // the indoor starting point, reject it.
+          if(candidateIndoorSeconds === null){
+            continue;
+          }
+
+          indoorSeconds = candidateIndoorSeconds;
+        }
+
+
+        // ----------------------------------------------
+        // 4. Complete candidate journey cost
+        // ----------------------------------------------
+
+        const totalJourneySeconds =
+          indoorSeconds + outdoorSeconds;
+
+
+        console.log(
+          'ENTRANCE CANDIDATE:',
+          originExit.nodeId,
+          '→',
+          destinationEntrance.nodeId,
+          '| indoor:',
+          indoorSeconds,
+          'sec | outdoor:',
+          outdoorSeconds,
+          'sec | total:',
+          totalJourneySeconds,
+          'sec'
+        );
+
+
+        // ----------------------------------------------
+        // 5. Keep the shortest COMPLETE journey
+        // ----------------------------------------------
+
+        if(totalJourneySeconds < shortestJourneySeconds){
+
+          shortestJourneySeconds =
+            totalJourneySeconds;
+
+          selectedOriginExit =
+            originExit;
+
+          selectedEntrance =
+            destinationEntrance;
+
+          selectedOutdoorRoute =
+            candidateRoute;
         }
 
       }catch(error){
+
         console.warn(
           'Could not test entrance combination:',
           originExit.nodeId,
@@ -3321,7 +3488,421 @@ if(
     }
   }
 }
+// ==================================================
+// BEST MADRIGA → RABIN CANDIDATE
+// ==================================================
+// Stores the best route that leaves Madriga through
+// the indoor Rabin connection instead of a Madriga
+// outdoor exit.
+// ==================================================
 
+let bestMadrigaRabinCandidate = null;
+
+// ==================================================
+// TRACK WHETHER MADRIGA → RABIN WON
+// ==================================================
+// Prevent the normal direct-exit code from overwriting
+// the original Madriga starting position afterward.
+// ==================================================
+
+let usesMadrigaRabinRoute = false;
+// ==================================================
+// MADRIGA → RABIN TRANSFER ROUTE CANDIDATE
+// ==================================================
+//
+// When a journey starts inside Madriga, leaving directly
+// through a Madriga outdoor exit is not always best.
+//
+// Madriga is connected indoors to Rabin. Therefore we
+// also test:
+//
+//   current Madriga position
+//        ↓
+//   Madriga → Rabin indoor transfer
+//        ↓
+//   Rabin transfer node
+//        ↓
+//   each usable Rabin outdoor exit
+//        ↓
+//   destination entrance
+//
+// Rabin's bridge entrance is NOT forced here.
+// Every usable Rabin exit competes using total journey
+// time, including floor7_n108 and floor7_n109.
+//
+// floor7_n109 currently remains marked requiresStairs,
+// so the mobility profile will exclude it for now.
+// ==================================================
+
+if(
+  originBuildingKey === 'madriga' &&
+  destinationEntrances.length &&
+  !sharedTransfer &&
+  !usesMainToMadrigaChain
+){
+  const madrigaToRabin =
+    sharedIndoorTransfer(
+      'madriga',
+      'rabin'
+    );
+
+  if(madrigaToRabin){
+
+    // ------------------------------------------------
+    // Rabin exits allowed for the active profile
+    // ------------------------------------------------
+
+    const rabinExits =
+      (BUILDING_ENTRANCES.rabin || []).filter(
+        entrance =>
+          currentProfile !== 'mobility' ||
+          (
+            !entrance.requiresStairs &&
+            !entrance.avoidForMobility
+          )
+      );
+
+
+    // ------------------------------------------------
+    // Starting point inside Madriga
+    // ------------------------------------------------
+
+    const madrigaStartNodeId =
+      buildingOnlyOrigin
+        ? primaryOriginEntrance?.nodeId
+        : customStart?.nodeId;
+
+
+    if(madrigaStartNodeId){
+
+      // ----------------------------------------------
+      // Madriga start → Madriga side of transfer
+      // ----------------------------------------------
+
+      const madrigaIndoorSeconds =
+        madrigaStartNodeId === madrigaToRabin.originNodeId
+          ? 0
+          : await getIndoorLegEtaSeconds(
+              'madriga',
+              madrigaStartNodeId,
+              madrigaToRabin.originNodeId,
+              currentProfile === 'mobility'
+            );
+
+
+      if(madrigaIndoorSeconds !== null){
+
+        // --------------------------------------------
+        // Cost of crossing Madriga ↔ Rabin transfer
+        // --------------------------------------------
+
+        const transferSeconds =
+          madrigaToRabin.method === 'elevator'
+            ? 40
+            : 30;
+
+
+        // --------------------------------------------
+        // Test every usable Rabin exit
+        // --------------------------------------------
+
+        for(const rabinExit of rabinExits){
+
+          const rabinIndoorSeconds =
+            madrigaToRabin.destinationNodeId === rabinExit.nodeId
+              ? 0
+              : await getIndoorLegEtaSeconds(
+                  'rabin',
+                  madrigaToRabin.destinationNodeId,
+                  rabinExit.nodeId,
+                  currentProfile === 'mobility'
+                );
+
+
+          // Exit cannot be reached through Rabin.
+          if(rabinIndoorSeconds === null){
+            continue;
+          }
+
+
+          // ------------------------------------------
+          // Test every destination entrance
+          // ------------------------------------------
+
+          for(const destinationEntrance of destinationEntrances){
+
+            try{
+
+              const candidateRoute =
+                await CampusOutdoorRouting.route(
+                  rabinExit.lat,
+                  rabinExit.lng,
+                  destinationEntrance.lat,
+                  destinationEntrance.lng,
+                  {
+                    avoidSteps:
+                      currentProfile === 'mobility'
+                  }
+                );
+
+
+              if(
+                !candidateRoute ||
+                !candidateRoute.coordinates?.length ||
+                candidateRoute.coordinates.length < 2
+              ){
+                continue;
+              }
+
+
+              const outdoorSeconds =
+                getOutdoorEtaSeconds(
+                  candidateRoute.coordinates,
+                  currentProfile === 'mobility'
+                );
+
+
+              const totalJourneySeconds =
+                madrigaIndoorSeconds +
+                transferSeconds +
+                rabinIndoorSeconds +
+                outdoorSeconds;
+            // --------------------------------------------------
+            // Remember the best Madriga → Rabin route
+            // --------------------------------------------------
+
+            if(
+              !bestMadrigaRabinCandidate ||
+              totalJourneySeconds <
+                bestMadrigaRabinCandidate.totalJourneySeconds
+            ){
+              bestMadrigaRabinCandidate = {
+                totalJourneySeconds,
+
+                madrigaStartNodeId,
+
+                madrigaTransferNodeId:
+                  madrigaToRabin.originNodeId,
+
+                rabinTransferNodeId:
+                  madrigaToRabin.destinationNodeId,
+
+                rabinExit,
+
+                destinationEntrance,
+
+                outdoorRoute: candidateRoute,
+
+                transferMethod:
+                  madrigaToRabin.method
+              };
+            }
+
+              console.log(
+                'MADRIGA → RABIN CANDIDATE:',
+                madrigaStartNodeId,
+                '→',
+                madrigaToRabin.originNodeId,
+                '→',
+                madrigaToRabin.destinationNodeId,
+                '→',
+                rabinExit.nodeId,
+                '→',
+                destinationEntrance.nodeId,
+                '| Madriga:',
+                madrigaIndoorSeconds,
+                'sec | transfer:',
+                transferSeconds,
+                'sec | Rabin:',
+                rabinIndoorSeconds,
+                'sec | outdoor:',
+                outdoorSeconds,
+                'sec | total:',
+                totalJourneySeconds,
+                'sec'
+              );
+
+            }catch(error){
+
+              console.warn(
+                'Could not test Madriga → Rabin candidate:',
+                rabinExit.nodeId,
+                '→',
+                destinationEntrance.nodeId,
+                error
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// ==================================================
+// CHOOSE BETWEEN:
+//   1. DIRECT MADRIGA EXIT
+//   2. MADRIGA → RABIN TRANSFER
+// ==================================================
+
+if(bestMadrigaRabinCandidate){
+
+  // The normal entrance comparison already selected
+  // the best direct Madriga route. Calculate its full
+  // journey time so both alternatives use the same unit.
+  let directMadrigaSeconds = Infinity;
+
+  if(
+    selectedOriginExit &&
+    selectedOutdoorRoute
+  ){
+   // --------------------------------------------------
+// Determine the Madriga start node for the direct route
+// --------------------------------------------------
+
+const directStartNodeId =
+  buildingOnlyOrigin
+    ? primaryOriginEntrance?.nodeId
+    : customStart?.nodeId;
+
+
+const directIndoorSeconds =
+  directStartNodeId === selectedOriginExit.nodeId
+    ? 0
+    : await getIndoorLegEtaSeconds(
+        'madriga',
+        directStartNodeId,
+        selectedOriginExit.nodeId,
+        currentProfile === 'mobility'
+      );
+
+    if(directIndoorSeconds !== null){
+
+      const directOutdoorSeconds =
+        getOutdoorEtaSeconds(
+          selectedOutdoorRoute.coordinates,
+          currentProfile === 'mobility'
+        );
+
+      directMadrigaSeconds =
+        directIndoorSeconds +
+        directOutdoorSeconds;
+    }
+  }
+
+
+  console.log(
+    'MADRIGA ROUTE COMPARISON:',
+    'direct =',
+    directMadrigaSeconds,
+    'sec | via Rabin =',
+    bestMadrigaRabinCandidate.totalJourneySeconds,
+    'sec'
+  );
+
+
+  // --------------------------------------------------
+  // Rabin route wins
+  // --------------------------------------------------
+
+  if(
+    bestMadrigaRabinCandidate.totalJourneySeconds <
+    directMadrigaSeconds
+  ){
+    // Madriga → Rabin beat the direct Madriga exits.
+    usesMadrigaRabinRoute = true;
+    const candidate =
+      bestMadrigaRabinCandidate;
+
+    selectedEntrance =
+      candidate.destinationEntrance;
+
+    selectedOutdoorRoute =
+      candidate.outdoorRoute;
+
+
+    // ----------------------------------------------
+    // Origin indoor journey:
+    // Madriga start → Madriga/Rabin transfer
+    // ----------------------------------------------
+
+    let startContext = {};
+
+    try{
+      startContext = JSON.parse(
+        sessionStorage.getItem(
+          'indoorStartContext'
+        ) || '{}'
+      );
+    }catch(error){
+      startContext = {};
+    }
+
+    startContext.buildingKey = 'madriga';
+
+    startContext.startNodeId =
+      candidate.madrigaStartNodeId;
+
+    startContext.exitEntranceId =
+      candidate.madrigaTransferNodeId;
+
+    sessionStorage.setItem(
+      'indoorStartContext',
+      JSON.stringify(startContext)
+    );
+
+
+    // ----------------------------------------------
+    // Save Madriga → Rabin transfer information
+    // ----------------------------------------------
+
+    sessionStorage.setItem(
+      'sharedIndoorTransfer',
+      JSON.stringify({
+        originBuilding: 'madriga',
+        destinationBuilding: 'rabin',
+        method: candidate.transferMethod
+      })
+    );
+
+
+    // ----------------------------------------------
+    // Rabin continuation:
+    // transfer node → chosen Rabin outdoor exit
+    // ----------------------------------------------
+
+    sessionStorage.setItem(
+      'intermediateIndoorTransfer',
+      JSON.stringify({
+        building: 'rabin',
+
+        startNodeId:
+          candidate.rabinTransferNodeId,
+
+        destinationNodeId:
+          candidate.rabinExit.nodeId,
+
+        destinationBuilding:
+          entranceKey
+      })
+    );
+
+
+    // ----------------------------------------------
+    // Outdoor portion begins at the chosen Rabin exit
+    // ----------------------------------------------
+
+    console.log(
+      'SELECTED MADRIGA → RABIN ROUTE:',
+      candidate.rabinExit.nodeId,
+      '→',
+      candidate.destinationEntrance.nodeId,
+      '| total:',
+      candidate.totalJourneySeconds,
+      'sec'
+    );
+  }
+}
 
 // --------------------------------------------------
 // Fallback destination entrance
@@ -3433,7 +4014,10 @@ if(
 // ==================================================
 // APPLY SELECTED ORIGIN EXIT
 // ==================================================
-if(selectedOriginExit){
+if(
+  selectedOriginExit &&
+  !usesMadrigaRabinRoute
+){
 
   customStart.lat = selectedOriginExit.lat;
   customStart.lng = selectedOriginExit.lng;
@@ -4089,6 +4673,12 @@ let gpsMarker = null;
 function clearIndoorStartJourney(){
   sessionStorage.removeItem('indoorStartContext');
   sessionStorage.removeItem('originIndoorComplete');
+
+    // --------------------------------------------------
+  // Clear transfer state from the previous journey
+  // --------------------------------------------------
+  sessionStorage.removeItem('sharedIndoorTransfer');
+  sessionStorage.removeItem('intermediateIndoorTransfer');
 
   if(sessionStorage.getItem('journeyStage') === 'origin'){
     sessionStorage.removeItem('journeyStage');
