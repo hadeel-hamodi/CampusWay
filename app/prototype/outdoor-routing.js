@@ -1045,7 +1045,17 @@ addEdge(
   'steps'
 );
 
+// ==================================================
+// FLOOR 6 BUFFET STREET → OSM NETWORK
+// ==================================================
+// Connect the existing Floor 6 buffet street node
+// directly to the existing OSM pedestrian node.
 
+addEdge(
+  'campus_floor6_buffet_street',
+  1936600045,
+  'footway'
+);
 // --------------------------------------------------
 // Teacher Buffet entrance
 // --------------------------------------------------
@@ -1659,50 +1669,427 @@ addEdge(
   'campus_main_floor600_elevator',
   'footway'
 );
-/*
+
+// ==================================================
+// MAIN ↔ RABIN BRIDGE
+// ==================================================
+// Physical bridge path connecting the Main Building side
+// to the Rabin Building side.
+
+// ==================================================
+// MAIN ↔ RABIN BRIDGE
+// ==================================================
+// Physical bridge path connecting the Main Building side
+// to the Rabin Building side.
+
+
+addCampusNode(
+  'campus_main_rabin_bridge_1',
+  32.76178009890341,
+  35.01993980258704
+);
+
+addCampusNode(
+  'campus_main_rabin_bridge_2',
+  32.76164673976182,
+  35.020172148942954
+);
+
+addCampusNode(
+  'campus_main_rabin_bridge_3',
+  32.761621364849695,
+  35.02021841704846
+);
+
+addCampusNode(
+  'campus_main_rabin_bridge_4',
+  32.76160867739092,
+  35.02024121582509
+);
+
+addCampusNode(
+  'campus_main_rabin_bridge_5',
+  32.761537909532095,
+  35.02019159495831
+);
+
+addCampusNode(
+  'campus_main_rabin_bridge_6',
+  32.7614978735074,
+  35.020229816436775
+);
+
+// ==================================================
+// MAIN ↔ RABIN BRIDGE CONNECTIONS
+// ==================================================
+
+
+addEdge(
+  'campus_main_rabin_bridge_1',
+  'campus_main_rabin_bridge_2',
+  'footway'
+);
+
+addEdge(
+  'campus_main_rabin_bridge_2',
+  'campus_main_rabin_bridge_3',
+  'footway'
+);
+
+addEdge(
+  'campus_main_rabin_bridge_3',
+  'campus_main_rabin_bridge_4',
+  'footway'
+);
+
+addEdge(
+  'campus_main_rabin_bridge_4',
+  'campus_main_rabin_bridge_5',
+  'footway'
+);
+
+addEdge(
+  'campus_main_rabin_bridge_5',
+  'campus_main_rabin_bridge_6',
+  'footway'
+);
+
+// ==================================================
+// MAIN GARDEN → RABIN BRIDGE
+// ==================================================
+// Connect the existing Main garden path directly to
+// the existing first node of the Rabin bridge.
+
+addEdge(
+  'campus_main_garden_path',
+  'campus_main_rabin_bridge_1',
+  'footway'
+);
+// ==================================================
+// RABIN-SIDE BRIDGE WALKWAY
+// ==================================================
+
+addCampusNode(
+  'campus_rabin_walkway_1',
+  32.761607267673156,
+  35.02024121582509
+);
+
+addCampusNode(
+  'campus_rabin_walkway_2',
+  32.761546931732376,
+  35.02035655081273
+);
+
+addCampusNode(
+  'campus_rabin_walkway_3',
+  32.76148941519,
+  35.02042159438134
+);
+
+addCampusNode(
+  'campus_rabin_walkway_4',
+  32.761384531987694,
+  35.0205684453249
+);
+
+addCampusNode(
+  'campus_rabin_walkway_5',
+  32.761346187560314,
+  35.020649582147605
+);
+
+addCampusNode(
+  'campus_rabin_walkway_6',
+  32.761314045895226,
+  35.020687133073814
+);
+
+addCampusNode(
+  'campus_rabin_walkway_7',
+  32.76127908477267,
+  35.02071931958199
+);
+
+addCampusNode(
+  'campus_rabin_walkway_9',
+  32.76115333739573,
+  35.020874887704856
+);
+
+// ==================================================
+// RABIN-SIDE WALKWAY CONNECTIONS
+// ==================================================S
+
+addEdge(
+  'campus_rabin_walkway_1',
+  'campus_rabin_walkway_2',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_walkway_2',
+  'campus_rabin_walkway_3',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_walkway_3',
+  'campus_rabin_walkway_4',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_walkway_4',
+  'campus_rabin_walkway_5',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_walkway_5',
+  'campus_rabin_walkway_6',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_walkway_6',
+  'campus_rabin_walkway_7',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_walkway_7',
+  'campus_rabin_bridge_path_6',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_bridge_path_6',
+  'campus_rabin_walkway_9',
+  'footway'
+);
+
+// ==================================================
+// RABIN BRIDGE PATH → EXISTING OSM NETWORK
+// ==================================================
+addEdge(
+  'campus_rabin_bridge_path_11',
+  7674525954,
+  'footway'
+);
+
+// ==================================================
+// RABIN STAIRS 1 CONNECTIONS
+// ==================================================
+// Stairs connect the two walkway points on either side.
+
+addEdge(
+  'campus_rabin_walkway_2',
+  'campus_rabin_stairs_1',
+  'steps'
+);
+
+addEdge(
+  'campus_rabin_stairs_1',
+  'campus_rabin_walkway_3',
+  'steps'
+);
+
  // --------------------------------------------------
  // Accessible ramp: street <-> Rabin Floor 6 plaza
  // Provides step-free access toward Student House Floor 4
  // --------------------------------------------------
 
- addCampusNode(
-   'campus_rabin_ramp_lower',
-   32.7618565,
-   35.0204916
- );
+// ==================================================
+// RABIN BRIDGE → RABIN PATH
+// ==================================================
+// Continuation from the Main ↔ Rabin bridge toward
+// the Rabin Building side.
 
- addCampusNode(
-   'campus_rabin_ramp_upper',
-   32.7615516,
-   35.0208770
- );
 
- addEdge(
-   7674525954,
-   'campus_rabin_ramp_lower',
-   'footway'
- );
-
- addEdge(
-   'campus_rabin_ramp_lower',
-   'campus_rabin_ramp_upper',
-   'footway'
- );
-
- addEdge(
-   'campus_rabin_ramp_upper',
-   1936600008,
-   'footway'
- );
-
- // Split the existing direct sidewalk edge so routing follows the ramp geometry
-removeEdge(
-  7674525954,
-  1936600008
+addCampusNode(
+  'campus_rabin_bridge_path_6',
+  32.76120521525885,
+  35.02080716192722
 );
-*/
 
+addCampusNode(
+  'campus_rabin_bridge_path_8',
+  32.76148377631132,
+  35.02098888158799
+);
 
+addCampusNode(
+  'campus_rabin_bridge_path_9',
+  32.76164335644062,
+  35.02087689936162
+);
+
+addCampusNode(
+  'campus_rabin_bridge_path_10',
+  32.761839024972105,
+  35.02065025269986
+);
+
+addCampusNode(
+  'campus_rabin_bridge_path_11',
+  32.76186158039477,
+  35.02068310976029
+);
+
+// Additional Rabin-side path point
+addCampusNode(
+  'campus_rabin_bridge_path_12',
+  32.761347,
+  35.020649
+);
+
+// ==================================================
+// RABIN PLAZA / MADRIGA STAIR NODES
+// ==================================================
+// Routing nodes placed exactly at the existing
+// stair icons shown on the campus map.
+
+addCampusNode(
+  'campus_rabin_stairs_1',
+  32.76151986512884,
+  35.020382702350624
+);
+
+addCampusNode(
+  'campus_rabin_stairs_2',
+  32.76145445413631,
+  35.020460486412055
+);
+
+addCampusNode(
+  'campus_rabin_stairs_3',
+  32.761255965313104,
+  35.020739436149604
+);
+
+addCampusNode(
+  'campus_rabin_stairs_4',
+  32.76116799853403,
+  35.020854771137245
+);
+
+// ==================================================
+// RABIN PLAZA → MADRIGA STAIR CONNECTIONS
+// ==================================================
+
+// Upper walkway → first stairs
+addEdge(
+  'campus_rabin_walkway_7',
+  'campus_rabin_stairs_3',
+  'steps'
+);
+
+// First stairs → middle walkway point
+addEdge(
+  'campus_rabin_stairs_3',
+  'campus_rabin_bridge_path_6',
+  'steps'
+);
+
+// Middle walkway point → second stairs
+addEdge(
+  'campus_rabin_bridge_path_6',
+  'campus_rabin_stairs_4',
+  'steps'
+);
+
+// Second stairs → lower walkway
+addEdge(
+  'campus_rabin_stairs_4',
+  'campus_rabin_walkway_9',
+  'steps'
+);
+
+// ==================================================
+// RABIN WALKWAY → FLOOR 6 PLAZA ENTRANCE
+// ==================================================
+
+addEdge(
+  'campus_rabin_walkway_7',
+  'campus_rabin_floor6_plaza',
+  'footway'
+);
+
+// ==================================================
+// AROMA OUTSIDE APPROACH
+// ==================================================
+
+addCampusNode(
+  'campus_aroma_outside_approach',
+32.761313482006265, 35.020813196897514
+);
+
+// Aroma approach → Rabin/plaza walkway
+addEdge(
+  'campus_aroma_outside_approach',
+  'campus_rabin_walkway_7',
+  'footway'
+);
+
+// ==================================================
+// AROMA OUTSIDE ENTRANCE
+// ==================================================
+// Outdoor counterpart of the Aroma entrance shown
+// in the Rabin indoor graph.
+
+addCampusNode(
+  'campus_aroma_outside_entrance',
+  32.76129374589024,
+  35.0208292901516
+);
+// Aroma outside entrance → plaza approach
+addEdge(
+  'campus_aroma_outside_entrance',
+  'campus_aroma_outside_approach',
+  'footway'
+);
+
+// ==================================================
+// AROMA → UPPER RABIN PATH
+// ==================================================
+// Uses existing nodes only. No new nodes are created.
+
+addEdge(
+  'campus_aroma_outside_approach',
+  'campus_rabin_bridge_path_8',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_bridge_path_8',
+  'campus_rabin_bridge_path_9',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_bridge_path_9',
+  'campus_rabin_bridge_path_10',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_bridge_path_10',
+  'campus_rabin_bridge_path_11',
+  'footway'
+);
+
+// ==================================================
+// UPPER RABIN PATH → EXISTING OSM NETWORK
+// ==================================================
+// Connect the mapped Rabin walkway back into the
+// existing OSM pedestrian network.
+
+addEdge(
+  'campus_rabin_bridge_path_11',
+  1936600008,
+  'footway'
+);
 // --------------------------------------------------
 // Student House <-> Main upper connector
 // This OSM edge is mapped as service, but the physical
