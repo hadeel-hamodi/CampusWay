@@ -1492,6 +1492,7 @@ const vertical = [
     label: 'Floor 600 long stairs'
   },
 
+  // rabin 
 {
   type: 'stairs',
   lat: 32.76151986512884,
@@ -3557,7 +3558,11 @@ const startingBuildingKey =
   entranceKeyByBuilding[customStart?.label] ||
   null;
 
-// Check if start and destination are in the same building
+// ==================================================
+// OUTDOOR ROUTING
+// ==================================================
+
+// Check if start and destination are in the same building.
 const sameBuilding =
   startingBuildingKey !== null &&
   entranceKey !== null &&
@@ -3567,36 +3572,14 @@ const sameBuilding =
 let outdoorResult = selectedOutdoorRoute || null;
 
 
-if(
-  !outdoorResult &&
-  !activeSharedTransfer &&
-  !sameBuilding &&
-  !usesMainToMadrigaChain
-){
-  try{
-
-    let outdoorStartLat = start.lat;
-    let outdoorStartLng = start.lng;
-
-    let outdoorDestinationLat = lat;
-    let outdoorDestinationLng = lng;
-
-    outdoorResult = await CampusOutdoorRouting.route(
-      outdoorStartLat,
-      outdoorStartLng,
-      outdoorDestinationLat,
-      outdoorDestinationLng,
-      {
-        avoidSteps: currentProfile === 'mobility'
-      }
-    );
-
-  }catch(error){
-    console.error('Outdoor routing failed:', error);
-  }
-}
-
-let waypoints;
+// ==================================================
+// MAIN ↔ RABIN BRIDGE ROUTE
+// ==================================================
+// Main ↔ Rabin now uses the REAL outdoor graph.
+//
+// Main ↔ Terrace also uses this graph segment:
+// Main ↔ Rabin happens outdoors across the mapped bridge,
+// while Rabin ↔ Terrace remains an indoor transfer.
 
 const usesMainRabinBridge =
   (
@@ -3608,62 +3591,122 @@ const usesMainRabinBridge =
     entranceKey === 'rabin'
   );
 
-  if(sameBuilding){
-  // Same building: no outdoor route needed
-  waypoints = [];}
 
- // ==================================================
-// MAIN ↔ MADRIGA — DIRECTION-AWARE BRIDGE ROUTE
 // ==================================================
+// CALCULATE REAL OUTDOOR ROUTE
 // ==================================================
-// MAIN ↔ MADRIGA — DIRECTION-AWARE OUTDOOR SEGMENT
-// ==================================================
-else if(usesMainToMadrigaChain){
-  const mainBridgeEnd = [
-    32.761753,
-    35.019978
-  ];
 
-  const rabinBridgeEnd = [
-    32.761728,
-    35.020010
-  ];
+if(
+  !outdoorResult &&
+  !activeSharedTransfer &&
+  !sameBuilding
+){
+  try{
 
-if(startingBuildingKey === 'madriga'){
+    let outdoorStartLat = start.lat;
+    let outdoorStartLng = start.lng;
 
-  // ==================================================
-  // MADRIGA → RABIN → MAIN
-  // ==================================================
-  // Madriga → Rabin is an indoor transfer.
-  // After reaching Rabin Floor 7, cross the bridge
-  // and enter Main through Floor 600.
-  waypoints = [
-    rabinBridgeEnd,
-    mainBridgeEnd,
-    [
-      BUILDING_ENTRANCES.main.find(
-        entrance =>
-          entrance.nodeId === 'floor600_n86'
-      ).lat,
-      BUILDING_ENTRANCES.main.find(
-        entrance =>
-          entrance.nodeId === 'floor600_n86'
-      ).lng
-    ]
-  ];
+    let outdoorDestinationLat = lat;
+    let outdoorDestinationLng = lng;
 
-  }else{
 
-    // Main → Rabin across the bridge.
-    // Rabin → Madriga continues through the indoor transfer.
-    waypoints = [
-      [start.lat, start.lng],
-      mainBridgeEnd,
-      rabinBridgeEnd
-    ];
+    // ==============================================
+    // TERRACE → RABIN → MAIN
+    // ==============================================
+    // Terrace → Rabin happens indoors.
+    // Therefore the outdoor portion starts at
+    // Rabin's Floor 7 bridge entrance.
+
+    if(
+      usesMainToMadrigaChain &&
+      startingBuildingKey === 'madriga'
+    ){
+      const rabinBridgeEntrance =
+        BUILDING_ENTRANCES.rabin.find(
+          entrance =>
+            entrance.nodeId === 'floor7_n108'
+        );
+
+      const mainBridgeEntrance =
+        BUILDING_ENTRANCES.main.find(
+          entrance =>
+            entrance.nodeId === 'floor600_n86'
+        );
+
+      if(rabinBridgeEntrance){
+        outdoorStartLat = rabinBridgeEntrance.lat;
+        outdoorStartLng = rabinBridgeEntrance.lng;
+      }
+
+      if(mainBridgeEntrance){
+        outdoorDestinationLat = mainBridgeEntrance.lat;
+        outdoorDestinationLng = mainBridgeEntrance.lng;
+      }
+    }
+
+
+    // ==============================================
+    // MAIN → RABIN → TERRACE
+    // ==============================================
+    // Main → Rabin happens outdoors across the bridge.
+    // Rabin → Terrace then continues indoors.
+
+    else if(
+      usesMainToMadrigaChain &&
+      startingBuildingKey === 'main'
+    ){
+      const rabinBridgeEntrance =
+        BUILDING_ENTRANCES.rabin.find(
+          entrance =>
+            entrance.nodeId === 'floor7_n108'
+        );
+
+      if(rabinBridgeEntrance){
+        outdoorDestinationLat = rabinBridgeEntrance.lat;
+        outdoorDestinationLng = rabinBridgeEntrance.lng;
+      }
+    }
+
+
+    // ==============================================
+    // RUN REAL GRAPH ROUTER
+    // ==============================================
+
+    outdoorResult = await CampusOutdoorRouting.route(
+      outdoorStartLat,
+      outdoorStartLng,
+      outdoorDestinationLat,
+      outdoorDestinationLng,
+      {
+        avoidSteps:
+          currentProfile === 'mobility'
+      }
+    );
+
+  }catch(error){
+    console.error(
+      'Outdoor routing failed:',
+      error
+    );
   }
 }
-else if(activeSharedTransfer){
+
+
+// ==================================================
+// BUILD MAP WAYPOINTS
+// ==================================================
+
+let waypoints;
+
+if(sameBuilding){
+
+  // Same building: no outdoor route needed.
+  waypoints = [];
+
+}else if(activeSharedTransfer){
+
+  // Direct shared indoor connection.
+  // No outdoor walking segment is required.
   waypoints = [
     [start.lat, start.lng],
     [
@@ -3672,61 +3715,27 @@ else if(activeSharedTransfer){
     ]
   ];
 
-}else if(usesMainRabinBridge){
-  const mainBridgeEnd = [
-    32.761753,
-    35.019978
-  ];
-
-  const rabinBridgeEnd = [
-    32.761728,
-    35.020010
-  ];
-
-  waypoints =
-    startingBuildingKey === 'rabin'
-      ? [
-          [start.lat, start.lng],
-          rabinBridgeEnd,
-          mainBridgeEnd,
-          [lat, lng]
-        ]
-      : [
-          [start.lat, start.lng],
-          mainBridgeEnd,
-          rabinBridgeEnd,
-          [lat, lng]
-        ];
-
-  const bridgeDistance = waypoints
-    .slice(1)
-    .reduce(
-      (total, point, index) =>
-        total +
-        CampusOutdoorRouting.distance(
-          waypoints[index],
-          point
-        ),
-      0
-    );
-
-  outdoorResult = {
-    coordinates: waypoints,
-    distance: bridgeDistance
-  };
-
 }else if(
   outdoorResult &&
   outdoorResult.coordinates.length > 1
 ){
 
-  // Real OSM pedestrian route
+  // ==================================================
+  // REAL OUTDOOR GRAPH ROUTE
+  // ==================================================
+  // This now includes the actual mapped Main ↔ Rabin
+  // bridge instead of hardcoded bridge coordinates.
+
   waypoints = outdoorResult.coordinates;
 
 }else{
 
-  // Temporary fallback for disconnected/missing OSM paths.
-  // This keeps CampusWay usable until we repair the campus graph.
+  // ==================================================
+  // TEMPORARY FALLBACK
+  // ==================================================
+  // Only used if the outdoor graph genuinely cannot
+  // produce a connected route.
+
   const mid = [
     (start.lat + lat) / 2 + 0.0006,
     (start.lng + lng) / 2 - 0.0004
@@ -3742,7 +3751,6 @@ else if(activeSharedTransfer){
     'No connected OSM walking route found. Using temporary fallback.'
   );
 }
-
 // ==================================================
 // MAIN ↔ MADRIGA — INTERMEDIATE RABIN TRANSFER
 // ==================================================

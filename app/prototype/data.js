@@ -51,9 +51,10 @@ const BUILDING_ENTRANCES = {
     lng: 35.020316
     },
     {
+      // Rabin Floor 6 entrance → plaza
       nodeId: 'floor6_n73',
-      lat: 32.761444,
-      lng: 35.020528
+      lat: 32.76125427364507,
+      lng: 35.020638853311546
     },
     {
       nodeId: 'floor5_n162',
