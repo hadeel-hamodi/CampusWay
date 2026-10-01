@@ -4773,80 +4773,66 @@ if(sameBuilding){
 //
 // Indoor navigation may be needed at the START even
 // when the destination has no indoor graph.
-//
-// Example:
-// Terrace → Madriga/Rabin transfer → outdoors → Eshkol
-//
-// Eshkol does not need an indoor graph for the origin
-// indoor stages to be available.
 // ==================================================
 
-let indoorStartContext = null;
 
-try{
-  indoorStartContext = customStart
-    ? JSON.parse(
-        sessionStorage.getItem('indoorStartContext') || 'null'
-      )
-    : null;
-}catch(error){
-  indoorStartContext = null;
-}
-
+const routeIndoorStartContext = JSON.parse(
+  sessionStorage.getItem('indoorStartContext') || 'null'
+);
 
 const hasOriginIndoorJourney =
   Boolean(
-    indoorStartContext?.buildingKey &&
-    indoorStartContext?.startNodeId &&
-    indoorStartContext?.exitEntranceId
+  routeIndoorStartContext &&
+  routeIndoorStartContext.buildingKey &&
+  routeIndoorStartContext.startNodeId &&
+  routeIndoorStartContext.exitEntranceId &&
+  routeIndoorStartContext.startNodeId !== routeIndoorStartContext.exitEntranceId
   );
 
+const destinationIndoorContext = JSON.parse(
+  sessionStorage.getItem('indoorContext') || 'null'
+);
+
 const hasDestinationIndoorJourney =
-  Boolean(INDOOR_BUILDINGS[name]);
+  Boolean(
+    INDOOR_BUILDINGS[name] &&
+    destinationIndoorContext &&
+    (
+      destinationIndoorContext.destinationNodeId ||
+      destinationIndoorContext.destinationLabel
+    )
+  );
 
-
-if(
-  hasOriginIndoorJourney ||
-  hasDestinationIndoorJourney
-){
+if(hasOriginIndoorJourney){
   indoorBtn.style.display = 'block';
 
-if(
-  sameBuilding &&
-  indoorStartContext &&
-  indoorStartContext.buildingKey
-){
-  indoorBtn.dataset.stage = 'same-building';
-  indoorBtn.dataset.building = indoorStartContext.buildingKey;
+  indoorBtn.dataset.stage =
+    sameBuilding ? 'same-building' : 'origin';
 
-  delete indoorBtn.dataset.destinationBuilding;
+  indoorBtn.dataset.building =
+    routeIndoorStartContext.buildingKey;
 
-  document.getElementById('lbl-continue-indoor').textContent =
-    'Start indoor route →';
-
-}else if(indoorStartContext && indoorStartContext.buildingKey){
-  indoorBtn.dataset.stage = 'origin';
-  indoorBtn.dataset.building = indoorStartContext.buildingKey;
-  // Destination may intentionally have no indoor graph.
-if(INDOOR_BUILDINGS[name]){
-  indoorBtn.dataset.destinationBuilding =
-    INDOOR_BUILDINGS[name];
-}else{
-  delete indoorBtn.dataset.destinationBuilding;
-}
-
-  document.getElementById('lbl-continue-indoor').textContent =
-    'Start indoor route →';
-
-}else{
-    indoorBtn.dataset.stage = 'destination';
-    indoorBtn.dataset.building = INDOOR_BUILDINGS[name];
-
+  if(hasDestinationIndoorJourney){
+    indoorBtn.dataset.destinationBuilding =
+      INDOOR_BUILDINGS[name];
+  }else{
     delete indoorBtn.dataset.destinationBuilding;
-
-    document.getElementById('lbl-continue-indoor').textContent =
-      t.continueIndoors;
   }
+
+  document.getElementById('lbl-continue-indoor').textContent =
+    'Start indoor route →';
+
+}else if(hasDestinationIndoorJourney){
+  indoorBtn.style.display = 'block';
+
+  indoorBtn.dataset.stage = 'destination';
+  indoorBtn.dataset.building = INDOOR_BUILDINGS[name];
+
+  delete indoorBtn.dataset.destinationBuilding;
+
+  document.getElementById('lbl-continue-indoor').textContent =
+    t.continueIndoors;
+
 }else{
   indoorBtn.style.display = 'none';
 
@@ -5176,16 +5162,37 @@ const profileEntrances =
     nodeId,
     entranceId: entrance.nodeId
   };
+const defaultStartEntrance =
+  (BUILDING_ENTRANCES[buildingKey] || []).find(
+    item =>
+      item.primary &&
+      !item.onlyForService
+  ) ||
+  (BUILDING_ENTRANCES[buildingKey] || []).find(
+    item => !item.onlyForService
+  );
 
+const indoorStartNodeId =
+  nodeId ||
+  defaultStartEntrance?.nodeId ||
+  null;
+
+if(
+  indoorStartNodeId &&
+  indoorStartNodeId !== entrance.nodeId
+){
   sessionStorage.setItem(
     'indoorStartContext',
     JSON.stringify({
       buildingKey,
-      startNodeId: nodeId,
+      startNodeId: indoorStartNodeId,
       exitEntranceId: entrance.nodeId,
       label
     })
   );
+}else{
+  sessionStorage.removeItem('indoorStartContext');
+}
 
   document.getElementById('startInput').value = customStart.label;
   startSuggestions.style.display = 'none';
