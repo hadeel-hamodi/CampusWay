@@ -3116,16 +3116,27 @@ if(
     customStart.entranceId = floor600Exit.nodeId;
 
     try{
-      const startContext = JSON.parse(
-        sessionStorage.getItem('indoorStartContext') || '{}'
-      );
+const startContext = JSON.parse(
+  sessionStorage.getItem('indoorStartContext') || '{}'
+);
 
-      startContext.exitEntranceId = floor600Exit.nodeId;
+if(
+  customStart?.buildingKey === 'main' &&
+  customStart?.nodeId &&
+  customStart.nodeId !== floor600Exit.nodeId
+){
+  startContext.buildingKey = 'main';
+  startContext.startNodeId = customStart.nodeId;
+  startContext.exitEntranceId = floor600Exit.nodeId;
+  startContext.label = customStart.label;
 
-      sessionStorage.setItem(
-        'indoorStartContext',
-        JSON.stringify(startContext)
-      );
+  sessionStorage.setItem(
+    'indoorStartContext',
+    JSON.stringify(startContext)
+  );
+}else{
+  sessionStorage.removeItem('indoorStartContext');
+}
     }catch(error){
       console.warn(
         'Could not update the Main exit:',
@@ -4246,32 +4257,23 @@ if(selectedEntrance){
 }
 
 if(sharedTransfer){
-  let startContext = {};
-
-  try{
-    startContext = JSON.parse(
-      sessionStorage.getItem('indoorStartContext') || '{}'
-    );
-  }catch(error){
-    startContext = {};
-  }
-
-  if(startContext.buildingKey !== originBuildingKey){
-    startContext = {};
-  }
-
-  startContext.buildingKey = originBuildingKey;
-  startContext.startNodeId =
-    customStart?.nodeId ||
-    startContext.startNodeId ||
-    null;
-  startContext.exitEntranceId =
-    sharedTransfer.originNodeId;
-
+  if(
+  customStart?.buildingKey === originBuildingKey &&
+  customStart?.nodeId &&
+  customStart.nodeId !== sharedTransfer.originNodeId
+){
   sessionStorage.setItem(
     'indoorStartContext',
-    JSON.stringify(startContext)
+    JSON.stringify({
+      buildingKey: originBuildingKey,
+      startNodeId: customStart.nodeId,
+      exitEntranceId: sharedTransfer.originNodeId,
+      label: customStart.label
+    })
   );
+}else{
+  sessionStorage.removeItem('indoorStartContext');
+}
 
   let destinationContext = {};
 
@@ -5058,45 +5060,27 @@ uniqueRoomMatches.sort((a, b) => {
 
 function pickStart(name, lat, lng){
 
-clearIndoorStartJourney();
+  clearIndoorStartJourney();
 
-if(name === 'Main Building'){
-  customStart = {
-    lat,
-    lng,
-    label: name,
-    buildingKey: 'main',
-    nodeId: 'floor700_n69'
-  };
-
-  sessionStorage.setItem(
-    'indoorStartContext',
-    JSON.stringify({
+  if(name === 'Main Building'){
+    customStart = {
+      lat,
+      lng,
+      label: name,
       buildingKey: 'main',
-      startNodeId: 'floor700_n69',
-      label: 'Main entrance 700'
-    })
-  );
-}else if(name === 'Rabin Building'){
-  customStart = {
-    lat,
-    lng,
-    label: name,
-    buildingKey: 'rabin',
-    nodeId: 'floor7_n108'
-  };
-
-  sessionStorage.setItem(
-    'indoorStartContext',
-    JSON.stringify({
+      nodeId: 'floor700_n69'
+    };
+  }else if(name === 'Rabin Building'){
+    customStart = {
+      lat,
+      lng,
+      label: name,
       buildingKey: 'rabin',
-      startNodeId: 'floor7_n108',
-      label: 'Rabin entrance 700'
-    })
-  );
-}else{
-  customStart = {lat, lng, label:name};
-}
+      nodeId: 'floor7_n108'
+    };
+  }else{
+    customStart = {lat, lng, label:name};
+  }
   document.getElementById('startInput').value = name;
   startSuggestions.style.display = 'none';
   if(gpsMarker) map.removeLayer(gpsMarker);
