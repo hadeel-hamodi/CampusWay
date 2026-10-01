@@ -5384,6 +5384,15 @@ uniqueRoomMatches.sort((a, b) => {
         ${localizedBuildingNameByEnglishName(match.buildingName)}
         · ${match.floor.replace('floorminus1','-1').replace('floor','')}
       </span>
+      ${favouriteButton({
+        kind: 'indoor',
+        name: String(match.node.label).trim(),
+        nodeId: match.node.id,
+        type: match.node.type,
+        buildingKey: match.buildingKey,
+        buildingName: match.buildingName,
+        floor: match.floor
+      })}
     </div>
   `;
 }).join('');
@@ -5673,7 +5682,21 @@ if(window.innerWidth <= 768){
   document.getElementById('map').addEventListener('click', ()=> sidebar.classList.remove('open'));
 }
 
+const FAVOURITES_KEY = 'campusway.favourites.v1';
+
 let favourites = [];
+
+try {
+  const saved = JSON.parse(
+    localStorage.getItem(FAVOURITES_KEY) || '[]'
+  );
+
+  if (Array.isArray(saved)) {
+    favourites = saved;
+  }
+} catch (error) {
+  console.warn('Could not load favourites:', error);
+}
 
 function toggleBuildingList(){
   const list = document.getElementById('buildingList');
@@ -5683,39 +5706,204 @@ function toggleBuildingList(){
   arrow.textContent = isOpen ? '▼' : '▲';
 }
 
-function toggleFavourite(name, lat, lng){
-  const idx = favourites.findIndex(f=>f.name===name);
-  if(idx >= 0){
-    favourites.splice(idx, 1);
-  } else {
-    favourites.push({name, lat, lng});
-  }
-  buildFavouriteList();
+function favouriteButton(place) {
+  const isSaved = favourites.some(
+    item => favouriteKey(item) === favouriteKey(place)
+  );
+
+  const payload = encodeURIComponent(
+    JSON.stringify(place)
+  ).replace(/'/g, '%27');
+
+  return `
+    <button
+      type="button"
+      data-favourite="${payload}"
+      aria-label="${t.saveToFav}"
+      aria-pressed="${isSaved}"
+      title="${t.saveToFav}"
+      style="
+        flex-shrink: 0;
+        background: transparent;
+        border: 0;
+        color: var(--amber);
+        font-size: 22px;
+        min-width: 44px;
+        min-height: 44px;
+        cursor: pointer;
+      "
+    >
+      ${isSaved ? '★' : '☆'}
+    </button>
+  `;
 }
 
-function buildFavouriteList(){
-  const el = document.getElementById('favouriteList');
-  const empty = document.getElementById('favEmpty');
-  if(!favourites.length){
-    empty.style.display = 'block';
-    el.querySelectorAll('.building-item').forEach(i=>i.remove());
-    return;
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-favourite]');
+
+  if (!button) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const place = JSON.parse(
+    decodeURIComponent(button.dataset.favourite)
+  );
+
+  toggleSavedPlace(place);
+}, true);
+
+
+function favouriteKey(place) {
+  if (place.kind === 'indoor') {
+    return `indoor:${place.buildingKey}:${place.name.trim().toLowerCase()}`;
   }
-  empty.style.display = 'none';
-  el.querySelectorAll('.building-item').forEach(i=>i.remove());
-  favourites.forEach(f=>{
-    const item = document.createElement('div');
-    item.className = 'building-item';
-    item.innerHTML = `<span>⭐ ${f.name}</span><span style="color:var(--mid);font-size:11px;cursor:pointer;" onclick="toggleFavourite('${f.name.replace(/'/g,"\\'")}',${f.lat},${f.lng})">✕</span>`;
-    item.onclick = (e)=>{
-      if(e.target.tagName === 'SPAN' && e.target.textContent === '✕') return;
-      map.flyTo([f.lat,f.lng],18,{duration:0.8});
-      setTimeout(()=> routeTo(f.name, f.lat, f.lng), 900);
-    };
-    el.insertBefore(item, empty);
+
+  return `place:${place.name}:${place.lat}:${place.lng}`;
+}
+
+function favouriteLabel(place) {
+  if (place.kind !== 'indoor') {
+    return place.name;
+  }
+
+  const name = place.type === 'room'
+    ? `${t.room} ${place.name.replace(/^room\s+/i, '')}`
+    : place.name;
+
+  const buildingName =
+    localizedBuildingNameByEnglishName(place.buildingName);
+
+  const shortBuildingName = lang === 'en'
+    ? buildingName.replace(/ Building$/, '')
+    : buildingName;
+
+  return `${name} · ${shortBuildingName}`;
+}
+
+function toggleSavedPlace(place) {
+  const key = favouriteKey(place);
+
+  const index = favourites.findIndex(
+    item => favouriteKey(item) === key
+  );
+
+  if (index >= 0) {
+    favourites.splice(index, 1);
+  } else {
+    favourites.push(place);
+  }
+
+  try {
+    localStorage.setItem(
+      FAVOURITES_KEY,
+      JSON.stringify(favourites)
+    );
+  } catch (error) {
+    console.warn('Could not save favourites:', error);
+  }
+
+  buildFavouriteList();
+
+  document.querySelectorAll('[data-favourite]').forEach(button => {
+    const savedPlace = JSON.parse(
+      decodeURIComponent(button.dataset.favourite)
+    );
+
+    const isSaved = favourites.some(
+      item => favouriteKey(item) === favouriteKey(savedPlace)
+    );
+
+    button.textContent = isSaved ? '★' : '☆';
+    button.setAttribute('aria-pressed', String(isSaved));
   });
 }
 
+// Keeps the existing building save buttons working.
+function toggleFavourite(name, lat, lng) {
+  toggleSavedPlace({
+    kind: 'place',
+    name,
+    lat,
+    lng
+  });
+}
+
+function buildFavouriteList() {
+  const list = document.getElementById('favouriteList');
+  const empty = document.getElementById('favEmpty');
+
+  list.querySelectorAll('.building-item').forEach(
+    item => item.remove()
+  );
+
+  empty.style.display = favourites.length ? 'none' : 'block';
+
+  favourites.forEach(place => {
+    const item = document.createElement('div');
+    item.className = 'building-item';
+
+    const destination = document.createElement('button');
+    destination.type = 'button';
+    destination.textContent = `⭐ ${favouriteLabel(place)}`;
+
+    destination.style.cssText = `
+      flex: 1;
+      text-align: start;
+      background: none;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      min-height: 44px;
+    `;
+
+    destination.onclick = () => {
+      if (place.kind === 'indoor') {
+        pickIndoorDestination(
+          place.nodeId,
+          place.name,
+          place.buildingKey
+        );
+      } else if (place.indoor) {
+        routeToFoodPlace(place);
+      } else {
+        pickDestination(place.name, place.lat, place.lng);
+      }
+    };
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '✕';
+
+    const removeText = lang === 'he'
+      ? 'הסר'
+      : lang === 'ar'
+        ? 'إزالة'
+        : 'Remove';
+
+    remove.setAttribute(
+      'aria-label',
+      `${removeText} ${favouriteLabel(place)}`
+    );
+
+    remove.style.cssText = `
+      background: none;
+      border: 0;
+      color: var(--mid);
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+    `;
+
+    remove.onclick = () => toggleSavedPlace(place);
+
+    item.append(destination, remove);
+    list.insertBefore(item, empty);
+  });
+}
+
+buildFavouriteList();
 
 function startIndoorTransition(){
   const indoorBtn = document.getElementById('continueIndoorBtn');
