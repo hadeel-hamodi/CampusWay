@@ -1182,6 +1182,12 @@ addEdge(
   'footway'
 );
 
+addEdge(
+  9255990877,
+  'campus_main_education_crossing_approach',
+  'footway'
+);
+
 // ==================================================
 // SHOPS — WALKING PATH
 // ==================================================

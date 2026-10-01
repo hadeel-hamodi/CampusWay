@@ -3230,7 +3230,7 @@ const entranceKeyByBuilding = {
   'Student House': 'student',
   'Multi-Purpose Building': 'multi-purpose',
   'Education and Science': 'education',
-  'Health Building': 'health',
+  'Welfare and Health Building': 'health',
   'Eshkol Tower': 'eshkol',
   'Art Building': 'art',
   'Bloom Building': 'bloom',
@@ -3271,13 +3271,20 @@ const usesMainToMadrigaChain =
 if(entranceKey){
   const entrances = BUILDING_ENTRANCES[entranceKey] || [];
 const profileEntrances =
-  currentProfile === 'mobility'
-    ? entrances.filter(
-        entrance =>
-          !entrance.requiresStairs &&
-          !entrance.avoidForMobility
-      )
-    : entrances;
+  entrances.filter(entrance => {
+    if(entrance.onlyForService){
+      return false;
+    }
+
+    if(currentProfile === 'mobility'){
+      return (
+        !entrance.requiresStairs &&
+        !entrance.avoidForMobility
+      );
+    }
+
+    return true;
+  });
 
 const originBuildingKey =
   customStart?.buildingKey ||
@@ -3553,6 +3560,66 @@ if(
     }
   }
 }
+
+if(
+  !selectedEntrance &&
+  !originBuildingKey &&
+  destinationEntrances.length &&
+  !sharedTransfer &&
+  !usesMainToMadrigaChain
+){
+  let shortestDestinationSeconds = Infinity;
+
+  for(const destinationEntrance of destinationEntrances){
+    try{
+      const candidateRoute =
+        await CampusOutdoorRouting.route(
+          start.lat,
+          start.lng,
+          destinationEntrance.lat,
+          destinationEntrance.lng,
+          {
+            avoidSteps: currentProfile === 'mobility'
+          }
+        );
+
+      if(
+        !candidateRoute ||
+        !candidateRoute.coordinates?.length ||
+        candidateRoute.coordinates.length < 2
+      ){
+        continue;
+      }
+
+      const outdoorSeconds =
+        getOutdoorEtaSeconds(
+          candidateRoute.coordinates,
+          currentProfile === 'mobility'
+        );
+
+      console.log(
+        'DESTINATION ENTRANCE CANDIDATE:',
+        destinationEntrance.nodeId,
+        '| outdoor:',
+        outdoorSeconds,
+        'sec'
+      );
+
+      if(outdoorSeconds < shortestDestinationSeconds){
+        shortestDestinationSeconds = outdoorSeconds;
+        selectedEntrance = destinationEntrance;
+        selectedOutdoorRoute = candidateRoute;
+      }
+    }catch(error){
+      console.warn(
+        'Could not test destination entrance:',
+        destinationEntrance.nodeId,
+        error
+      );
+    }
+  }
+}
+
 // ==================================================
 // BEST MADRIGA → RABIN CANDIDATE
 // ==================================================
@@ -5076,14 +5143,21 @@ function pickIndoorStart(nodeId, label, buildingKey){
 
   const entrances = BUILDING_ENTRANCES[buildingKey] || [];
 
-  const profileEntrances =
-    currentProfile === 'mobility'
-      ? entrances.filter(
-          entrance =>
-            !entrance.requiresStairs &&
-            !entrance.avoidForMobility
-        )
-      : entrances;
+const profileEntrances =
+  entrances.filter(entrance => {
+    if(entrance.onlyForService){
+      return false;
+    }
+
+    if(currentProfile === 'mobility'){
+      return (
+        !entrance.requiresStairs &&
+        !entrance.avoidForMobility
+      );
+    }
+
+    return true;
+  });
 
   const routingEntrances =
     profileEntrances.some(entrance => entrance.primary)

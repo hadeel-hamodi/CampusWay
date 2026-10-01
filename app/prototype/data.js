@@ -16,7 +16,8 @@ const BUILDING_ENTRANCES = {
     {
     nodeId: 'floorminus1_n1',
     lat: 32.760864,
-    lng: 35.021283
+    lng: 35.021283,
+    onlyForService: 'gym'
     },
     {
       nodeId: 'floor4_n46',
@@ -126,8 +127,8 @@ health: [
 eshkol: [
   {
     nodeId: 'campus_eshkol_entrance',
-    lat: 32.76267455859602,
-    lng: 35.01776587218047,
+    lat: 32.762662435167755,
+    lng: 35.017747599631555,
     primary: true
   }
 ],
