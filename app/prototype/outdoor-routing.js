@@ -1461,14 +1461,7 @@ addEdge(
 
 
 // --------------------------------------------------
-// 1. MAIN FLOOR 600 → ELEVATOR / STAIRS AREA
-//
-// After leaving Main Building on Floor 600,
-// walk straight along this path.
-//
-// Near the end:
-// - LEFT leads to the elevator
-// - STRAIGHT continues toward the stairs
+// MAIN FLOOR 600 → ELEVATOR / STAIRS AREA
 // --------------------------------------------------
 
 addCampusNode(
@@ -1676,11 +1669,6 @@ addEdge(
   'footway'
 );
 
-// ==================================================
-// MAIN ↔ RABIN BRIDGE
-// ==================================================
-// Physical bridge path connecting the Main Building side
-// to the Rabin Building side.
 
 // ==================================================
 // MAIN ↔ RABIN BRIDGE
@@ -2114,6 +2102,109 @@ addEdge(
   'elevator'
 );
 
+// --------------------------------------------------
+// DORM - MiniMarket
+// --------------------------------------------------
+
+// Carmel Gate / Multi-Purpose approach path
+addCampusNode(
+  'campus_carmel_multipurpose_path_1',
+  32.758962033966434,
+  35.021737217903144
+);
+
+addCampusNode(
+  'campus_carmel_multipurpose_path_2',
+  32.75849173690675,
+  35.02242118120194
+);
+
+addCampusNode(
+  'campus_carmel_multipurpose_path_3',
+  32.75837669983782,
+  35.022342056036
+);
+
+addCampusNode(
+  'campus_carmel_multipurpose_path_4',
+  32.75852782693699,
+  35.02213418483735
+);
+
+addCampusNode(
+  'campus_carmel_multipurpose_path_5',
+  32.75872632184173,
+  35.02186194062234
+);
+
+// connections
+addEdge(
+  'campus_carmel_multipurpose_path_5',
+  2065458971,
+  'footway'
+);
+
+addEdge(
+  'campus_carmel_multipurpose_path_5',
+  'campus_carmel_multipurpose_path_4',
+  'footway'
+);
+
+addEdge(
+  'campus_carmel_multipurpose_path_4',
+  'campus_carmel_multipurpose_path_3',
+  'footway'
+);
+
+addEdge(
+  'campus_carmel_multipurpose_path_3',
+  'campus_carmel_multipurpose_path_2',
+  'footway'
+);
+
+addEdge(
+  'campus_carmel_multipurpose_path_2',
+  'campus_carmel_multipurpose_path_1',
+  'footway'
+);
+
+addEdge(
+  'campus_carmel_multipurpose_path_2',
+  2102963357,
+  'footway'
+);
+
+addEdge(
+  2102963357,
+  1387533537,
+  'footway'
+);
+
+addCampusNode(
+  'campus_minimarket_path',
+  32.7592422937429,
+  35.02321444451809
+);
+
+addCampusNode(
+  'campus_minimarket_entrance',
+  32.75915841326848,
+  35.0230796635151
+);
+
+addEdge(
+  'campus_minimarket_path',
+  'campus_minimarket_entrance',
+  'footway'
+);
+
+addEdge(
+  'campus_minimarket_path',
+  1387533546,
+  'footway'
+);
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   for(const correction of CAMPUS_CORRECTIONS){
 
