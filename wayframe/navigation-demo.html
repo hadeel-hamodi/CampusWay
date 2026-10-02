@@ -556,7 +556,8 @@ async function loadGraph(){
   const requestedBuilding = params.get('building');
 
   if(requestedBuilding && !requestedBuildingApplied){
-  requestedBuildingApplied = true;
+    requestedBuildingApplied = true;
+
     const buildingSelect = $('building');
 
     if(
@@ -587,371 +588,189 @@ async function loadGraph(){
   floorButtons();
   drawBaseMap();
 
-// Restore a room-to-exit route or an entrance-to-room route.
-const journeyStage =
-  sessionStorage.getItem('journeyStage') || 'destination';
+  function selectLocation(selectId, node){
+    if(!node) return;
 
-if(journeyStage === 'same-building'){
-  const savedStartContext =
-    sessionStorage.getItem('indoorStartContext');
+    const floorSelectId =
+      selectId === 'from' ? 'fromFloor' : 'toFloor';
 
-  const savedContext =
-    sessionStorage.getItem('indoorContext');
-
-  if(savedStartContext && savedContext){
-    try{
-      const startContext = JSON.parse(savedStartContext);
-      const destinationContext = JSON.parse(savedContext);
-
-      const startNode = nodeById(startContext.startNodeId);
-
-      if(startNode){
-        $('fromFloor').value = startNode.floor;
-
-        fillLocationSelect(
-          startNode.floor,
-          'from',
-          'Choose starting point...'
-        );
-
-        ensureNodeOption('from', startNode);
-        $('from').value = startNode.id;
-
-        let destinations = [];
-
-    if(destinationContext.destinationNodeId){
-  const savedDestination =
-    nodeById(destinationContext.destinationNodeId);
-
-  if(savedDestination){
-    destinations = [savedDestination];
-  }
-
-}else if(
-  Array.isArray(destinationContext.destinationNodeIds) &&
-  destinationContext.destinationNodeIds.length
-){
-  destinations = destinationContext.destinationNodeIds
-    .map(id => nodeById(id))
-    .filter(Boolean);
-
-}else if(
-  String(destinationContext.destinationLabel)
-        .toLowerCase()
-        .includes('restroom')
-    ){
-      destinations = allNodes().filter(
-        node => node.type === 'restroom'
-      );
-
-    }else if(
-      String(destinationContext.destinationLabel)
-        .toLowerCase()
-        .includes('shelter')
-    ){
-      destinations = allNodes().filter(
-        node => node.type === 'shelter'
-      );
-
-    }else if(destinationContext.destinationLabel){
-          const wantedLabel =
-            String(destinationContext.destinationLabel)
-              .trim()
-              .toLowerCase();
-
-          destinations = allNodes().filter(
-            node =>
-              String(node.label)
-                .trim()
-                .toLowerCase() === wantedLabel
-          );
-        }
-
-        if(destinations.length){
-          const best =
-            bestDestinationNode(startNode.id, destinations);
-
-          const destination = best.destination;
-
-          if(destination){
-            $('toFloor').value = destination.floor;
-
-            fillLocationSelect(
-              destination.floor,
-              'to',
-              'Choose destination...'
-            );
-
-            ensureNodeOption('to', destination);
-            $('to').value = destination.id;
-          }
-        }
-      }
-    }catch(error){
-      console.warn(
-        'Could not restore same-building indoor route:',
-        error
-      );
-    }
-  }
-
-  }else if(journeyStage === 'intermediate'){
-  // Use the exact intermediate start selected by CampusWay.
-const intermediateTransfer = JSON.parse(
-  sessionStorage.getItem(
-    'intermediateIndoorTransfer'
-  ) || 'null'
-);
-
-const startNode = nodeById(
-  intermediateTransfer?.startNodeId ||
-  'floor7_n108'
-);
-
-  if(startNode){
-    $('fromFloor').value = startNode.floor;
+    $(floorSelectId).value = node.floor;
 
     fillLocationSelect(
-      startNode.floor,
-      'from',
-      'Choose starting point...'
+      node.floor,
+      selectId,
+      selectId === 'from'
+        ? 'Choose starting point...'
+        : 'Choose destination...'
     );
 
-    ensureNodeOption('from', startNode);
-    $('from').value = startNode.id;
-
-// Use the exact intermediate destination selected by CampusWay.
-// Fall back to the old Main ↔ Rabin transfer nodes when needed.
-const destinationNode = nodeById(
-  intermediateTransfer?.destinationNodeId ||
-  (
-    $('accessibleRoute').checked
-      ? 'floor5_n104'
-      : 'floor5_n204'
-  )
-);
-
-if(destinationNode){
-  $('toFloor').value = destinationNode.floor;
-
-  fillLocationSelect(
-    destinationNode.floor,
-    'to',
-    'Choose destination...'
-  );
-
-  ensureNodeOption('to', destinationNode);
-  $('to').value = destinationNode.id;
-}
+    ensureNodeOption(selectId, node);
+    $(selectId).value = node.id;
   }
 
-}else if(journeyStage === 'origin'){
-  const savedStartContext =
-    sessionStorage.getItem('indoorStartContext');
+  function matchingDestinationNodes(context){
+    if(context.destinationNodeId){
+      const node = nodeById(context.destinationNodeId);
 
-  if(savedStartContext){
-    try{
-      const context = JSON.parse(savedStartContext);
-
-      const startNode = nodeById(context.startNodeId);
-      const exitNode = nodeById(context.exitEntranceId);
-
-      if(startNode){
-        $('fromFloor').value = startNode.floor;
-
-        fillLocationSelect(
-          startNode.floor,
-          'from',
-          'Choose starting point...'
-        );
-
-        $('from').value = startNode.id;
-      }
-
-      if(exitNode){
-        $('toFloor').value = exitNode.floor;
-
-      fillLocationSelect(
-        exitNode.floor,
-        'to',
-        'Choose destination...'
-      );
-
-      ensureNodeOption('to', exitNode);
-
-      $('to').value = exitNode.id;
-      }
-    }catch(error){
-      console.warn(
-        'Could not restore indoor starting room:',
-        error
-      );
+      if(node) return [node];
     }
-  }
-}else{
-  const savedContext =
-    sessionStorage.getItem('indoorContext');
 
-  if(savedContext){
-    try{
-      const context = JSON.parse(savedContext);
-
-      let entrance = null;
-
-      const transferEntranceId =
-  sessionStorage.getItem('madrigaTransferEntrance');
-
-if(transferEntranceId){
-  const transferEntrance =
-    nodeById(transferEntranceId);
-
-  if(transferEntrance){
-    entrance = transferEntrance;
-
-    sessionStorage.removeItem(
-      'madrigaTransferEntrance'
-    );
-  }
-}
-
-      if(!entrance && context.entranceId){
-        const savedEntrance =
-          nodeById(context.entranceId);
-
-        if(
-          savedEntrance &&
-          ['entrance', 'elevator'].includes(
-            savedEntrance.type
-          )
-        ){
-          entrance = savedEntrance;
-        }
-      }
-
-      if(!entrance){
-        entrance = allNodes().find(
-          node => node.type === 'entrance'
-        );
-      }
-
-      if(entrance){
-        $('fromFloor').value = entrance.floor;
-
-        fillLocationSelect(
-          entrance.floor,
-          'from',
-          'Choose starting point...'
-        );
-
-        ensureNodeOption('from', entrance);
-
-        $('from').value = entrance.id;
-      }
-
-let matchingDestinations = [];
-
-if(
-  String(context.destinationLabel)
-    .toLowerCase()
-    .includes('restroom')
-){
-  matchingDestinations = allNodes().filter(
-    node => node.type === 'restroom'
-  );
-
-      }else if(
-        String(context.destinationLabel)
-          .toLowerCase()
-          .includes('shelter')
-      ){
-        matchingDestinations = allNodes().filter(
-          node => node.type === 'shelter'
-        );
-
-        }else if(
-       Array.isArray(context.destinationNodeIds) &&
+    if(
+      Array.isArray(context.destinationNodeIds) &&
       context.destinationNodeIds.length
-      ){
-      matchingDestinations = context.destinationNodeIds
-      .map(id => nodeById(id))
-      .filter(Boolean);
+    ){
+      return context.destinationNodeIds
+        .map(id => nodeById(id))
+        .filter(Boolean);
+    }
 
-      }else if(context.destinationLabel){
-        matchingDestinations = allNodes().filter(
-          node =>
-            ['room', 'gym', 'library', 'landmark'].includes(
-              node.type
-            ) &&
-            String(node.label).trim().toLowerCase() ===
-            String(context.destinationLabel).trim().toLowerCase()
+    const label = String(context.destinationLabel || '')
+      .trim()
+      .toLowerCase();
+
+    if(label.includes('restroom')){
+      return allNodes().filter(node => node.type === 'restroom');
+    }
+
+    if(label.includes('shelter')){
+      return allNodes().filter(node => node.type === 'shelter');
+    }
+
+    if(!label) return [];
+
+    return allNodes().filter(
+      node => String(node.label || '').trim().toLowerCase() === label
+    );
+  }
+
+  function selectBestDestination(context){
+    const destinations = matchingDestinationNodes(context);
+
+    if(!destinations.length) return;
+
+    const startId = $('from').value;
+
+    const best = startId
+      ? bestDestinationNode(startId, destinations)
+      : null;
+
+    const destination =
+      best?.destination || destinations[0];
+
+    selectLocation('to', destination);
+  }
+
+  const journeyStage =
+    sessionStorage.getItem('journeyStage') || 'destination';
+
+  try{
+    if(journeyStage === 'same-building'){
+      const savedStartContext =
+        sessionStorage.getItem('indoorStartContext');
+
+      const savedContext =
+        sessionStorage.getItem('indoorContext');
+
+      if(savedStartContext && savedContext){
+        const startContext = JSON.parse(savedStartContext);
+        const destinationContext = JSON.parse(savedContext);
+
+        selectLocation(
+          'from',
+          nodeById(startContext.startNodeId)
+        );
+
+        selectBestDestination(destinationContext);
+      }
+
+    }else if(journeyStage === 'intermediate'){
+      const intermediateTransfer = JSON.parse(
+        sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+      );
+
+      const startNode = nodeById(
+        intermediateTransfer?.startNodeId || 'floor7_n108'
+      );
+
+      const destinationNode = nodeById(
+        intermediateTransfer?.destinationNodeId ||
+        (
+          $('accessibleRoute').checked
+            ? 'floor5_n104'
+            : 'floor5_n204'
+        )
+      );
+
+      selectLocation('from', startNode);
+      selectLocation('to', destinationNode);
+
+    }else if(journeyStage === 'origin'){
+      const savedStartContext =
+        sessionStorage.getItem('indoorStartContext');
+
+      if(savedStartContext){
+        const context = JSON.parse(savedStartContext);
+
+        selectLocation(
+          'from',
+          nodeById(context.startNodeId)
+        );
+
+        selectLocation(
+          'to',
+          nodeById(context.exitEntranceId)
         );
       }
 
-      if(
-        !matchingDestinations.length &&
-        context.destinationNodeId
-      ){
-        const savedNode =
-          nodeById(context.destinationNodeId);
+    }else{
+      const savedContext =
+        sessionStorage.getItem('indoorContext');
 
-        if(
-          savedNode &&
-          ['room', 'restroom', 'shelter', 'gym', 'library', 'landmark'].includes(
-          savedNode.type
-        )
-        ){
-          matchingDestinations = [savedNode];
+      if(savedContext){
+        const context = JSON.parse(savedContext);
+
+        let entrance = null;
+
+        const transferEntranceId =
+          sessionStorage.getItem('madrigaTransferEntrance');
+
+        if(transferEntranceId){
+          entrance = nodeById(transferEntranceId);
+
+          if(entrance){
+            sessionStorage.removeItem('madrigaTransferEntrance');
+          }
         }
-      }
 
-      if(matchingDestinations.length){
-        const startId = $('from').value;
+        if(!entrance && context.entranceId){
+          const savedEntrance = nodeById(context.entranceId);
 
-        const best = startId
-          ? bestDestinationNode(
-              startId,
-              matchingDestinations
-            )
-          : {
-              destination:
-                matchingDestinations[0]
-            };
+          if(
+            savedEntrance &&
+            ['entrance', 'elevator'].includes(savedEntrance.type)
+          ){
+            entrance = savedEntrance;
+          }
+        }
 
-        const destination =
-          best.destination ||
-          matchingDestinations[0];
-
-        if(destination){
-          $('toFloor').value = destination.floor;
-
-          fillLocationSelect(
-            destination.floor,
-            'to',
-            'Choose destination...'
+        if(!entrance){
+          entrance = allNodes().find(
+            node => node.type === 'entrance'
           );
+        }
 
-          ensureNodeOption('to', destination);
-          $('to').value = destination.id;
-          if($('from').value && $('to').value){
-          setTimeout(() => route(), 0);
-        }
-        }
+        selectLocation('from', entrance);
+        selectBestDestination(context);
       }
-    }catch(error){
-      console.warn(
-        'Could not restore indoor destination:',
-        error
-      );
-      if(
-        $('from').value &&
-        $('to').value
-      ){
-        setTimeout(() => {
-          route();
-        }, 0);
-      }
-     }
     }
+
+  }catch(error){
+    console.warn('Could not restore indoor journey:', error);
+  }
+
+  // Display the route automatically after restoring both locations.
+  if($('from').value && $('to').value){
+    route();
   }
 }
 

@@ -2441,6 +2441,87 @@ function sharedIndoorTransfer(
 
   return connection.standard;
 }
+
+async function chooseSharedIndoorTransfer(originBuilding, destinationBuilding){
+  const connection =
+    SHARED_INDOOR_TRANSFERS[`${originBuilding}:${destinationBuilding}`];
+
+  if(!connection) return null;
+
+  if(currentProfile === 'mobility'){
+    return connection.mobility;
+  }
+
+  let context = {};
+
+  try{
+    context = JSON.parse(
+      sessionStorage.getItem('indoorContext') || '{}'
+    );
+  }catch(error){}
+
+  const startId = customStart?.nodeId;
+  const destinationIds = context.destinationNodeId
+    ? [context.destinationNodeId]
+    : (context.destinationNodeIds || []);
+
+  // Keep existing building-only behavior when exact endpoints are unavailable.
+  if(!startId || !destinationIds.length){
+    return sharedIndoorTransfer(originBuilding, destinationBuilding);
+  }
+
+  const results = [];
+
+  for(const transfer of [connection.standard, connection.mobility]){
+    try{
+      const originSeconds = await getIndoorLegEtaSeconds(
+        originBuilding,
+        startId,
+        transfer.originNodeId,
+        false
+      );
+
+      if(originSeconds === null) continue;
+
+      let destinationSeconds = Infinity;
+
+      for(const destinationId of destinationIds){
+        const seconds = await getIndoorLegEtaSeconds(
+          destinationBuilding,
+          transfer.destinationNodeId,
+          destinationId,
+          false
+        );
+
+        if(seconds !== null){
+          destinationSeconds = Math.min(destinationSeconds, seconds);
+        }
+      }
+
+      if(!Number.isFinite(destinationSeconds)) continue;
+
+      results.push({
+        transfer,
+        seconds: originSeconds +
+          (transfer.method === 'elevator' ? 40 : 30) +
+          destinationSeconds
+      });
+    }catch(error){
+      console.warn('Could not compare shared transfer:', error);
+    }
+  }
+
+  results.sort((a, b) => a.seconds - b.seconds);
+
+  console.table(results.map(result => ({
+    method: result.transfer.method,
+    estimatedSeconds: Math.round(result.seconds)
+  })));
+
+  return results[0]?.transfer ||
+    sharedIndoorTransfer(originBuilding, destinationBuilding);
+}
+
 async function loadIndoorGraphForEta(buildingKey){
   const response = await fetch(
     `buildings/${buildingKey}/${buildingKey}-indoor-graph.json`
@@ -3059,7 +3140,11 @@ async function getJourneyEtaSeconds({
     : null;
 }
 
+let selectedRouteDestination = null;
+
 async function routeTo(name, lat, lng){
+
+  selectedRouteDestination = {name, lat, lng};
   if(routeLine) map.removeLayer(routeLine);
 
     if(gpsMarker && customStart?.buildingKey){
@@ -3343,8 +3428,8 @@ const originBuildingKey =
   entranceKeyByBuilding[customStart?.label] ||
   null;
 
-  const sharedTransfer =
-  sharedIndoorTransfer(
+const sharedTransfer =
+  await chooseSharedIndoorTransfer(
     originBuildingKey,
     entranceKey
   );
@@ -5001,7 +5086,7 @@ function indoorSearchName(node){
 function showStartSuggestions(filter){
 
   const q = (filter || '').trim().toLowerCase();
-  
+
   const placeMatches = q
   ? searchableCampusPlaces().filter(place => placeMatchesSearch(place, q))
   : [];
@@ -5212,12 +5297,10 @@ function pickStart(name, lat, lng){
   gpsMarker.bindPopup('🚩 '+name).openPopup();
   map.flyTo([lat,lng],17,{duration:0.6});
   // If there's already an active route, recalculate it from new start
-  if(routeLine){
-    const dest = document.getElementById('routeTitle')
-  .textContent.split(/[→←]/)[1]?.trim();
-    const match = CAMPUS_DATA.buildings.find(b=>b.name === dest);
-    if(match) setTimeout(()=> routeTo(match.name, match.lat, match.lng), 700);
-  }
+if(selectedRouteDestination){
+  const {name, lat, lng} = selectedRouteDestination;
+  routeTo(name, lat, lng);
+}
 }
 
 function pickIndoorStart(nodeId, label, buildingKey, displayLabel = ''){
@@ -5329,6 +5412,11 @@ gpsMarker = L.circleMarker(
 
   gpsMarker.bindPopup(`🚩 ${customStart.label}`).openPopup();
   map.flyTo([visualStartLat, visualStartLng], 17, {duration: 0.6});
+
+  if(selectedRouteDestination){
+  const {name, lat, lng} = selectedRouteDestination;
+  routeTo(name, lat, lng);
+}
 }
 
 document.getElementById('startInput').addEventListener('focus', ()=> showStartSuggestions(''));
