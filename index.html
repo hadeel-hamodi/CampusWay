@@ -674,12 +674,12 @@ const T = {
       {id:'spatial', label:'Spatial / Navigation',sub:'Extra landmarks, simple steps'},
       {id:'mental',  label:'Mental Health Support',sub:'Routes to quiet space on request'},
     ],
-    alerts:{
+    /*alerts:{
       mobility:'Elevator in Eshkol Tower reported out of service. Routes will avoid it automatically.',
       visual:'Tactile guide path active from Carmel Gate to Main Building.',
       mental:'Quiet zones (libraries, garden) will be suggested near your route.',
       spatial:'Step-by-step landmarks enabled — fewer turns, simpler directions.',
-    },
+    },*/
     voices:['US English','UK English','Default'],
     legendBuilding:'Building',
     legendGate:'Gate / Entrance', legendFood:'Food', legendShop:'Shops', legendClinic:'Clinic',
@@ -1012,14 +1012,14 @@ function buildProfiles(){
       btn.classList.add('active');
       currentProfile = p.id;
       sessionStorage.setItem('accessibilityProfile', currentProfile);
-      showAlert(p.id);
+      //showAlert(p.id);//
       speak(p.label + '. ' + p.sub);
     };
     el.appendChild(btn);
   });
 }
 
-function showAlert(profileId){
+/*function showAlert(profileId){
   const area = document.getElementById('alertArea');
   const msg = t.alerts[profileId];
   if(!msg){ area.innerHTML=''; return; }
@@ -1028,7 +1028,7 @@ function showAlert(profileId){
     <div><strong>${t.liveAlert}</strong><p>${msg}</p></div>
   </div>`;
   speak(t.liveAlert + '. ' + msg);
-}
+}*/
 
 // ═══════════════════════════════════════════
 // MAP

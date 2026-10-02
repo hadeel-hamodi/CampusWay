@@ -768,10 +768,42 @@ async function loadGraph(){
     console.warn('Could not restore indoor journey:', error);
   }
 
-  // Display the route automatically after restoring both locations.
-  if($('from').value && $('to').value){
-    route();
+// Display the restored route.
+if($('from').value && $('to').value){
+  route();
+}
+
+// Continue navigation after a shared building transfer.
+const savedResume =
+  sessionStorage.getItem('sharedNavigationResume');
+
+if(savedResume){
+  sessionStorage.removeItem('sharedNavigationResume');
+
+  try{
+    const resume = JSON.parse(savedResume);
+
+    if(resume.building === BUILDING && routeNodes.length){
+      setNavigationMode(
+        resume.mode === 'sensor' ? 'sensor' : 'auto'
+      );
+
+      await startNavigation();
+
+      if(!navigationActive){
+        $('startBtn').disabled = false;
+        $('status').textContent = localizedInstruction(
+          'Tap Start navigation to resume phone sensors.',
+          'اضغط على ابدأ الملاحة لاستئناف حساسات الهاتف.',
+          'לחץ על התחל ניווט כדי לחדש את חיישני הטלפון.'
+        );
+      }
+    }
+  }catch(error){
+    console.warn('Could not resume shared navigation:', error);
+    $('startBtn').disabled = false;
   }
+}
 }
 
 document.getElementById('building').onchange = async () => {
@@ -1813,6 +1845,14 @@ sessionStorage.setItem(
   sessionStorage.removeItem(
     'originIndoorComplete'
   );
+
+  sessionStorage.setItem(
+  'sharedNavigationResume',
+  JSON.stringify({
+    building: destinationBuilding,
+    mode: navMode
+  })
+);
 
   setTimeout(() => {
     window.location.replace(
