@@ -848,6 +848,17 @@ function localizedBuildingNameByEnglishName(name){
 
   if(building) return localizedBuildingName(building);
 
+  const place = [
+  ...CAMPUS_DATA.points.food,
+  ...CAMPUS_DATA.points.shops
+].find(place =>
+  place.name === name ||
+  place.name_en === name ||
+  place.name_he === name
+);
+
+if(place) return localizedPlaceName(place);
+
   // Building and gate names stay Hebrew in Arabic mode too.
   if(lang === 'he' || lang === 'ar'){
     const gateNames = {
@@ -1249,9 +1260,11 @@ CAMPUS_DATA.buildings.forEach(b=>{
   m.buildingData = b;
 
   m.bindPopup(()=>`
-    <b>${b.name}</b>
+    <b>${localizedBuildingName(b)}</b>
     <br>
-    <span style="color:#5B6B82;">${b.name_he}</span>
+    <span style="color:#5B6B82;">
+      ${lang === 'en' ? b.name_he : b.name}
+    </span>
 
     <button
       class="building-popup-btn"
@@ -1292,7 +1305,9 @@ CAMPUS_DATA.points.gates.forEach(g=>{
     iconSize:[18,18],iconAnchor:[9,9]});
 const marker = L.marker([g.lat,g.lng],{icon})
   .addTo(map)
-  .bindPopup(`<b>🚪</b> ${g.name}`);
+  .bindPopup(() =>
+  `<b>🚪</b> ${localizedBuildingNameByEnglishName(g.name)}`
+);
 
 gateMarkers.push(marker);
 });
@@ -1364,8 +1379,8 @@ CAMPUS_DATA.points.food.forEach(f=>{
     icon: normalFoodIcon
   })
   .addTo(map)
-  .bindPopup(`
-    <b>🍽️ ${f.name}</b>
+  .bindPopup(() => `
+    <b>🍽️ ${localizedPlaceName(f)}</b>
 
     <button
       class="building-popup-btn"
@@ -1444,8 +1459,8 @@ CAMPUS_DATA.points.shops.forEach(s=>{
     icon: normalShopIcon
   })
   .addTo(map)
-  .bindPopup(`
-    <b>🛍️ ${s.name}</b>
+  .bindPopup(() => `
+    <b>🛍️ ${localizedPlaceName(s)}</b>
 
     <button
       class="building-popup-btn"
@@ -1468,7 +1483,7 @@ CAMPUS_DATA.points.clinic.forEach(c=>{
     iconSize:[18,18],iconAnchor:[9,9]});
 const marker = L.marker([c.lat,c.lng],{icon})
   .addTo(map)
-  .bindPopup(`<b>🏥</b> ${c.name}`);
+  .bindPopup(() => `<b>🏥</b> ${t.legendClinic}`);
 
 clinicMarkers.push(marker);
 });
@@ -2071,7 +2086,15 @@ setTimeout(() => {
         : getStart().label;
 
     title.textContent =
-      `${t.routeFrom} ${startLabel} → Nearest restroom`;
+      `${t.routeFrom} ${localizedBuildingNameByEnglishName(startLabel)} ${
+  lang === 'en' ? '→' : '←'
+} ${
+  {
+    en: 'Nearest restroom',
+    he: 'השירותים הקרובים ביותר',
+    ar: 'أقرب مرحاض'
+  }[lang] || 'Nearest restroom'
+}`;
   }
 }, 100);
 
@@ -4733,9 +4756,13 @@ const isRestroomRoute =
 let displayDestination;
 
 if(isRestroomRoute){
-  displayDestination = 'Nearest restroom';
+  displayDestination = {
+  en: 'Nearest restroom',
+  he: 'השירותים הקרובים ביותר',
+  ar: 'أقرب مرحاض'
+}[lang] || 'Nearest restroom';
 
-}else if(sameBuilding){
+}else if(sameBuilding || sessionStorage.getItem('indoorContext')){
   try{
     const indoorContext = JSON.parse(
       sessionStorage.getItem('indoorContext') || 'null'
@@ -4756,7 +4783,7 @@ if(isRestroomRoute){
 }
 
 if(sameBuilding && displayDestination){
-  if(!/^room\s/i.test(displayDestination)){
+  if(/^\d/.test(displayDestination)){
     displayDestination = `Room ${displayDestination}`;
   }
 
@@ -5246,11 +5273,12 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) star
 const searchSuggestions = document.getElementById('searchSuggestions');
 
 function localizedPlaceName(place){
-  return lang === 'en'
-    ? (place.name_en || place.name)
-    : (place.name_he || place.name);
-}
+  if(lang === 'en') return place.name;
 
+  return PLACE_NAMES_HE[place.name] ||
+    place.name_he ||
+    place.name;
+}
 function placeMatchesSearch(place, query){
   const q = String(query || '').trim().toLowerCase();
 
