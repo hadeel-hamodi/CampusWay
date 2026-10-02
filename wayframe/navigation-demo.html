@@ -464,6 +464,39 @@ function localizedInstruction(en, ar, he){
 }
 
 function applyIndoorTranslations(){
+  const buildingNames = {
+  en: {
+    madriga: 'Madriga',
+    education: 'Education',
+    main: 'Main',
+    'multi-purpose': 'Multi-Purpose',
+    rabin: 'Rabin',
+    student: 'Student House'
+  },
+  he: {
+    madriga: 'בניין המדרגה',
+    education: 'בניין החינוך',
+    main: 'הבניין הראשי',
+    'multi-purpose': 'הבניין הרב-תכליתי',
+    rabin: 'בניין רבין',
+    student: 'בית הסטודנט'
+  },
+ar: {
+  madriga: 'בניין המדרגה',
+  education: 'בניין החינוך',
+  main: 'הבניין הראשי',
+  'multi-purpose': 'הבניין הרב-תכליתי',
+  rabin: 'בניין רבין',
+  student: 'בית הסטודנט'
+}
+};
+
+document.querySelectorAll('#building option').forEach(option => {
+  option.textContent =
+    buildingNames[indoorLang]?.[option.value] ||
+    buildingNames.en[option.value] ||
+    option.textContent;
+});
   const rtl=indoorLang==='ar'||indoorLang==='he';
   document.documentElement.lang=indoorLang;
   document.documentElement.dir=rtl?'rtl':'ltr';
@@ -897,7 +930,11 @@ if(
             'Choose destination...'
           );
 
+          ensureNodeOption('to', destination);
           $('to').value = destination.id;
+          if($('from').value && $('to').value){
+          setTimeout(() => route(), 0);
+        }
         }
       }
     }catch(error){
@@ -983,7 +1020,11 @@ function userFacingLocationsForFloor(floorId){
     .sort((a,b)=>{
       const priority={room:0,restroom:1,entrance:2,landmark:3};
       return (priority[a.type]??9)-(priority[b.type]??9) ||
-        a.label.localeCompare(b.label,undefined,{numeric:true});
+        String(a.label || a.type || a.id).localeCompare(
+        String(b.label || b.type || b.id),
+        undefined,
+        {numeric:true}
+      );
     });
 
   // Add one virtual "Elevators" destination for this floor.

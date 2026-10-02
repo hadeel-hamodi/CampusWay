@@ -503,6 +503,7 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
         </div>
       </div>
 
+      
       <!-- Start location + GPS -->
       <div>
         <span class="panel-label" id="lbl-startfrom">Starting from</span>
@@ -817,6 +818,8 @@ let restroomMode = false;
 function pickLang(l, dir){
   lang = l;
   t = T[l];
+
+  sessionStorage.setItem('campuswayLanguage', l);
   document.documentElement.lang = l;
   document.documentElement.dir = dir;
   document.getElementById('langScreen').style.display = 'none';
@@ -839,8 +842,23 @@ function localizedBuildingName(building){
 }
 
 function localizedBuildingNameByEnglishName(name){
-  const building = CAMPUS_DATA.buildings.find(b => b.name === name);
-  return building ? localizedBuildingName(building) : name;
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === name
+  );
+
+  if(building) return localizedBuildingName(building);
+
+  // Building and gate names stay Hebrew in Arabic mode too.
+  if(lang === 'he' || lang === 'ar'){
+    const gateNames = {
+      'Carmel Gate (South gate)': 'שער כרמל',
+      'Haifa (Denya) Gate (North gate)': 'שער דניה'
+    };
+
+    return gateNames[name] || name;
+  }
+
+  return name;
 }
 
 function applyTranslations(){
@@ -4746,7 +4764,18 @@ if(sameBuilding && displayDestination){
     startLabel = `Room ${startLabel}`;
   }
 }
-  document.getElementById('routeTitle').textContent = `${t.routeFrom} ${startLabel} → ${displayDestination}`;
+  startLabel = localizedBuildingNameByEnglishName(startLabel);
+displayDestination =
+  localizedBuildingNameByEnglishName(displayDestination);
+
+startLabel = startLabel.replace(/^Room\s+/i, `${t.room} `);
+displayDestination =
+  displayDestination.replace(/^Room\s+/i, `${t.room} `);
+
+const routeArrow = lang === 'en' ? '→' : '←';
+
+document.getElementById('routeTitle').textContent =
+  `${t.routeFrom} ${startLabel} ${routeArrow} ${displayDestination}`;
   document.getElementById('routeSub').textContent = `${t.optimizedFor}: ${profile.label}`;
 const routeEta = document.getElementById('routeEta');
 
@@ -5081,7 +5110,8 @@ function pickStart(name, lat, lng){
   }else{
     customStart = {lat, lng, label:name};
   }
-  document.getElementById('startInput').value = name;
+  document.getElementById('startInput').value =
+  localizedBuildingNameByEnglishName(name);
   startSuggestions.style.display = 'none';
   if(gpsMarker) map.removeLayer(gpsMarker);
   gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#00B09B',fillColor:'#00B09B',fillOpacity:0.4,weight:3}).addTo(map);
@@ -5089,7 +5119,8 @@ function pickStart(name, lat, lng){
   map.flyTo([lat,lng],17,{duration:0.6});
   // If there's already an active route, recalculate it from new start
   if(routeLine){
-    const dest = document.getElementById('routeTitle').textContent.split('→')[1]?.trim();
+    const dest = document.getElementById('routeTitle')
+  .textContent.split(/[→←]/)[1]?.trim();
     const match = CAMPUS_DATA.buildings.find(b=>b.name === dest);
     if(match) setTimeout(()=> routeTo(match.name, match.lat, match.lng), 700);
   }
@@ -5214,9 +5245,31 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) star
 
 const searchSuggestions = document.getElementById('searchSuggestions');
 
+function localizedPlaceName(place){
+  return lang === 'en'
+    ? (place.name_en || place.name)
+    : (place.name_he || place.name);
+}
+
+function placeMatchesSearch(place, query){
+  const q = String(query || '').trim().toLowerCase();
+
+  return [place.name, place.name_en, place.name_he]
+    .some(name =>
+      String(name || '').toLowerCase().includes(q)
+    );
+}
+
 function showSearchSuggestions(filter){
 
   const q = (filter || '').trim().toLowerCase();
+
+  const placeMatches = q
+  ? [
+      ...CAMPUS_DATA.points.food,
+      ...CAMPUS_DATA.points.shops
+    ].filter(place => placeMatchesSearch(place, q))
+  : [];
 
   // Building matches
   const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
@@ -5293,7 +5346,7 @@ const nodeLabel = String(node.label || '').trim();
   }
 }
 
-  if(!buildingMatches.length && !roomMatches.length){
+  if(!buildingMatches.length && !roomMatches.length && !placeMatches.length){
     searchSuggestions.style.display = 'none';
     return;
   }
@@ -5397,8 +5450,50 @@ uniqueRoomMatches.sort((a, b) => {
   `;
 }).join('');
 
-  searchSuggestions.innerHTML = buildingHTML + roomHTML;
-  searchSuggestions.style.display = 'block';
+searchSuggestions.innerHTML = buildingHTML + roomHTML;
+
+placeMatches.forEach(place => {
+  const row = document.createElement('div');
+  row.className = 'suggestion-item';
+
+  const name = document.createElement('span');
+  name.textContent = localizedPlaceName(place);
+
+  const detail = document.createElement('span');
+  detail.style.cssText = 'color:var(--mid);font-size:11px;';
+
+  const building = place.indoor
+    ? CAMPUS_DATA.buildings.find(
+        b => b.name === ({
+          madriga: 'Terrace Building',
+          main: 'Main Building',
+          rabin: 'Rabin Building',
+          student: 'Student House'
+        })[place.indoor.buildingKey]
+      )
+    : null;
+
+  detail.textContent = building
+    ? localizedBuildingName(building)
+    : (place.type === 'food' ? '🍽️' : '🛍️');
+
+  row.append(name, detail);
+
+  row.onclick = () => {
+    searchInput.value = localizedPlaceName(place);
+    searchSuggestions.style.display = 'none';
+
+    if(place.type === 'food'){
+      routeToFoodPlace(place);
+    } else {
+      routeToShopPlace(place);
+    }
+  };
+
+  searchSuggestions.appendChild(row);
+});
+
+searchSuggestions.style.display = 'block';
 }
 
 
@@ -5450,7 +5545,8 @@ function pickDestination(name, lat, lng){
   sessionStorage.removeItem('indoorContext');
   sessionStorage.removeItem('indoorBuilding');
 
-  document.getElementById('searchInput').value = name;
+  document.getElementById('searchInput').value =
+  localizedBuildingNameByEnglishName(name);
   searchSuggestions.style.display = 'none';
 
   routeTo(name, lat, lng);
@@ -5648,33 +5744,210 @@ function doSearch(q){
 let recognition = null;
 let micActive = false;
 
-function toggleMic(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRecognition){ alert(t.voiceNotSupported); return; }
-  if(micActive){ recognition.stop(); return; }
+let voiceMeterStream = null;
+let voiceMeterContext = null;
+let voiceMeterSource = null;
+let voiceMeterFrame = null;
+let voiceMeterRequest = 0;
+
+function voiceMeterMessage(en, he, ar) {
+  return lang === 'he' ? he : lang === 'ar' ? ar : en;
+}
+
+function stopVoiceMeter() {
+  voiceMeterRequest++;
+
+  if (voiceMeterFrame !== null) {
+    cancelAnimationFrame(voiceMeterFrame);
+    voiceMeterFrame = null;
+  }
+
+  if (voiceMeterSource) {
+    voiceMeterSource.disconnect();
+    voiceMeterSource = null;
+  }
+
+  if (voiceMeterStream) {
+    voiceMeterStream.getTracks().forEach(track => track.stop());
+    voiceMeterStream = null;
+  }
+
+  if (voiceMeterContext) {
+    voiceMeterContext.close().catch(() => {});
+    voiceMeterContext = null;
+  }
+
+  const icon = document.querySelector('#micBtn svg');
+
+if (icon) {
+  icon.style.transform = '';
+}
+}
+async function startVoiceMeter() {
+  stopVoiceMeter();
+
+  const request = voiceMeterRequest;
+  const icon = document.querySelector('#micBtn svg');
+
+  const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (
+    !icon ||
+    !navigator.mediaDevices?.getUserMedia ||
+    !AudioContextClass
+  ) return;
+
+  try {
+    const context = new AudioContextClass();
+    voiceMeterContext = context;
+
+    await context.resume();
+
+    if (request !== voiceMeterRequest) return;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    });
+
+    if (request !== voiceMeterRequest) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+
+    voiceMeterStream = stream;
+
+    const source = context.createMediaStreamSource(stream);
+    voiceMeterSource = source;
+
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+
+    const samples = new Uint8Array(analyser.fftSize);
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    let smoothedLevel = 0;
+
+    function animateIcon() {
+      if (request !== voiceMeterRequest) return;
+
+      analyser.getByteTimeDomainData(samples);
+
+      let sum = 0;
+
+      for (const sample of samples) {
+        const value = (sample - 128) / 128;
+        sum += value * value;
+      }
+
+      const level = Math.min(
+        1,
+        Math.sqrt(sum / samples.length) * 5
+      );
+
+      smoothedLevel += (level - smoothedLevel) * 0.3;
+
+      if (!reduceMotion) {
+        icon.style.transform =
+          `scale(${1 + smoothedLevel * 0.65})`;
+      }
+
+      voiceMeterFrame = requestAnimationFrame(animateIcon);
+    }
+
+    animateIcon();
+  } catch (error) {
+    if (request !== voiceMeterRequest) return;
+
+    stopVoiceMeter();
+    console.warn('Microphone animation unavailable:', error);
+  }
+}
+
+function toggleMic() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert(t.voiceNotSupported);
+    return;
+  }
+
+  if (micActive) {
+    recognition.abort();
+    micActive = false;
+    stopVoiceMeter();
+
+    document.getElementById('micBtn').classList.remove('listening');
+    searchInput.placeholder = t.searchPlaceholder;
+    return;
+  }
 
   recognition = new SpeechRecognition();
-  recognition.lang = lang==='he'?'he-IL': lang==='ar'?'ar-SA':'en-US';
+  recognition.lang =
+    lang === 'he' ? 'he-IL' :
+    lang === 'ar' ? 'ar-SA' : 'en-US';
+
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
 
-  recognition.onstart = ()=>{
-    micActive=true;
+  micActive = true;
+
+  recognition.onstart = () => {
     document.getElementById('micBtn').classList.add('listening');
     searchInput.placeholder = t.voiceListening;
   };
-  recognition.onresult = e=>{
-    const transcript = e.results[0][0].transcript;
+
+  recognition.onresult = event => {
+    const transcript = event.results[0][0].transcript
+      .replace(/(\d)[,٬](?=\d)/g, '$1')
+      .trim();
+
     searchInput.value = transcript;
     doSearch(transcript);
   };
-  recognition.onerror = recognition.onend = ()=>{
-    micActive=false;
+
+  recognition.onerror = event => {
+    console.error('Voice recognition error:', event.error);
+
+    stopVoiceMeter();
+
+    if (event.error !== 'aborted') {
+      alert('Voice recognition error: ' + event.error);
+    }
+  };
+
+  recognition.onend = () => {
+    micActive = false;
+    stopVoiceMeter();
+
     document.getElementById('micBtn').classList.remove('listening');
     searchInput.placeholder = t.searchPlaceholder;
   };
-  recognition.start();
+
+  // Start both from the user's tap.
+  startVoiceMeter();
+
+  try {
+    recognition.start();
+  } catch (error) {
+    micActive = false;
+    stopVoiceMeter();
+
+    document.getElementById('micBtn').classList.remove('listening');
+    searchInput.placeholder = t.searchPlaceholder;
+
+    alert('Voice recognition error: ' + error.message);
+  }
 }
+
+window.addEventListener('pagehide', () => {
+  if (recognition && micActive) recognition.abort();
+  stopVoiceMeter();
+});
 
 if(window.innerWidth <= 768){
   const sidebar = document.querySelector('.sidebar');
