@@ -1986,12 +1986,6 @@ addEdge(
   'steps'
 );
 
-// Middle walkway point → second stairs
-addEdge(
-  'campus_rabin_bridge_path_6',
-  'campus_rabin_stairs_4',
-  'steps'
-);
 
 // Second stairs → lower walkway
 addEdge(
@@ -2204,6 +2198,82 @@ addEdge(
   'footway'
 );
 
+// Additional walking path - main building
+addCampusNode(
+  'campus_extra_walk_1',
+  32.76140483197199,
+  35.01996997743846
+);
+
+addCampusNode(
+  'campus_extra_walk_2',
+  32.761661964705645,
+  35.01960217952729
+);
+
+addCampusNode(
+  'campus_extra_walk_3',
+  32.76177699753029,
+  35.01972422003747
+);
+
+addCampusNode(
+  'campus_extra_walk_4',
+  32.76182380005856,
+  35.01965515315533
+);
+
+addEdge(
+  'campus_extra_walk_3',
+  'campus_main_rabin_bridge_1',
+  'footway'
+);
+
+addEdge('campus_extra_walk_1', 'campus_extra_walk_2', 'footway');
+addEdge('campus_extra_walk_2', 'campus_extra_walk_3', 'footway');
+addEdge('campus_extra_walk_3', 'campus_extra_walk_4', 'footway');
+
+addCampusNode(
+  'campus_rabin_floor5_entrance',
+  32.76116743464413,
+  35.02082761377097
+);
+
+addCampusNode(
+  'campus_rabin_floor5_junction',
+  32.76117702077177,
+  35.02084186300636
+);
+
+addEdge(
+  'campus_rabin_floor5_junction',
+  'campus_rabin_stairs_4',
+  'steps'
+);
+
+addEdge(
+  'campus_rabin_floor5_junction',
+  'campus_rabin_bridge_path_6',
+  'footway'
+);
+
+addEdge(
+  'campus_rabin_floor5_junction',
+  'campus_rabin_floor5_entrance',
+  'footway'
+);
+
+addEdge(
+  'campus_extra_walk_1',
+  1447013842,
+  'footway'
+);
+
+addEdge(
+  'campus_main_floor600_garden_junction',
+  'campus_main_floor600_exit',
+  'footway'
+);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   for(const correction of CAMPUS_CORRECTIONS){

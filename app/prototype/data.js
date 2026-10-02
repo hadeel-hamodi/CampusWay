@@ -46,8 +46,8 @@ const BUILDING_ENTRANCES = {
     },
     {
       nodeId: 'floor4_n46',
-      lat: 32.761430,
-      lng: 35.020440
+      lat: 32.76115220961575,
+      lng: 35.0208755582571
     }
   ],
 
@@ -57,6 +57,11 @@ const BUILDING_ENTRANCES = {
       lat: 32.761944,
       lng: 35.019778
     },
+    {
+  nodeId: 'floor600_n87',
+  lat: 32.761822672287074,
+  lng: 35.01965515315533
+},
 {
   // Main Building — Floor 700 main entrance
   nodeId: 'floor700_n69',
@@ -86,8 +91,8 @@ const BUILDING_ENTRANCES = {
     },
     {
       nodeId: 'floor5_n162',
-      lat: 32.761430,
-      lng: 35.020440
+      lat: 32.76116743464413,
+      lng: 35.02082761377097
     },
     {
     nodeId: 'floor7_n109',

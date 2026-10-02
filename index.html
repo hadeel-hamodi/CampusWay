@@ -4530,6 +4530,25 @@ if(sameBuilding){
   // Only used if the outdoor graph genuinely cannot
   // produce a connected route.
 
+  if(currentProfile === 'mobility'){
+    if(routeLine){
+      map.removeLayer(routeLine);
+      routeLine = null;
+    }
+
+    clearInterval(window._dashAnim);
+    document.getElementById('routeCard').style.display = 'none';
+    document.getElementById('continueIndoorBtn').style.display = 'none';
+
+    alert({
+      en: 'No stair-free outdoor route was found in the mapped network.',
+      he: 'לא נמצא מסלול חיצוני ללא מדרגות ברשת השבילים הממופה.',
+      ar: 'لم يتم العثور على مسار خارجي بدون أدراج ضمن شبكة المسارات المرسومة.'
+    }[lang] || 'No stair-free outdoor route was found in the mapped network.');
+
+    return;
+  }
+
   const mid = [
     (start.lat + lat) / 2 + 0.0006,
     (start.lng + lng) / 2 - 0.0004
@@ -4970,8 +4989,22 @@ function useGPS_do(){
 
 const startSuggestions = document.getElementById('startSuggestions');
 
+function indoorSearchName(node){
+  if(node.type === 'gym') return t.serviceGym;
+  if(node.type === 'library') return t.serviceLibrary;
+
+  return node.type === 'room'
+    ? `${t.room} ${node.label}`
+    : String(node.label || '');
+}
+
 function showStartSuggestions(filter){
+
   const q = (filter || '').trim().toLowerCase();
+  
+  const placeMatches = q
+  ? searchableCampusPlaces().filter(place => placeMatchesSearch(place, q))
+  : [];
 
   const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
     !q ||
@@ -5014,7 +5047,10 @@ function showStartSuggestions(filter){
 
           if(
             ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
-            nodeLabel.toLowerCase().includes(q) &&
+            (
+            nodeLabel.toLowerCase().includes(q) ||
+            indoorSearchName(node).toLowerCase().includes(q)
+          ) &&
             !/^node\s*\d+$/i.test(nodeLabel)
           ){
             roomMatches.push({
@@ -5041,7 +5077,7 @@ function showStartSuggestions(filter){
     return true;
   });
 
-  if(!buildingMatches.length && !uniqueRoomMatches.length){
+  if(!buildingMatches.length && !uniqueRoomMatches.length && !placeMatches.length){
     startSuggestions.style.display = 'none';
     return;
   }
@@ -5098,10 +5134,11 @@ uniqueRoomMatches.sort((a, b) => {
       onclick="pickIndoorStart(
         '${match.node.id}',
         '${String(match.node.label).replace(/'/g, "\\'")}',
-        '${match.buildingKey}'
+        '${match.buildingKey}',
+        '${indoorSearchName(match.node).replace(/'/g, "\\'")} · ${localizedBuildingNameByEnglishName(match.buildingName)}'
       )"
     >
-      <span>${t.room} ${match.node.label}</span>
+      <span>${indoorSearchName(match.node)}</span>
       <span style="color:var(--mid);font-size:11px;">
         ${localizedBuildingNameByEnglishName(match.buildingName)}
         · ${match.floor.replace('floorminus1','-1').replace('floor','')}
@@ -5109,8 +5146,38 @@ uniqueRoomMatches.sort((a, b) => {
     </div>
   `).join('');
 
-  startSuggestions.innerHTML = buildingHTML + roomHTML;
-  startSuggestions.style.display = 'block';
+startSuggestions.innerHTML = buildingHTML + roomHTML;
+
+placeMatches.forEach(place => {
+  const row = document.createElement('div');
+  row.className = 'suggestion-item';
+
+  const name = document.createElement('span');
+  name.textContent = localizedPlaceName(place);
+
+  row.appendChild(name);
+
+  row.onclick = () => {
+    const nodeId = place.indoor?.nodeIds?.[0];
+
+    if(nodeId){
+      pickIndoorStart(
+        nodeId,
+        place.name,
+        place.indoor.buildingKey,
+        localizedPlaceName(place)
+      );
+    } else {
+      pickStart(place.name, place.lat, place.lng);
+      document.getElementById('startInput').value =
+        localizedPlaceName(place);
+    }
+  };
+
+  startSuggestions.appendChild(row);
+});
+
+startSuggestions.style.display = 'block';
 }
 
 
@@ -5153,7 +5220,7 @@ function pickStart(name, lat, lng){
   }
 }
 
-function pickIndoorStart(nodeId, label, buildingKey){
+function pickIndoorStart(nodeId, label, buildingKey, displayLabel = ''){
   const buildingNames = {
     madriga: 'Terrace Building',
     main: 'Main Building',
@@ -5199,7 +5266,8 @@ const profileEntrances =
   customStart = {
     lat: entrance.lat,
     lng: entrance.lng,
-    label: `${t.room} ${label} — ${localizedBuildingName(building)}`,
+    label: displayLabel ||
+  `${t.room} ${label} — ${localizedBuildingName(building)}`,
     buildingKey,
     nodeId,
     entranceId: entrance.nodeId
@@ -5272,17 +5340,40 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.start-row')) star
 
 const searchSuggestions = document.getElementById('searchSuggestions');
 
+function searchableCampusPlaces(){
+  return [
+    ...CAMPUS_DATA.points.food,
+    ...CAMPUS_DATA.points.shops,
+    ...CAMPUS_DATA.points.gates,
+    ...CAMPUS_DATA.points.clinic
+  ];
+}
+
 function localizedPlaceName(place){
+  if(place.type === 'gate'){
+    return localizedBuildingNameByEnglishName(place.name);
+  }
+
+  if(place.type === 'clinic'){
+    return t.legendClinic;
+  }
+
   if(lang === 'en') return place.name;
 
   return PLACE_NAMES_HE[place.name] ||
     place.name_he ||
     place.name;
 }
+
 function placeMatchesSearch(place, query){
   const q = String(query || '').trim().toLowerCase();
 
-  return [place.name, place.name_en, place.name_he]
+  return [
+  place.name,
+  place.name_en,
+  place.name_he,
+  localizedPlaceName(place)
+]
     .some(name =>
       String(name || '').toLowerCase().includes(q)
     );
@@ -5293,10 +5384,7 @@ function showSearchSuggestions(filter){
   const q = (filter || '').trim().toLowerCase();
 
   const placeMatches = q
-  ? [
-      ...CAMPUS_DATA.points.food,
-      ...CAMPUS_DATA.points.shops
-    ].filter(place => placeMatchesSearch(place, q))
+  ? searchableCampusPlaces().filter(place => placeMatchesSearch(place, q))
   : [];
 
   // Building matches
@@ -5358,7 +5446,10 @@ const nodeLabel = String(node.label || '').trim();
 
         if(
           ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
-          nodeLabel.toLowerCase().includes(q) &&
+          (
+          nodeLabel.toLowerCase().includes(q) ||
+          indoorSearchName(node).toLowerCase().includes(q)
+        ) &&
           !/^node\s*\d+$/i.test(nodeLabel)
         ){
           roomMatches.push({
@@ -5452,13 +5543,12 @@ uniqueRoomMatches.sort((a, b) => {
       onclick="pickIndoorDestination(
         '${match.node.id}',
         '${String(match.node.label).replace(/'/g,"\\'")}',
-        '${match.buildingKey}'
+        '${match.buildingKey}',
+        '${indoorSearchName(match.node).replace(/'/g,"\\'")}'
       )"
     >
       <span>
-        ${match.node.type === 'room'
-          ? `${typeLabel} ${match.node.label}`
-          : match.node.label}
+      ${indoorSearchName(match.node)}
       </span>
 
       <span style="color:var(--mid);font-size:11px;">
@@ -5503,7 +5593,12 @@ placeMatches.forEach(place => {
 
   detail.textContent = building
     ? localizedBuildingName(building)
-    : (place.type === 'food' ? '🍽️' : '🛍️');
+    : ({
+    food: '🍽️',
+    shop: '🛍️',
+    gate: '🚪',
+    clinic: '🏥'
+  }[place.type] || '');
 
   row.append(name, detail);
 
@@ -5511,11 +5606,14 @@ placeMatches.forEach(place => {
     searchInput.value = localizedPlaceName(place);
     searchSuggestions.style.display = 'none';
 
-    if(place.type === 'food'){
-      routeToFoodPlace(place);
-    } else {
-      routeToShopPlace(place);
-    }
+  if(place.type === 'food'){
+    routeToFoodPlace(place);
+  } else if(place.type === 'shop'){
+    routeToShopPlace(place);
+  } else {
+    pickDestination(place.name, place.lat, place.lng);
+    searchInput.value = localizedPlaceName(place);
+  }
   };
 
   searchSuggestions.appendChild(row);
@@ -5525,7 +5623,7 @@ searchSuggestions.style.display = 'block';
 }
 
 
-function pickIndoorDestination(nodeId, label, buildingKey){
+function pickIndoorDestination(nodeId, label, buildingKey, displayLabel = ''){
 
 const buildingNames = {
   madriga: 'Terrace Building',
@@ -5548,14 +5646,14 @@ JSON.stringify({
   entranceId: null,
   startNodeId: null,
   destinationNodeId: nodeId,
-  destinationLabel: label
+  destinationLabel: displayLabel || label
 })
   );
 
   sessionStorage.setItem('indoorBuilding', buildingKey);
 
-  document.getElementById('searchInput').value =
-    `${t.room} ${label} — ${localizedBuildingName(building)}`;
+document.getElementById('searchInput').value =
+  `${displayLabel || `${t.room} ${label}`} · ${localizedBuildingName(building)}`;
 
   searchSuggestions.style.display = 'none';
 
