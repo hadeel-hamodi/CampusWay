@@ -136,6 +136,16 @@ test('endpoint pause and automatic recalibration facing start allows backtrackin
   h.stable(2000,2400,210);h.injectSteps(2400,[2350]);h.drain();near(travelled(h),0);
 });
 
+test('mid-route reverse interruption keeps the return prompt and direction',async()=>{
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:0}]);await startSensor(h);
+  h.run('progressIndex=0;progressT=0.5;lastTravelDirection=-1');h.listeners.get('orientationchange')();
+  assert.match(h.element('directionStatus').textContent,/toward the starting location/);
+  const restarting=h.element('calibrateBtn').onclick();h.stable(1000,1400,180);await restarting;
+  assert.equal(h.run('navigationActive'),true);assert.equal(h.run('lastTravelDirection'),-1);
+  const classification=h.run("headingTracker.classify(performance.now(),CampusRouteProgress.candidates(routeNodes,{index:progressIndex,t:progressT}))");
+  assert.equal(classification.direction,-1);
+});
+
 test('old heading cannot keep pushing beyond the corner tolerance',async()=>{
   const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Corner',floor:'floor500',x:1.3/132.6,y:1},{id:'c',label:'C',floor:'floor500',x:1.3/132.6,y:0}]);
   await startSensor(h,90);h.stable(450,2600,90);h.injectSteps(2600,[800,1300,1800,2300]);h.drain();

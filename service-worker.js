@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v31-sensor-floor-navigation';
+const CACHE_NAME = 'campusway-v32-sensor-direction-retry';
 
 const APP_FILES = [
 './',

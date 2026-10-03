@@ -2742,7 +2742,10 @@ function requireDirectionCalibration(){
   stopNavigationMotion();
   lastTravelDirection=intendedDirection;
   $('startBtn').disabled=routeNodes.length<2;
-  const message=progressIndex === routeNodes.length-1
+  const atStart=progressIndex===0 && progressT===0;
+  const atEnd=progressIndex===routeNodes.length-1 && progressT===0;
+  const returning=(atEnd ? -1 : atStart ? 1 : intendedDirection)<0;
+  const message=returning
     ? localizedInstruction('Point the phone back along the route toward the starting location, then press Start navigation.','وجّه الهاتف راجعًا على المسار نحو نقطة البداية، ثم اضغط ابدأ الملاحة.','כוון את הטלפון חזרה לאורך המסלול לנקודת ההתחלה ולחץ התחל ניווט.')
     : localizedInstruction('Point the phone along the next part of the route toward your destination, then press Start navigation.','وجّه الهاتف مع الجزء التالي من المسار نحو الوجهة، ثم اضغط ابدأ الملاحة.','כוון את הטלפון לאורך החלק הבא במסלול לכיוון היעד ולחץ התחל ניווט.');
   $('directionStatus').textContent=message;
@@ -2775,22 +2778,6 @@ function updateDeviceHeading(e){
     drawBaseMap();
   }
 }
-
-async function calibrateAndStart(){
-  if(navMode !== 'sensor' || !sensorsEnabled || navigationActive || routeNodes.length<2) return;
-  const cursor={index:progressIndex,t:progressT};
-  const segment=CampusRouteProgress.segment(routeNodes,progressIndex);
-  const candidates=CampusRouteProgress.candidates(routeNodes,cursor);
-  const reference=progressIndex === routeNodes.length-1
-    ? candidates.find(c=>c.direction===-1)?.bearing
-    : segment?.bearing ?? candidates.find(c=>c.direction===1)?.bearing;
-  if(!Number.isFinite(reference) || !headingTracker.calibrate(reference)){
-    $('directionStatus').textContent=localizedInstruction('Hold the phone steady in portrait, slightly tilted, then try again. Direction readings must be available.','ثبّت الهاتف بالطول ومائلًا قليلًا ثم أعد المحاولة. يجب أن تكون قراءات الاتجاه متاحة.','החזק את הטלפון יציב לאורך בהטיה קלה ונסה שוב. נדרשים נתוני כיוון זמינים.');
-    return;
-  }
-  await startNavigation();
-}
-
 
 function updateDeviceMotion(e){
   sensorEvents++;
@@ -3122,7 +3109,7 @@ function setNavigationMode(mode){
 $('autoModeBtn').onclick=()=>setNavigationMode('auto');
 $('sensorModeBtn').onclick=()=>setNavigationMode('sensor');
 $('wheelchairModeBtn').onclick=()=>setNavigationMode('wheelchair');
-$('calibrateBtn').onclick=calibrateAndStart;
+$('calibrateBtn').onclick=startNavigation;
 $('wheelchairBackBtn').onclick=()=>moveWheelchairToCheckpoint(-1);
 $('wheelchairNextBtn').onclick=()=>moveWheelchairToCheckpoint(1);
 $('sensorConfirmBtn').onclick=async()=>{
