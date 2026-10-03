@@ -1898,31 +1898,74 @@ function showFloorBoundary(direction = lastTravelDirection){
   if(!sensorElevatorRide){
     sensorElevatorRide =
       findSensorElevatorRide(progressIndex, direction);
+
+    // A non-elevator floor change uses one confirmation.
+    if(!sensorElevatorRide){
+      const start = routeNodes[progressIndex];
+      const endIndex = progressIndex + direction;
+      const target = routeNodes[endIndex];
+
+      if(
+        !start ||
+        !target ||
+        start.floor === target.floor
+      ){
+        return;
+      }
+
+      sensorElevatorRide = {
+        route: routeNodes,
+        startIndex: progressIndex,
+        endIndex,
+        direction,
+        kind: 'floor-change',
+        entered: true
+      };
+    }
   }
 
-  if(!sensorElevatorRide){
-    $('instruction').textContent = localizedInstruction(
-      'Confirm your location on the next floor',
-      'أكّد موقعك في الطابق التالي',
-      'אשר את מיקומך בקומה הבאה'
-    );
-
-    $('subInstruction').textContent = localizedInstruction(
-      'Floor change requires confirmation.',
-      'تغيير الطابق يحتاج إلى تأكيد.',
-      'מעבר קומה דורש אישור.'
-    );
-
-    $('status').textContent = $('subInstruction').textContent;
-    return;
-  }
-
-  if(sensorElevatorRide.entered) return;
+  const ride = sensorElevatorRide;
+  const target = routeNodes[ride.endIndex];
 
   stepMovementQueue = [];
   projectedStepCursor = null;
 
-  const target = routeNodes[sensorElevatorRide.endIndex];
+  if(ride.kind === 'floor-change'){
+    const start = routeNodes[ride.startIndex];
+    const usesStairs =
+      start.type === 'stairs' || target.type === 'stairs';
+
+    $('instruction').textContent = usesStairs
+      ? localizedInstruction(
+          `Take the stairs to Floor ${floorLabel(target.floor)}`,
+          `استخدم الأدراج إلى ${localizedFloor(target.floor)}`,
+          `השתמש במדרגות כדי להגיע ל${localizedFloor(target.floor)}`
+        )
+      : localizedInstruction(
+          `Continue to Floor ${floorLabel(target.floor)}`,
+          `تابع إلى ${localizedFloor(target.floor)}`,
+          `המשך אל ${localizedFloor(target.floor)}`
+        );
+
+    $('subInstruction').textContent = localizedInstruction(
+      'Confirm after reaching the indicated floor.',
+      'أكّد بعد الوصول إلى الطابق المحدد.',
+      'אשר לאחר ההגעה לקומה המצוינת.'
+    );
+
+    $('status').textContent = $('subInstruction').textContent;
+
+    $('sensorConfirmBtn').textContent = localizedInstruction(
+      `I'm on Floor ${floorLabel(target.floor)}`,
+      `أنا في ${localizedFloor(target.floor)}`,
+      `אני ב${localizedFloor(target.floor)}`
+    );
+
+    $('sensorConfirmBtn').hidden = false;
+    return;
+  }
+
+  if(ride.entered) return;
 
   $('instruction').textContent = localizedInstruction(
     `Take the elevator to Floor ${floorLabel(target.floor)}`,
@@ -2624,14 +2667,45 @@ async function calibrateHeadingAutomatically(token){
     'החזק את הטלפון בכיוון ההליכה'
   );
 
+  const cursor = {
+  index: progressIndex,
+  t: progressT
+};
+
+const segment = CampusRouteProgress.segment(
+  routeNodes,
+  progressIndex
+);
+
+const candidates = CampusRouteProgress.candidates(
+  routeNodes,
+  cursor
+);
+
+const routeBearing =
+  progressIndex === routeNodes.length - 1
+    ? candidates.find(candidate => candidate.direction === -1)?.bearing
+    : (
+        segment?.bearing ??
+        candidates.find(candidate => candidate.direction === 1)?.bearing
+      );
+
+if(!Number.isFinite(routeBearing)){
+  $('status').textContent = {
+    en: 'Walking direction is unavailable at this floor change.',
+    he: 'לא ניתן לקבוע את כיוון ההליכה במעבר הזה בין הקומות.',
+    ar: 'لا يمكن تحديد اتجاه المشي عند الانتقال بين الطوابق هنا.'
+  }[indoorLang] || 'Walking direction is unavailable at this floor change.';
+
+  return false;
+}
+
   const deadline = performance.now() + 2500;
 
   while(performance.now() < deadline){
     await new Promise(resolve => setTimeout(resolve, 100));
 
     if(!requestIsCurrent()) return false;
-
-    const routeBearing = -currentHeading();
 
     if(headingTracker.calibrate(routeBearing, performance.now())){
       deviceHeading = headingTracker.mapHeading();
