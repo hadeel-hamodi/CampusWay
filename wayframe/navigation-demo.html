@@ -547,12 +547,12 @@ function applyIndoorTranslations(){
   document.querySelectorAll('#building option').forEach(option=>{
     option.textContent=buildingNames[indoorLang]?.[option.value] || buildingNames.en[option.value] || option.textContent;
   });
-  $('directionTitle').textContent=localizedInstruction('Set your starting direction','ثبّت اتجاه البداية','קבע כיוון התחלתי');
+  $('directionTitle').textContent=localizedInstruction('Automatic direction setup','تحديد الاتجاه تلقائيًا','הגדרת כיוון אוטומטית');
   $('directionHelp').textContent=localizedInstruction(
-    'Press Start, point the top of your phone along the route in the direction shown below, and set the initial direction. Keep the phone generally facing your walk; ordinary changes in tilt do not need a new setup. Unclear readings pause position updates, which resume automatically when usable readings return. Turning around can move the marker back; walking backwards without turning is not supported. Position is estimated on this floor; leaving the route is not detected.',
-    'اضغط ابدأ، ووجّه أعلى الهاتف مع المسار بالاتجاه الموضّح أدناه، وثبّت اتجاه البداية. أبقِ الهاتف باتجاه مشيك عمومًا؛ تغيّر الميلان العادي لا يتطلب تثبيتًا جديدًا. عند عدم وضوح القراءة، يتوقف تحديث الموقع مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. يمكنك اللف والمشي للرجوع؛ المشي للخلف دون لف غير مدعوم. الموقع تقديري على هذا الطابق، ولا يكشف الخروج عن المسار.',
-    'לחץ התחל, כוון את קצה הטלפון לאורך המסלול בכיוון שמוצג למטה וקבע כיוון התחלתי. שמור את הטלפון בכיוון ההליכה באופן כללי; שינויי הטיה רגילים אינם דורשים הגדרה מחדש. קריאות לא ברורות משהות את עדכון המיקום, שמתחדש אוטומטית כשחוזרות קריאות תקינות. ניתן להסתובב ולחזור; הליכה לאחור בלי להסתובב אינה נתמכת. המיקום משוער בקומה זו; סטייה מהמסלול אינה מזוהה.');
-  $('calibrateBtn').textContent=localizedInstruction('Set direction and start','ثبّت الاتجاه وابدأ','קבע כיוון והתחל');
+    'Press Start and point the top of your phone along the route. CampusWay sets the initial direction automatically. Keep the phone generally facing your walk; ordinary changes in tilt do not need a new setup. Unclear readings pause position updates, which resume automatically when usable readings return. Turning around can move the marker back; walking backwards without turning is not supported. Position is estimated on this floor; leaving the route is not detected.',
+    'اضغط ابدأ ووجّه أعلى الهاتف مع المسار. يحدد CampusWay اتجاه البداية تلقائيًا. أبقِ الهاتف باتجاه مشيك عمومًا؛ تغيّر الميلان العادي لا يتطلب إعدادًا جديدًا. عند عدم وضوح القراءة، يتوقف تحديث الموقع مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. يمكنك اللف والمشي للرجوع؛ المشي للخلف دون لف غير مدعوم. الموقع تقديري على هذا الطابق، ولا يكشف الخروج عن المسار.',
+    'לחץ התחל וכוון את קצה הטלפון לאורך המסלול. CampusWay מגדיר את כיוון ההתחלה אוטומטית. שמור את הטלפון בכיוון ההליכה באופן כללי; שינויי הטיה רגילים אינם דורשים הגדרה מחדש. קריאות לא ברורות משהות את עדכון המיקום, שמתחדש אוטומטית כשחוזרות קריאות תקינות. ניתן להסתובב ולחזור; הליכה לאחור בלי להסתובב אינה נתמכת. המיקום משוער בקומה זו; סטייה מהמסלול אינה מזוהה.');
+  $('calibrateBtn').textContent=localizedInstruction('Retry direction setup','أعد تحديد الاتجاه','נסה שוב להגדיר כיוון');
   const rtl=indoorLang==='ar'||indoorLang==='he';
   document.documentElement.lang=indoorLang;
   document.documentElement.dir=rtl?'rtl':'ltr';
@@ -2339,26 +2339,78 @@ function findSensorElevatorRide(startIndex,direction=1){
 function showFloorBoundary(direction=lastTravelDirection){
   if(navMode!=='sensor' || !navigationActive) return;
   if(!sensorElevatorRide){
-    sensorElevatorRide=findSensorElevatorRide(progressIndex,direction);
+    sensorElevatorRide =
+      findSensorElevatorRide(progressIndex, direction);
+
+    // A non-elevator floor change uses one confirmation.
+    if(!sensorElevatorRide){
+      const start = routeNodes[progressIndex];
+      const endIndex = progressIndex + direction;
+      const target = routeNodes[endIndex];
+
+      if(
+        !start ||
+        !target ||
+        start.floor === target.floor
+      ){
+        return;
+      }
+
+      sensorElevatorRide = {
+        route: routeNodes,
+        startIndex: progressIndex,
+        endIndex,
+        direction,
+        kind: 'floor-change',
+        entered: true
+      };
+    }
   }
 
-  if(!sensorElevatorRide){
-    $('sensorConfirmBtn').hidden=true;
-    const message=localizedInstruction(
-      'Floor change: choose your new starting location and calculate a route after changing floors.',
-      'انتقال بين الطوابق: بعد تغيير الطابق، حدّد نقطة بدايتك الجديدة واحسب المسار.',
-      'מעבר קומה: לאחר המעבר בחר נקודת התחלה חדשה וחשב מסלול.');
-    $('instruction').textContent=localizedInstruction('Confirm your location on the next floor','حدّد موقعك في الطابق التالي','קבע את מיקומך בקומה הבאה');
-    $('subInstruction').textContent=message;
-    $('status').textContent=message;
+  const ride = sensorElevatorRide;
+  const target = routeNodes[ride.endIndex];
+
+  stepMovementQueue = [];
+  projectedStepCursor = null;
+
+  if(ride.kind === 'floor-change'){
+    const start = routeNodes[ride.startIndex];
+    const usesStairs =
+      start.type === 'stairs' || target.type === 'stairs';
+
+    $('instruction').textContent = usesStairs
+      ? localizedInstruction(
+          `Take the stairs to Floor ${floorLabel(target.floor)}`,
+          `استخدم الأدراج إلى ${localizedFloor(target.floor)}`,
+          `השתמש במדרגות כדי להגיע ל${localizedFloor(target.floor)}`
+        )
+      : localizedInstruction(
+          `Continue to Floor ${floorLabel(target.floor)}`,
+          `تابع إلى ${localizedFloor(target.floor)}`,
+          `המשך אל ${localizedFloor(target.floor)}`
+        );
+
+    $('subInstruction').textContent = localizedInstruction(
+      'Confirm after reaching the indicated floor.',
+      'أكّد بعد الوصول إلى الطابق المحدد.',
+      'אשר לאחר ההגעה לקומה המצוינת.'
+    );
+
+    $('status').textContent = $('subInstruction').textContent;
+
+    $('sensorConfirmBtn').textContent = localizedInstruction(
+      `I'm on Floor ${floorLabel(target.floor)}`,
+      `أنا في ${localizedFloor(target.floor)}`,
+      `אני ב${localizedFloor(target.floor)}`
+    );
+
+    $('sensorConfirmBtn').hidden = false;
     return;
   }
 
-  if(sensorElevatorRide.entered) return;
-  stepMovementQueue=[];
-  projectedStepCursor=null;
-  const target=routeNodes[sensorElevatorRide.endIndex];
-  $('instruction').textContent=localizedInstruction(
+  if(ride.entered) return;
+
+  $('instruction').textContent = localizedInstruction(
     `Take the elevator to Floor ${floorLabel(target.floor)}`,
     `استخدم المصعد إلى ${localizedFloor(target.floor)}`,
     `סע במעלית אל ${localizedFloor(target.floor)}`
@@ -2443,8 +2495,17 @@ function heldDirectionMessage(){
 }
 
 function handleDetectedStep(stepTime){
-  if(sensorElevatorRide) return;
   if(!navigationActive || navMode !== 'sensor') return;
+  if(sensorElevatorRide){
+    const ride=sensorElevatorRide;
+    if(ride.kind !== 'floor-change') return;
+    const cursor=projectedStepCursor || {index:progressIndex,t:progressT};
+    const direction=headingTracker.classify(stepTime,CampusRouteProgress.candidates(routeNodes,cursor));
+    if(direction.direction !== -ride.direction) return;
+    sensorElevatorRide=null;
+    sensorFloorBoundary=false;
+    $('sensorConfirmBtn').hidden=true;
+  }
   detectedSteps++;
   const cursor=projectedStepCursor || {index:progressIndex,t:progressT};
   const direction=headingTracker.classify(stepTime,CampusRouteProgress.candidates(routeNodes,cursor));
@@ -2677,11 +2738,13 @@ function updateDirectionControls(){
 }
 
 function requireDirectionCalibration(){
+  const intendedDirection=lastTravelDirection;
   stopNavigationMotion();
+  lastTravelDirection=intendedDirection;
   $('startBtn').disabled=routeNodes.length<2;
   const message=progressIndex === routeNodes.length-1
-    ? localizedInstruction('Point the phone back along the route toward the starting location, then set the direction.','وجّه الهاتف راجعًا على المسار نحو نقطة البداية ثم ثبّت الاتجاه.','כוון את הטלפון חזרה לאורך המסלול לנקודת ההתחלה וקבע כיוון.')
-    : localizedInstruction('Point the phone along the next part of the route toward your destination, then use Set direction and start.','وجّه الهاتف مع الجزء التالي من المسار نحو الوجهة واضغط «ثبّت الاتجاه وابدأ».','כוון את הטלפון לאורך החלק הבא במסלול לכיוון היעד ולחץ קבע כיוון והתחל.');
+    ? localizedInstruction('Point the phone back along the route toward the starting location, then press Start navigation.','وجّه الهاتف راجعًا على المسار نحو نقطة البداية، ثم اضغط ابدأ الملاحة.','כוון את הטלפון חזרה לאורך המסלול לנקודת ההתחלה ולחץ התחל ניווט.')
+    : localizedInstruction('Point the phone along the next part of the route toward your destination, then press Start navigation.','وجّه الهاتف مع الجزء التالي من المسار نحو الوجهة، ثم اضغط ابدأ الملاحة.','כוון את הטלפון לאורך החלק הבא במסלול לכיוון היעד ולחץ התחל ניווט.');
   $('directionStatus').textContent=message;
   $('status').textContent=message;
   updateDirectionControls();
@@ -2804,7 +2867,89 @@ function startAutoDemo(){
   }, 80);
 }
 
-function stopNavigationMotion(resetHeading=true){
+async function calibrateHeadingAutomatically(token){
+  const requestIsCurrent = () =>
+    token === navigationStartToken &&
+    navMode === 'sensor';
+
+  if(!requestIsCurrent()) return false;
+
+  headingTracker.invalidate();
+  deviceHeading = null;
+
+  $('status').textContent = localizedInstruction(
+    'Hold your phone facing forward...',
+    'أمسك الهاتف باتجاه الأمام...',
+    'החזק את הטלפון בכיוון ההליכה...'
+  );
+
+  $('instruction').textContent = localizedInstruction(
+    'Hold your phone facing forward',
+    'أمسك الهاتف باتجاه الأمام',
+    'החזק את הטלפון בכיוון ההליכה'
+  );
+
+  const atStart=progressIndex===0 && progressT===0;
+  const atEnd=progressIndex===routeNodes.length-1 && progressT===0;
+  const intendedDirection=atEnd ? -1 : atStart ? 1 : lastTravelDirection;
+
+  function localRouteBearing(direction){
+    if(direction > 0){
+      for(let index=progressIndex;index<routeNodes.length-1;index++){
+        if(routeNodes[index].floor !== routeNodes[index+1].floor) break;
+        const segment=CampusRouteProgress.segment(routeNodes,index);
+        if(segment) return segment.bearing;
+      }
+    }else{
+      if(progressT > 0){
+        const segment=CampusRouteProgress.segment(routeNodes,progressIndex);
+        if(segment) return (segment.bearing+180)%360;
+      }
+      for(let index=progressIndex-1;index>=0;index--){
+        if(routeNodes[index].floor !== routeNodes[index+1].floor) break;
+        const segment=CampusRouteProgress.segment(routeNodes,index);
+        if(segment) return (segment.bearing+180)%360;
+      }
+    }
+    return CampusRouteProgress
+      .candidates(routeNodes,{index:progressIndex,t:progressT})
+      .find(candidate=>candidate.direction===direction)?.bearing;
+  }
+
+  const routeBearing=localRouteBearing(intendedDirection);
+  if(!Number.isFinite(routeBearing)){
+    $('status').textContent=localizedInstruction(
+      'Walking direction is unavailable at this location.',
+      'لا يمكن تحديد اتجاه المشي في هذا الموقع.',
+      'לא ניתן לקבוע את כיוון ההליכה במיקום הזה.');
+    return false;
+  }
+
+  const deadline = performance.now() + 2500;
+
+  while(performance.now() < deadline){
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    if(!requestIsCurrent()) return false;
+
+    if(headingTracker.calibrate(routeBearing, performance.now())){
+      deviceHeading = headingTracker.mapHeading();
+      return true;
+    }
+  }
+
+  if(!requestIsCurrent()) return false;
+
+  $('status').textContent = localizedInstruction(
+    'Keep the phone upright and facing forward, then try again.',
+    'أبقِ الهاتف قائمًا وباتجاه الأمام، ثم حاول مجددًا.',
+    'החזק את הטלפון זקוף ובכיוון ההליכה, ואז נסה שוב.'
+  );
+
+  return false;
+}
+
+function stopNavigationMotion(resetHeading = true){
   navigationStartToken++;
   navigationActive=false;
   if(autoTimer !== null) clearInterval(autoTimer);
@@ -2822,8 +2967,11 @@ function stopNavigationMotion(resetHeading=true){
   sensorElevatorRide=null;
   $('sensorConfirmBtn').hidden=true;
   sensorHeadingPaused=false;
-  lastTravelDirection=1;
-  if(resetHeading){ headingTracker.reset(); deviceHeading=null; }
+  if(resetHeading){
+    headingTracker.reset();
+    deviceHeading=null;
+    lastTravelDirection=1;
+  }
   updateDirectionControls();
 }
 
@@ -2845,8 +2993,13 @@ async function startNavigation(){
   }
 
   if(requestedMode === 'sensor' && !headingTracker.isCalibrated){
-    requireDirectionCalibration();
-    return;
+    const calibrated=await calibrateHeadingAutomatically(token);
+    if(token !== navigationStartToken || requestedMode !== navMode || requestedRoute !== routeNodes) return;
+    if(!calibrated){
+      $('startBtn').disabled=false;
+      updateDirectionControls();
+      return;
+    }
   }
   stopNavigationMotion(false);
   navigationActive=true;

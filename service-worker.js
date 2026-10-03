@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v30-canonical-indoor-graphs';
+const CACHE_NAME = 'campusway-v31-sensor-floor-navigation';
 
 const APP_FILES = [
 './',
