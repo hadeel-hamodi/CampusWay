@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CampusWay Microphone Test</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 560px;
+      margin: 30px auto;
+      padding: 0 20px;
+      color: #0d1b3e;
+    }
+
+    button {
+      padding: 14px 20px;
+      font-size: 18px;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 150px;
+      margin: 24px 0;
+      background: #eef2f7;
+      border-radius: 12px;
+    }
+
+    #status {
+      padding: 14px;
+      background: #eef2f7;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Microphone test</h1>
+  <p>Press Start, allow microphone access, then speak.
+     The bars should move with your voice.</p>
+
+  <button id="start">Start microphone</button>
+  <button id="stop" disabled>Stop</button>
+
+  <canvas id="meter" width="600" height="150"></canvas>
+  <p id="status" role="status">Microphone is off.</p>
+
+  <p>This test does not record or upload sound.</p>
+
+  <script>
+    const startButton = document.getElementById('start');
+    const stopButton = document.getElementById('stop');
+    const status = document.getElementById('status');
+    const canvas = document.getElementById('meter');
+    const drawing = canvas.getContext('2d');
+
+    let stream = null;
+    let audioContext = null;
+    let analyser = null;
+    let source = null;
+    let animation = null;
+    let samples = null;
+    let starting = false;
+    let requestId = 0;
+
+    function drawIdle() {
+      drawing.clearRect(0, 0, canvas.width, canvas.height);
+      drawing.fillStyle = '#94a3b8';
+
+      for (let i = 0; i < 24; i++) {
+        drawing.fillRect(i * 25 + 5, 73, 15, 4);
+      }
+    }
+
+    function drawMeter() {
+      if (!analyser) return;
+
+      analyser.getByteTimeDomainData(samples);
+
+      let sum = 0;
+
+      for (const sample of samples) {
+        const amplitude = (sample - 128) / 128;
+        sum += amplitude * amplitude;
+      }
+
+      const level = Math.min(
+        1,
+        Math.sqrt(sum / samples.length) * 5
+      );
+
+      drawing.clearRect(0, 0, canvas.width, canvas.height);
+      drawing.fillStyle = '#00a88f';
+
+      for (let i = 0; i < 24; i++) {
+        const shape = 0.35 +
+          0.65 * Math.sin((i / 23) * Math.PI);
+
+        const height = Math.max(4, level * 140 * shape);
+
+        drawing.fillRect(
+          i * 25 + 5,
+          (canvas.height - height) / 2,
+          15,
+          height
+        );
+      }
+
+      animation = requestAnimationFrame(drawMeter);
+    }
+
+    function stopMicrophone(showMessage = true) {
+      requestId++;
+      starting = false;
+
+      if (animation !== null) {
+        cancelAnimationFrame(animation);
+        animation = null;
+      }
+
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+
+      if (source) {
+        source.disconnect();
+        source = null;
+      }
+
+      if (audioContext) {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+      }
+
+      analyser = null;
+      samples = null;
+
+      startButton.disabled = false;
+      stopButton.disabled = true;
+
+      drawIdle();
+
+      if (showMessage) {
+        status.textContent = 'Microphone is off.';
+      }
+    }
+
+    startButton.onclick = async () => {
+      if (starting || stream) return;
+
+      if (!window.isSecureContext) {
+        status.textContent =
+          'Open this page through HTTPS on your phone. ' +
+          'On your laptop, localhost also works.';
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        status.textContent =
+          'Microphone access is unavailable in this browser.';
+        return;
+      }
+
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        status.textContent =
+          'Audio analysis is unavailable in this browser.';
+        return;
+      }
+
+      starting = true;
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      status.textContent = 'Requesting microphone access…';
+
+      const currentRequest = ++requestId;
+
+      try {
+        // Create and resume from the button tap.
+        audioContext = new AudioContextClass();
+        const context = audioContext;
+
+        await context.resume();
+
+        if (currentRequest !== requestId) return;
+
+        const microphone = await navigator.mediaDevices
+          .getUserMedia({ audio: true });
+
+        if (currentRequest !== requestId) {
+          microphone.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        stream = microphone;
+        source = context.createMediaStreamSource(stream);
+        analyser = context.createAnalyser();
+        analyser.fftSize = 1024;
+
+        samples = new Uint8Array(analyser.fftSize);
+        source.connect(analyser);
+
+        // Do not connect to speakers: avoids microphone feedback.
+        starting = false;
+
+        status.textContent = context.state === 'running'
+          ? 'Microphone active. Speak and watch the bars.'
+          : 'Audio is paused. Press Stop, then Start again.';
+
+        drawMeter();
+      } catch (error) {
+        if (currentRequest !== requestId) return;
+
+        stopMicrophone(false);
+
+        const messages = {
+          NotAllowedError:
+            'Microphone permission was denied. Allow it in browser settings.',
+          NotFoundError:
+            'No microphone was found.',
+          NotReadableError:
+            'The microphone could not be opened. Close other apps using it.'
+        };
+
+        status.textContent =
+          messages[error.name] ||
+          `Microphone error: ${error.name} — ${error.message}`;
+      }
+    };
+
+    stopButton.onclick = () => stopMicrophone();
+
+    window.addEventListener('pagehide', () => stopMicrophone());
+
+    drawIdle();
+  </script>
+</body>
+</html>

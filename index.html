@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -12,7 +12,6 @@
 <script src="wayframe/route-planner.js"></script>
 <script src="app/prototype/outdoor-routing.js"></script>
 <script src="app/prototype/madriga-graph.js"></script>
-<script src="app/prototype/main-graph.js"></script>
 
 <!-- Not mapped/exported yet -->
 <!-- <script src="app/prototype/education-graph.js"></script> -->
@@ -122,6 +121,12 @@ header{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:9px 6px;border-radius:11px;border:1.5px solid var(--line);
   background:var(--white);cursor:pointer;font-family:inherit;transition:.15s;
+}
+.a11y-btn.service-active{
+  background:#E6F7F4;
+  border:2px solid #00B09B;
+  box-shadow:0 0 0 2px rgba(0,176,155,.12);
+  font-weight:700;
 }
 .a11y-btn:hover{border-color:var(--teal);}
 .a11y-btn.active{border-color:var(--teal);background:var(--teal-light);}
@@ -496,6 +501,7 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
         </div>
       </div>
 
+
       <!-- Start location + GPS -->
       <div>
         <span class="panel-label" id="lbl-startfrom">Starting from</span>
@@ -539,34 +545,34 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
   <span class="panel-label" id="lbl-services">Services Near Me</span>
 
   <div class="a11y-toolbar">
-    <button class="a11y-btn" onclick="findNearbyService('restroom')">
+    <button id="serviceRestroomBtn" class="a11y-btn" onclick="findNearbyService('restroom')">
       <span style="font-size:18px;">🚻</span>
       <span id="lbl-service-restrooms">Restrooms</span>
     </button>
 
-    <button class="a11y-btn" onclick="findNearbyService('food')">
+    <button id="serviceFoodBtn" class="a11y-btn" onclick="findNearbyService('food')">
       <span style="font-size:18px;">🍽️</span>
       <span id="lbl-service-food">Food</span>
     </button>
 
-    <button class="a11y-btn" onclick="findNearbyService('shop')">
+   <button id="serviceShopBtn" class="a11y-btn" onclick="findNearbyService('shop')">
   <span style="font-size:18px;">🛍️</span>
   <span id="lbl-service-shops">Shops</span>
     </button>
 
-    <button class="a11y-btn" onclick="findNearbyService('clinic')">
+    <button id="serviceClinicBtn" class="a11y-btn" onclick="findNearbyService('clinic')">
       <span style="font-size:18px;">🏥</span>
       <span id="lbl-service-clinic">Clinic</span>
     </button>
   </div>
 
   <div class="a11y-toolbar" style="margin-top:8px;">
-  <button class="a11y-btn" onclick="findNearbyService('gym')">
+  <button id="serviceGymBtn" class="a11y-btn" onclick="findNearbyService('gym')">
     <span style="font-size:18px;">🏋️</span>
     <span id="lbl-service-gym">Gym</span>
   </button>
 
-  <button class="a11y-btn" onclick="findNearbyService('library')">
+  <button id="serviceLibraryBtn" class="a11y-btn" onclick="findNearbyService('library')">
     <span style="font-size:18px;">📚</span>
     <span id="lbl-service-library">Library</span>
   </button>
@@ -576,7 +582,7 @@ html[dir=rtl] .building-item{flex-direction:row-reverse;}
     <span id="lbl-service-landmarks">Landmarks</span>
   </button>
 
-  <button class="a11y-btn" onclick="findNearbyService('shelter')">
+  <button id="serviceShelterBtn" class="a11y-btn" onclick="findNearbyService('shelter')">
   <span style="font-size:18px;">🛡️</span>
   <span id="lbl-service-shelters">Shelters</span>
   </button>
@@ -810,8 +816,11 @@ let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
 sessionStorage.setItem('accessibilityProfile', currentProfile);
 let audioOn = false;
 // Search and navigation share the canonical indoor graph files.
+let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
 let STUDENT_GRAPH = null;
+const MAIN_GRAPH_URL =
+  'buildings/main/main-indoor-graph.json';
 const RABIN_GRAPH_URL =
   'buildings/rabin/rabin-indoor-graph.json';
 const STUDENT_GRAPH_URL =
@@ -839,6 +848,13 @@ function loadCanonicalIndoorGraph(url, buildingName){
   });
 }
 
+const mainGraphReady = loadCanonicalIndoorGraph(
+  MAIN_GRAPH_URL,
+  'Main Building'
+).then(graph => {
+  MAIN_GRAPH = graph;
+  return graph;
+});
 const rabinGraphReady = loadCanonicalIndoorGraph(
   RABIN_GRAPH_URL,
   'Rabin Building'
@@ -854,6 +870,7 @@ const studentGraphReady = loadCanonicalIndoorGraph(
   return graph;
 });
 const indoorSearchGraphsReady = Promise.all([
+  mainGraphReady,
   rabinGraphReady,
   studentGraphReady
 ]);
@@ -865,6 +882,8 @@ let keepIndoorContextForCurrentRoute = false;
 let currentOutdoorDestination = null;
 let outdoorRouteRequestId = 0;
 const OUTDOOR_JOURNEY_STORAGE_KEY = 'outdoorJourneyContext';
+let shopMode = false;
+let activeRouteService = null;
 let restroomMode = false;
 
 // ═══════════════════════════════════════════
@@ -918,8 +937,34 @@ function localizedBuildingName(building){
 }
 
 function localizedBuildingNameByEnglishName(name){
-  const building = CAMPUS_DATA.buildings.find(b => b.name === name);
-  return building ? localizedBuildingName(building) : name;
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === name
+  );
+
+  if(building) return localizedBuildingName(building);
+
+  const place = [
+  ...CAMPUS_DATA.points.food,
+  ...CAMPUS_DATA.points.shops
+].find(place =>
+  place.name === name ||
+  place.name_en === name ||
+  place.name_he === name
+);
+
+if(place) return localizedPlaceName(place);
+
+  // Building and gate names stay Hebrew in Arabic mode too.
+  if(lang === 'he' || lang === 'ar'){
+    const gateNames = {
+      'Carmel Gate (South gate)': 'שער כרמל',
+      'Haifa (Denya) Gate (North gate)': 'שער דניה'
+    };
+
+    return gateNames[name] || name;
+  }
+
+  return name;
 }
 
 function updateRestSpaceServiceButton(){
@@ -1117,12 +1162,14 @@ const map = L.map('map', {
   zoomControl: true,
   attributionControl: false,
   minZoom: 15,
+  maxZoom: 23,
   maxBounds: campusBounds,
   maxBoundsViscosity: 1.0
 }).setView(center, 16);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
+   maxNativeZoom: 19,
+  maxZoom: 23,
   noWrap: true,
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
@@ -1130,25 +1177,88 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 map.getContainer().style.background = '#EAF3ED';
 
+// ==================================================
+// MAP COORDINATE PICKER
+// ==================================================
+// Click anywhere on the campus map to print the exact
+// latitude and longitude in the browser console.
+// ==================================================
 
+map.on('click', function(e){
+
+  console.log(
+    'MAP CLICK:',
+    e.latlng.lat,
+    e.latlng.lng
+  );
+
+  L.popup()
+    .setLatLng(e.latlng)
+    .setContent(
+      `${e.latlng.lat}, ${e.latlng.lng}`
+    )
+    .openOn(map);
+
+});
+
+// ==================================================
+// OUTDOOR ROUTING GRAPH DEBUG VIEW
+// ==================================================
+// OSM nodes + edges       = BLUE
+// CampusWay custom nodes  = RED
+// Edges touching a custom node = RED
+//
+// Run in console:
+//   showOutdoorDebugGraph()
+//
+// Click any node to see its exact ID.
+// ==================================================
+
+let outdoorDebugLayer = null;
 
 async function showOutdoorDebugGraph(){
 
   await CampusOutdoorRouting.load();
 
+  // Remove old debug overlay if we run this again.
+  if(outdoorDebugLayer){
+    map.removeLayer(outdoorDebugLayer);
+  }
+
+  outdoorDebugLayer = L.layerGroup().addTo(map);
+
   const debugGraph =
     CampusOutdoorRouting.getDebugGraph();
 
+  const nodeById =
+    new Map(
+      debugGraph.map(node => [node.id, node])
+    );
+
   const drawnEdges = new Set();
+
+
+  // --------------------------------------------------
+  // DRAW ROUTING EDGES
+  // --------------------------------------------------
 
   debugGraph.forEach(node => {
 
     node.connections.forEach(connection => {
 
+      const other =
+        nodeById.get(connection.node);
+
+      if(!other){
+        return;
+      }
+
       const key = [
-        node.id,
-        connection.node
-      ].sort().join('-');
+        String(node.id),
+        String(connection.node)
+      ]
+        .sort()
+        .join('|');
 
       if(drawnEdges.has(key)){
         return;
@@ -1156,14 +1266,9 @@ async function showOutdoorDebugGraph(){
 
       drawnEdges.add(key);
 
-      const other =
-        CampusOutdoorRouting.inspectNode(
-          connection.node
-        );
-
-      if(!other.coordinate){
-        return;
-      }
+      const customEdge =
+        String(node.id).startsWith('campus_') ||
+        String(connection.node).startsWith('campus_');
 
       L.polyline(
         [
@@ -1171,17 +1276,74 @@ async function showOutdoorDebugGraph(){
           other.coordinate
         ],
         {
-          color: '#ff0000',
-          weight: 3,
-          opacity: 0.8
+          color: customEdge
+            ? '#ff0000'
+            : '#2563eb',
+
+          weight: customEdge ? 4 : 2,
+
+          opacity: customEdge ? 0.9 : 0.5,
+
+          // Let map clicks pass through debug lines.
+          interactive: false
         }
-      ).addTo(map);
+      )
+      .addTo(outdoorDebugLayer);
+
     });
+
   });
 
+
+  // --------------------------------------------------
+  // DRAW ROUTING NODES
+  // --------------------------------------------------
+
+  debugGraph.forEach(node => {
+
+    const customNode =
+      String(node.id).startsWith('campus_');
+
+    const marker =
+      L.circleMarker(
+        node.coordinate,
+        {
+          radius: customNode ? 6 : 3,
+
+          color: customNode
+            ? '#ff0000'
+            : '#2563eb',
+
+          fillColor: customNode
+            ? '#ff0000'
+            : '#2563eb',
+
+          fillOpacity: customNode ? 1 : 0.7,
+
+          weight: 1,
+
+          // Let map clicks pass through debug dots.
+          interactive: false
+        }
+      );
+
+    marker.addTo(outdoorDebugLayer);
+
+  });
+
+
   console.log(
-    `Debug overlay: ${drawnEdges.size} OSM connections drawn`
+    `Debug overlay: ${debugGraph.length} routing nodes / ${drawnEdges.size} connections`
   );
+}
+
+// Remove the debug graph again without refreshing.
+function hideOutdoorDebugGraph(){
+
+  if(outdoorDebugLayer){
+    map.removeLayer(outdoorDebugLayer);
+    outdoorDebugLayer = null;
+  }
 }
 
 
@@ -1216,9 +1378,11 @@ CAMPUS_DATA.buildings.forEach(b=>{
   m.buildingData = b;
 
   m.bindPopup(()=>`
-    <b>${b.name}</b>
+    <b>${localizedBuildingName(b)}</b>
     <br>
-    <span style="color:#5B6B82;">${b.name_he}</span>
+    <span style="color:#5B6B82;">
+      ${lang === 'en' ? b.name_he : b.name}
+    </span>
 
     <button
       class="building-popup-btn"
@@ -1259,7 +1423,9 @@ CAMPUS_DATA.points.gates.forEach(g=>{
     iconSize:[18,18],iconAnchor:[9,9]});
 const marker = L.marker([g.lat,g.lng],{icon})
   .addTo(map)
-  .bindPopup(`<b>🚪</b> ${g.name}`);
+  .bindPopup(() =>
+  `<b>🚪</b> ${localizedBuildingNameByEnglishName(g.name)}`
+);
 
 gateMarkers.push(marker);
 });
@@ -1274,17 +1440,69 @@ const normalFoodIcon = L.divIcon({
   iconAnchor:[7,7]
 });
 
+function routeToFoodPlace(food){
+
+  // Outdoor-only food place
+  if(!food.indoor){
+    routeTo(
+      food.name,
+      food.lat,
+      food.lng
+    );
+    return;
+  }
+
+  // Indoor food destination
+  sessionStorage.setItem(
+    'indoorContext',
+    JSON.stringify({
+      entranceId: null,
+      startNodeId: null,
+      destinationLabel: food.name,
+      destinationNodeIds: food.indoor.nodeIds
+    })
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    food.indoor.buildingKey
+  );
+
+  const buildingNameByKey = {
+    main: 'Main Building',
+    rabin: 'Rabin Building',
+    madriga: 'Terrace Building',
+    student: 'Student House',
+    'multi-purpose': 'Multi-Purpose Building'
+  };
+
+  const buildingName =
+    buildingNameByKey[food.indoor.buildingKey];
+
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === buildingName
+  );
+
+  if(!building) return;
+
+  routeTo(
+    building.name,
+    building.lat,
+    building.lng
+  );
+}
+
 CAMPUS_DATA.points.food.forEach(f=>{
   const marker = L.marker([f.lat,f.lng],{
     icon: normalFoodIcon
   })
   .addTo(map)
-  .bindPopup(`
-    <b>🍽️ ${f.name}</b>
+  .bindPopup(() => `
+    <b>🍽️ ${localizedPlaceName(f)}</b>
 
     <button
       class="building-popup-btn"
-      onclick="routeTo('${f.name.replace(/'/g,"\\'")}', ${f.lat}, ${f.lng})"
+      onclick='routeToFoodPlace(${JSON.stringify(f)})'
     >
       ${t.navigateHere}
     </button>
@@ -1302,18 +1520,69 @@ const normalShopIcon = L.divIcon({
   html: `<div style="width:14px;height:14px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
   iconAnchor:[7,7]
 });
+function routeToShopPlace(shop){
+
+  // Outdoor-only shop
+  if(!shop.indoor){
+    routeTo(
+      shop.name,
+      shop.lat,
+      shop.lng
+    );
+    return;
+  }
+
+  // Indoor shop destination
+  sessionStorage.setItem(
+    'indoorContext',
+    JSON.stringify({
+      entranceId: null,
+      startNodeId: null,
+      destinationLabel: shop.name,
+      destinationNodeIds: shop.indoor.nodeIds
+    })
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    shop.indoor.buildingKey
+  );
+
+  const buildingNameByKey = {
+    main: 'Main Building',
+    rabin: 'Rabin Building',
+    madriga: 'Terrace Building',
+    student: 'Student House',
+    'multi-purpose': 'Multi-Purpose Building'
+  };
+
+  const buildingName =
+    buildingNameByKey[shop.indoor.buildingKey];
+
+  const building = CAMPUS_DATA.buildings.find(
+    b => b.name === buildingName
+  );
+
+  if(!building) return;
+
+  routeTo(
+    building.name,
+    building.lat,
+    building.lng
+  );
+}
 
 CAMPUS_DATA.points.shops.forEach(s=>{
   const marker = L.marker([s.lat,s.lng],{
     icon: normalShopIcon
   })
   .addTo(map)
-  .bindPopup(`
-    <b>🛍️ ${s.name}</b>
+  .bindPopup(() => `
+    <b>🛍️ ${localizedPlaceName(s)}</b>
 
     <button
       class="building-popup-btn"
-      onclick="routeTo('${s.name.replace(/'/g,"\\'")}', ${s.lat}, ${s.lng})"
+      onclick='routeToShopPlace(${JSON.stringify(s)})'
     >
       ${t.navigateHere}
     </button>
@@ -1332,13 +1601,76 @@ CAMPUS_DATA.points.clinic.forEach(c=>{
     iconSize:[18,18],iconAnchor:[9,9]});
 const marker = L.marker([c.lat,c.lng],{icon})
   .addTo(map)
-  .bindPopup(`<b>🏥</b> ${c.name}`);
+  .bindPopup(() => `<b>🏥</b> ${t.legendClinic}`);
 
 clinicMarkers.push(marker);
 });
 
-// Outdoor stairs & elevators
-const vertical = [];
+// ==================================================
+// OUTDOOR STAIRS & ELEVATORS
+// ==================================================
+// Main Building Floor 600 outdoor elevator.
+// This is the same elevator used by the accessible
+// Main ↔ Student House outdoor routing graph.
+// ==================================================
+
+// ==================================================
+// OUTDOOR STAIRS & ELEVATORS
+// ==================================================
+
+const vertical = [
+  // Main Building Floor 600 outdoor elevator
+  {
+    type: 'elevator',
+    lat: 32.762211,
+    lng: 35.020120,
+    label: 'Main Building Floor 600 elevator',
+    working: true
+  },
+
+  // Small stairs on the Floor 600 → Student House route
+  {
+    type: 'stairs',
+    lat: 32.762025,
+    lng: 35.020222,
+    label: 'Floor 600 small stairs'
+  },
+
+  {
+    type: 'stairs',
+    lat: 32.762059,
+    lng: 35.020293,
+    label: 'Floor 600 long stairs'
+  },
+
+  // Rabin
+{
+  type: 'stairs',
+  lat: 32.76151986512884,
+  lng: 35.020382702350624,
+  label: 'Stairs'
+},
+
+{
+  type: 'stairs',
+  lat: 32.76145445413631,
+  lng: 35.020460486412055,
+  label: 'Stairs'
+},
+
+{
+  type: 'stairs',
+  lat: 32.761255965313104,
+  lng: 35.020739436149604,
+  label: 'Stairs'
+},
+{
+  type: 'stairs',
+  lat: 32.76116799853403,
+  lng: 35.020854771137245,
+  label: 'Stairs'
+}
+];
 
 vertical.forEach(v=>{
   const isElevator = v.type === 'elevator';
@@ -1353,10 +1685,10 @@ vertical.forEach(v=>{
 
 function buildLegend(){
   const isHC = document.body.classList.contains('hc');
-  const dot = (bg, shape, symbol, hcSymbol) => isHC 
+  const dot = (bg, shape, symbol, hcSymbol) => isHC
     ? `<span style="width:14px;height:14px;border-radius:${shape};background:#FFD400;display:inline-flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;">${hcSymbol}</span>`
     : `<span style="width:12px;height:12px;border-radius:${shape};background:${bg};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;">${symbol}</span>`;
-  
+
   document.getElementById('mapLegend').innerHTML = `
     <div class="legend-row">${dot('#0D1B3E','4px','','■')} ${t.legendBuilding}</div>
     <div class="legend-row">${dot('#9CA3AF','50%','','🚪')} ${t.legendGate}</div>
@@ -1399,11 +1731,11 @@ function getStart(){
 
 function restoreServiceMarkers(){
 
-restroomMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
-});
+  restroomMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
 
-restroomMode = false;
+  restroomMode = false;
 
   clinicMarkers.forEach(marker => {
     if(!map.hasLayer(marker)) marker.addTo(map);
@@ -1415,6 +1747,7 @@ restroomMode = false;
 
   foodMode = false;
 }
+
 function collectIndoorRestroomServices(){
 
   const buildings = [
@@ -1696,6 +2029,20 @@ function routeToIndoorService(match){
     match.buildingKey
   );
 
+  if(
+  match.node.type === 'gym' &&
+  match.buildingKey === 'madriga'
+){
+  sessionStorage.setItem(
+    'preferredDestinationEntrance',
+    'floorminus1_n1'
+  );
+}else{
+    sessionStorage.removeItem?.(
+      'preferredDestinationEntrance'
+    );
+}
+
   document.getElementById('searchInput').value =
     `${displayLabel} — ${localizedBuildingName(match.building)}`;
 
@@ -1710,6 +2057,54 @@ function routeToIndoorService(match){
 }
 
 let nearbyServiceRequestId = 0;
+function exitFoodShopMode(){
+
+  foodMode = false;
+  shopMode = false;
+
+  foodMarkers.forEach(marker => {
+    marker.setIcon(normalFoodIcon);
+
+    if(!map.hasLayer(marker)){
+      marker.addTo(map);
+    }
+  });
+
+  shopMarkers.forEach(marker => {
+    marker.setIcon(normalShopIcon);
+
+    if(!map.hasLayer(marker)){
+      marker.addTo(map);
+    }
+  });
+}
+
+function setActiveServiceButton(type){
+
+  const buttons = {
+    restroom: 'serviceRestroomBtn',
+    food: 'serviceFoodBtn',
+    shop: 'serviceShopBtn',
+    clinic: 'serviceClinicBtn',
+    gym: 'serviceGymBtn',
+    library: 'serviceLibraryBtn',
+    landmark: 'landmarkServiceBtn',
+    'rest-space': 'landmarkServiceBtn',
+    shelter: 'serviceShelterBtn'
+  };
+
+  Object.values(buttons).forEach(id => {
+    document
+      .getElementById(id)
+      ?.classList.remove('service-active');
+  });
+
+  const activeButton = document.getElementById(buttons[type]);
+
+  if(activeButton){
+    activeButton.classList.add('service-active');
+  }
+}
 
 async function findNearbyService(type){
 
@@ -1728,7 +2123,43 @@ async function findNearbyService(type){
 
   if(requestId !== nearbyServiceRequestId) return;
 
-  if(type !== 'food' && type !== 'restroom'){
+  if(type !== 'food' && type !== 'shop'){
+
+    // Clicking the currently active route service again = turn it off
+    if(activeRouteService === type){
+      activeRouteService = null;
+
+      document
+        .getElementById({
+          restroom: 'serviceRestroomBtn',
+          clinic: 'serviceClinicBtn',
+          gym: 'serviceGymBtn',
+          library: 'serviceLibraryBtn',
+          landmark: 'landmarkServiceBtn',
+          'rest-space': 'landmarkServiceBtn',
+          shelter: 'serviceShelterBtn'
+        }[type])
+        ?.classList.remove('service-active');
+
+      closeRoute();
+      restoreServiceMarkers();
+      return;
+    }
+
+    // Switching to another service
+    activeRouteService = type;
+    exitFoodShopMode();
+  }else{
+    activeRouteService = null;
+  }
+
+  setActiveServiceButton(type);
+
+  if(
+    type !== 'food' &&
+    type !== 'shop' &&
+    type !== 'restroom'
+  ){
     restoreServiceMarkers();
   }
 
@@ -1766,6 +2197,13 @@ async function findNearbyService(type){
     showFoodPlaces();
     return;
   }
+
+
+if(type === 'shop'){
+  showShopPlaces();
+  return;
+}
+
 
   if(type === 'clinic'){
 
@@ -1832,7 +2270,15 @@ setTimeout(() => {
         : getStart().label;
 
     title.textContent =
-      `${t.routeFrom} ${startLabel} → Nearest restroom`;
+      `${t.routeFrom} ${localizedBuildingNameByEnglishName(startLabel)} ${
+  lang === 'en' ? '→' : '←'
+} ${
+  {
+    en: 'Nearest restroom',
+    he: 'השירותים הקרובים ביותר',
+    ar: 'أقرب مرحاض'
+  }[lang] || 'Nearest restroom'
+}`;
   }
 }, 100);
 
@@ -1885,18 +2331,38 @@ return;
 }
 
 function showFoodPlaces(){
-      closeRoute();
-        if(foodMode){
+  closeRoute();
 
-    restroomMarkers.forEach(marker => marker.addTo(map));
-    clinicMarkers.forEach(marker => marker.addTo(map));
-    gateMarkers.forEach(marker => marker.addTo(map));
+  const foodBtn = document.getElementById('serviceFoodBtn');
+  const shopBtn = document.getElementById('serviceShopBtn');
 
-    foodMarkers.forEach(marker => {
-    marker.setIcon(normalFoodIcon);
-  });
+  // Clicking Food again -> return to normal map
+  if(foodMode){
 
     foodMode = false;
+    foodBtn?.classList.remove('service-active');
+
+    foodMarkers.forEach(marker => {
+      marker.setIcon(normalFoodIcon);
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    shopMarkers.forEach(marker => {
+      marker.setIcon(normalShopIcon);
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    clinicMarkers.forEach(marker => {
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    gateMarkers.forEach(marker => {
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    restroomMarkers.forEach(marker => {
+      if(map.hasLayer(marker)) map.removeLayer(marker);
+    });
 
     const allLatLngs = CAMPUS_DATA.buildings.map(
       b => [b.lat, b.lng]
@@ -1910,18 +2376,41 @@ function showFoodPlaces(){
     return;
   }
 
+  // Always deactivate Shops before activating Food
+shopMode = false;
+shopBtn?.classList.remove('service-active');
+
+shopMarkers.forEach(marker => {
+  marker.setIcon(normalShopIcon);
+
+  if(map.hasLayer(marker)){
+    map.removeLayer(marker);
+  }
+});
+
+  // Activate Food
   foodMode = true;
-restroomMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
+  foodBtn?.classList.add('service-active');
+
+  foodMarkers.forEach(marker => {
+  if(!map.hasLayer(marker)) marker.addTo(map);
 });
 
-clinicMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
-});
+  restroomMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
 
-gateMarkers.forEach(marker => {
-  if(map.hasLayer(marker)) map.removeLayer(marker);
-});
+  clinicMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  gateMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  shopMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
 
   if(!foodMarkers.length) return;
 
@@ -1964,6 +2453,121 @@ gateMarkers.forEach(marker => {
   }
 }
 
+function showShopPlaces(){
+  closeRoute();
+
+    const shopBtn = document.getElementById('serviceShopBtn');
+  const foodBtn = document.getElementById('serviceFoodBtn');
+
+  // If Food is active, turn it off before opening Shops
+  if(foodMode){
+    foodMode = false;
+
+    foodBtn?.classList.remove('service-active');
+
+    foodMarkers.forEach(marker => {
+      marker.setIcon(normalFoodIcon);
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    foodBtn?.classList.remove('service-active');
+  }
+
+  if(shopMode){
+
+    restroomMarkers.forEach(marker => marker.addTo(map));
+    clinicMarkers.forEach(marker => marker.addTo(map));
+    gateMarkers.forEach(marker => marker.addTo(map));
+
+    foodMarkers.forEach(marker => {
+      if(!map.hasLayer(marker)) marker.addTo(map);
+    });
+
+    shopMarkers.forEach(marker => {
+      marker.setIcon(normalShopIcon);
+    });
+
+    shopMode = false;
+
+    shopBtn?.classList.remove('service-active');
+
+    const allLatLngs = CAMPUS_DATA.buildings.map(
+      b => [b.lat, b.lng]
+    );
+
+    map.fitBounds(allLatLngs, {
+      padding:[60,60],
+      maxZoom:16
+    });
+
+    return;
+  }
+
+  shopMode = true;
+
+  shopBtn?.classList.add('service-active');
+
+  shopMarkers.forEach(marker => {
+  if(!map.hasLayer(marker)) marker.addTo(map);
+});
+
+  restroomMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  clinicMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  gateMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  foodMarkers.forEach(marker => {
+    if(map.hasLayer(marker)) map.removeLayer(marker);
+  });
+
+  if(!shopMarkers.length) return;
+
+  const bounds = [];
+
+  shopMarkers.forEach(marker => {
+
+    const shop = marker.shopData;
+
+    const highlightedIcon = L.divIcon({
+      className:'',
+      html:`
+        <div style="
+          width:28px;
+          height:28px;
+          border-radius:50%;
+          background:#F59E0B;
+          border:3px solid #fff;
+          box-shadow:0 3px 12px rgba(0,0,0,.35);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:15px;
+        ">🛍️</div>
+      `,
+      iconSize:[28,28],
+      iconAnchor:[14,14]
+    });
+
+    marker.setIcon(highlightedIcon);
+
+    bounds.push([shop.lat, shop.lng]);
+  });
+
+  if(bounds.length){
+    map.fitBounds(bounds, {
+      padding:[70,70],
+      maxZoom:18
+    });
+  }
+}
+
 const SHARED_INDOOR_TRANSFERS = {
   'madriga:rabin': {
     standard: {
@@ -1992,7 +2596,11 @@ const SHARED_INDOOR_TRANSFERS = {
   }
 };
 
-function sharedIndoorTransfer(originBuilding, destinationBuilding){
+function sharedIndoorTransfer(
+  originBuilding,
+  destinationBuilding,
+  method = null
+){
   const connection =
     SHARED_INDOOR_TRANSFERS[
       `${originBuilding}:${destinationBuilding}`
@@ -2000,15 +2608,102 @@ function sharedIndoorTransfer(originBuilding, destinationBuilding){
 
   if(!connection) return null;
 
-    const mobilitySelected =
-      currentProfile === 'mobility' ||
-      sessionStorage.getItem(
-        'accessibilityProfile'
-      ) === 'mobility';
+  const mobilitySelected =
+    currentProfile === 'mobility';
 
-    return mobilitySelected
-      ? connection.mobility
-      : connection.standard;
+  if(mobilitySelected){
+    return connection.mobility;
+  }
+
+  if(method === 'elevator'){
+    return connection.mobility;
+  }
+
+  if(method === 'stairs'){
+    return connection.standard;
+  }
+
+  return connection.standard;
+}
+
+async function chooseSharedIndoorTransfer(originBuilding, destinationBuilding){
+  const connection =
+    SHARED_INDOOR_TRANSFERS[`${originBuilding}:${destinationBuilding}`];
+
+  if(!connection) return null;
+
+  if(currentProfile === 'mobility'){
+    return connection.mobility;
+  }
+
+  let context = {};
+
+  try{
+    context = JSON.parse(
+      sessionStorage.getItem('indoorContext') || '{}'
+    );
+  }catch(error){}
+
+  const startId = customStart?.nodeId;
+  const destinationIds = context.destinationNodeId
+    ? [context.destinationNodeId]
+    : (context.destinationNodeIds || []);
+
+  // Keep existing building-only behavior when exact endpoints are unavailable.
+  if(!startId || !destinationIds.length){
+    return sharedIndoorTransfer(originBuilding, destinationBuilding);
+  }
+
+  const results = [];
+
+  for(const transfer of [connection.standard, connection.mobility]){
+    try{
+      const originSeconds = await getIndoorLegEtaSeconds(
+        originBuilding,
+        startId,
+        transfer.originNodeId,
+        false
+      );
+
+      if(originSeconds === null) continue;
+
+      let destinationSeconds = Infinity;
+
+      for(const destinationId of destinationIds){
+        const seconds = await getIndoorLegEtaSeconds(
+          destinationBuilding,
+          transfer.destinationNodeId,
+          destinationId,
+          false
+        );
+
+        if(seconds !== null){
+          destinationSeconds = Math.min(destinationSeconds, seconds);
+        }
+      }
+
+      if(!Number.isFinite(destinationSeconds)) continue;
+
+      results.push({
+        transfer,
+        seconds: originSeconds +
+          (transfer.method === 'elevator' ? 40 : 30) +
+          destinationSeconds
+      });
+    }catch(error){
+      console.warn('Could not compare shared transfer:', error);
+    }
+  }
+
+  results.sort((a, b) => a.seconds - b.seconds);
+
+  console.table(results.map(result => ({
+    method: result.transfer.method,
+    estimatedSeconds: Math.round(result.seconds)
+  })));
+
+  return results[0]?.transfer ||
+    sharedIndoorTransfer(originBuilding, destinationBuilding);
 }
 
 async function loadIndoorGraphForEta(buildingKey){
@@ -2160,7 +2855,7 @@ for(const [key, floors] of connectorGroups){
       nextNodes[nextNodes.length - 1];
 
     const weight =
-      key.startsWith('elevator:') ? 0.02 : 0.04;
+      key.startsWith('elevator:') ? 12 : 36;
 
     adjacency.get(a.id).push({
       id: b.id,
@@ -2258,6 +2953,61 @@ function calculateIndoorEtaSeconds(graph, path){
   }
 
   return (routeMeters / 1.2) + verticalSeconds;
+}
+
+async function indoorLegUsesElevator(buildingKey, startNodeId, endNodeId, accessible){
+  const graph = await loadIndoorGraphForEta(buildingKey);
+  const path = findIndoorEtaPath(graph, startNodeId, endNodeId, accessible);
+
+  if(!path) return false;
+
+  const nodesById = new Map(
+    indoorEtaNodes(graph).map(node => [node.id, node])
+  );
+
+  for(let i = 0; i < path.length - 1; i++){
+    const current = nodesById.get(path[i]);
+    const next = nodesById.get(path[i + 1]);
+
+    if(
+      current &&
+      next &&
+      current.floor !== next.floor &&
+      current.type === 'elevator' &&
+      next.type === 'elevator'
+    ){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function lastVerticalMoveWasElevator(buildingKey, startNodeId, endNodeId, accessible){
+  const graph = await loadIndoorGraphForEta(buildingKey);
+  const path = findIndoorEtaPath(graph, startNodeId, endNodeId, accessible);
+
+  if(!path) return false;
+
+  const byId = new Map(
+    indoorEtaNodes(graph).map(n => [n.id, n])
+  );
+
+  let last = null;
+
+  for(let i = 0; i < path.length - 1; i++){
+    const a = byId.get(path[i]);
+    const b = byId.get(path[i + 1]);
+
+    if(a && b && a.floor !== b.floor){
+      last =
+        a.type === 'elevator' && b.type === 'elevator'
+          ? 'elevator'
+          : 'stairs';
+    }
+  }
+
+  return last === 'elevator';
 }
 
 async function getIndoorLegEtaSeconds(
@@ -2554,8 +3304,22 @@ async function routeTo(name, lat, lng, options={}){
     map.removeLayer(gpsMarker);
   }
 // Student rooms use the Floor 4 exit when travelling to Main.
+// --------------------------------------------------
+// STUDENT HOUSE → MAIN BUILDING
+// --------------------------------------------------
+// Whether the user starts from a room inside Student
+// House OR selects Student House itself, leave through
+// floor4_n3.
+//
+// This puts the outdoor route onto the same upper path
+// used by Main → Student House.
+// --------------------------------------------------
+
 if(
-  customStart?.buildingKey === 'student' &&
+  (
+    customStart?.buildingKey === 'student' ||
+    customStart?.label === 'Student House'
+  ) &&
   name === 'Main Building'
 ){
   const floor4Exit = (
@@ -2569,35 +3333,43 @@ if(
     customStart.lng = floor4Exit.lng;
     customStart.entranceId = floor4Exit.nodeId;
 
+    // If this started from an indoor room, tell the
+    // indoor route which Student House exit to use.
     try{
       const startContext = JSON.parse(
-        sessionStorage.getItem('indoorStartContext') || '{}'
+        sessionStorage.getItem('indoorStartContext') || 'null'
       );
 
-      startContext.exitEntranceId = floor4Exit.nodeId;
+      if(startContext){
+        startContext.exitEntranceId = floor4Exit.nodeId;
 
-      sessionStorage.setItem(
-        'indoorStartContext',
-        JSON.stringify(startContext)
-      );
+        sessionStorage.setItem(
+          'indoorStartContext',
+          JSON.stringify(startContext)
+        );
+      }
     }catch(error){
       console.warn(
-        'Could not update the Student exit:',
+        'Could not update Student House exit:',
         error
       );
-    }
-
-    if(gpsMarker){
-      gpsMarker.setLatLng([
-        floor4Exit.lat,
-        floor4Exit.lng
-      ]);
     }
   }
 }
 
 // Main rooms use the Floor 600 exit when travelling
 // toward Student, Rabin, or Madriga.
+// --------------------------------------------------
+// MAIN BUILDING: choose the correct Floor 600 exit
+// --------------------------------------------------
+//
+// Main → Student House:
+//   use floor600_n88, which leads to the Student House path.
+//
+// Main → Rabin / Terrace:
+//   keep using the existing floor600_n86 exit.
+// --------------------------------------------------
+
 if(
   customStart?.buildingKey === 'main' &&
   [
@@ -2606,10 +3378,15 @@ if(
     'Terrace Building'
   ].includes(name)
 ){
+  const mainExitId =
+    name === 'Student House'
+      ? 'floor600_n88'
+      : 'floor600_n86';
+
   const floor600Exit = (
     BUILDING_ENTRANCES.main || []
   ).find(
-    entrance => entrance.nodeId === 'floor600_n86'
+    entrance => entrance.nodeId === mainExitId
   );
 
   if(floor600Exit){
@@ -2618,16 +3395,27 @@ if(
     customStart.entranceId = floor600Exit.nodeId;
 
     try{
-      const startContext = JSON.parse(
-        sessionStorage.getItem('indoorStartContext') || '{}'
-      );
+const startContext = JSON.parse(
+  sessionStorage.getItem('indoorStartContext') || '{}'
+);
 
-      startContext.exitEntranceId = floor600Exit.nodeId;
+if(
+  customStart?.buildingKey === 'main' &&
+  customStart?.nodeId &&
+  customStart.nodeId !== floor600Exit.nodeId
+){
+  startContext.buildingKey = 'main';
+  startContext.startNodeId = customStart.nodeId;
+  startContext.exitEntranceId = floor600Exit.nodeId;
+  startContext.label = customStart.label;
 
-      sessionStorage.setItem(
-        'indoorStartContext',
-        JSON.stringify(startContext)
-      );
+  sessionStorage.setItem(
+    'indoorStartContext',
+    JSON.stringify(startContext)
+  );
+}else{
+  sessionStorage.removeItem('indoorStartContext');
+}
     }catch(error){
       console.warn(
         'Could not update the Main exit:',
@@ -2643,7 +3431,34 @@ if(
     }
   }
 }
+// Terrace uses the Floor -1 entrance when travelling to Student House.
+if(
+  (
+    customStart?.buildingKey === 'madriga' ||
+    customStart?.label === 'Terrace Building'
+  ) &&
+  name === 'Student House'
+){
+  const floorMinus1Exit = (
+    BUILDING_ENTRANCES.madriga || []
+  ).find(
+    entrance => entrance.nodeId === 'floorminus1_n1'
+  );
+
+  if(floorMinus1Exit){
+    customStart.lat = floorMinus1Exit.lat;
+    customStart.lng = floorMinus1Exit.lng;
+    customStart.entranceId = floorMinus1Exit.nodeId;
+  }
+}
+
 const start = getStart();
+
+console.log?.(
+  'ROUTE DEBUG',
+  'start =', start,
+  'destination =', { name, lat, lng }
+);
 
 // Rabin uses the Floor 7 bridge entrance when travelling to Main.
 if(
@@ -2704,95 +3519,1007 @@ const entranceKeyByBuilding = {
   'Rabin Building': 'rabin',
   'Student House': 'student',
   'Multi-Purpose Building': 'multi-purpose',
-  'Education and Science': 'education'
+  'Education and Science': 'education',
+  'Welfare and Health Building': 'health',
+  'Eshkol Tower': 'eshkol',
+  'Art Building': 'art',
+  'Bloom Building': 'bloom',
 };
 
 const entranceKey = entranceKeyByBuilding[name];
+
 let activeSharedTransfer = null;
 
+// ==================================================
+// SELECTED SHORTEST OUTDOOR ROUTE
+// ==================================================
+// Declared here so it remains available after the
+// destination-entrance selection block.
+let selectedOutdoorRoute = null;
+
+// ==================================================
+// MAIN ↔ MADRIGA TRANSFER CHAIN
+// ==================================================
+// Use the Rabin bridge transfer in both directions.
+// ==================================================
+
+const chainStartKey =
+  customStart?.buildingKey ||
+  entranceKeyByBuilding[customStart?.label] ||
+  null;
+
 const usesMainToMadrigaChain =
-  customStart?.buildingKey === 'main' &&
-  entranceKey === 'madriga';
+  (
+    chainStartKey === 'main' &&
+    entranceKey === 'madriga'
+  ) ||
+  (
+    chainStartKey === 'madriga' &&
+    entranceKey === 'main'
+  );
 
 if(entranceKey){
   const entrances = BUILDING_ENTRANCES[entranceKey] || [];
 const profileEntrances =
-  currentProfile === 'mobility'
-    ? entrances.filter(
-        entrance =>
-          !entrance.requiresStairs &&
-          !entrance.avoidForMobility
-      )
-    : entrances;
+  entrances.filter(entrance => {
+    if(entrance.onlyForService){
+      return false;
+    }
+
+    if(currentProfile === 'mobility'){
+      return (
+        !entrance.requiresStairs &&
+        !entrance.avoidForMobility
+      );
+    }
+
+    return true;
+  });
 
 const originBuildingKey =
   customStart?.buildingKey ||
   entranceKeyByBuilding[customStart?.label] ||
   null;
 
-  const sharedTransfer =
-  sharedIndoorTransfer(
-    originBuildingKey,
-    entranceKey
-  );
+const sharedTransfer =
+  typeof chooseSharedIndoorTransfer === 'function'
+    ? await chooseSharedIndoorTransfer(
+        originBuildingKey,
+        entranceKey
+      )
+    : sharedIndoorTransfer(
+        originBuildingKey,
+        entranceKey
+      );
 
   activeSharedTransfer = sharedTransfer;
 
-const preferredMainEntranceByOrigin = {
-  rabin: 'floor600_n86',
-  madriga: 'floor600_n86',
-  education: 'floor700_n70'
-};
+// --------------------------------------------------
+// SELECT DESTINATION ENTRANCE
+// --------------------------------------------------
+//
+// ==================================================
+// SHORTEST BUILDING ENTRANCE / EXIT SELECTION
+// ==================================================
+//
+// For normal building-to-building outdoor routing:
+//
+// 1. Test every usable exit from the origin building.
+// 2. Test every usable entrance to the destination building.
+// 3. Use the real outdoor routing graph for every combination.
+// 4. Choose the combination with the shortest walking route.
+//
+// This avoids destination-specific hard-coding.
+// ==================================================
 
-let preferredEntranceId = null;
+let selectedEntrance = null;
+let selectedOriginExit = null;
 
-if(entranceKey === 'main'){
-  preferredEntranceId =
-    preferredMainEntranceByOrigin[originBuildingKey];
-}else if(
-  originBuildingKey === 'main' &&
-  entranceKey === 'rabin'
+
+// --------------------------------------------------
+// Get usable destination entrances
+// --------------------------------------------------
+const destinationEntrances = profileEntrances;
+
+
+// ==================================================
+// GET USABLE ORIGIN EXITS
+// ==================================================
+//
+// If the user selected only a building as the origin,
+// use that building's primary entrance as the default.
+//
+// If the trip starts from a specific indoor location,
+// keep all usable exits so indoor routing can determine
+// which exit makes sense from the user's actual position.
+// ==================================================
+
+const allOriginEntrances =
+  originBuildingKey && BUILDING_ENTRANCES[originBuildingKey]
+    ? BUILDING_ENTRANCES[originBuildingKey].filter(
+        entrance =>
+          currentProfile !== 'mobility' ||
+          (
+            !entrance.requiresStairs &&
+            !entrance.avoidForMobility
+          )
+      )
+    : [];
+
+
+// --------------------------------------------------
+// Detect whether the origin is only a building
+// --------------------------------------------------
+//
+// Specific indoor-room starts contain entranceId.
+// Building-only selections do not.
+//
+const buildingOnlyOrigin =
+  Boolean(originBuildingKey) &&
+  !customStart?.entranceId;
+
+
+// --------------------------------------------------
+// Prefer the primary entrance for building-only starts
+// --------------------------------------------------
+const primaryOriginEntrance =
+  buildingOnlyOrigin
+    ? allOriginEntrances.find(
+        entrance => entrance.primary
+      )
+    : null;
+
+
+// --------------------------------------------------
+// Final origin exits to test
+// --------------------------------------------------
+const originEntrances = allOriginEntrances;
+
+// ==================================================
+// COMPARE COMPLETE ROUTES THROUGH EACH ORIGIN EXIT
+// ==================================================
+//
+// Do NOT choose an exit using outdoor distance alone.
+//
+// The route cost is:
+//
+//   indoor start → candidate origin exit
+//   +
+//   candidate origin exit → destination entrance
+//
+// For a specific room:
+//   use the actual room node as the indoor start.
+//
+// For a building-only start:
+//   use the building's primary entrance/node as the
+//   assumed indoor starting position.
+// ==================================================
+
+if(
+  originEntrances.length &&
+  destinationEntrances.length &&
+  !sharedTransfer &&
+  !usesMainToMadrigaChain
 ){
-  preferredEntranceId = 'floor7_n108';
+  let shortestJourneySeconds = Infinity;
+
+  // --------------------------------------------------
+  // Determine the indoor starting node
+  // --------------------------------------------------
+
+  let indoorStartNodeId = null;
+
+  if(buildingOnlyOrigin){
+
+    // Building selected without a specific room:
+    // treat its primary entrance as the default
+    // position inside the building.
+    indoorStartNodeId =
+      primaryOriginEntrance?.nodeId || null;
+
+  }else{
+
+    // Specific indoor room:
+    // use the actual room/node selected by the user.
+    indoorStartNodeId =
+      customStart?.nodeId || null;
+  }
+
+
+  // --------------------------------------------------
+  // Test every origin exit + destination entrance
+  // --------------------------------------------------
+
+  for(const originExit of originEntrances){
+
+    for(const destinationEntrance of destinationEntrances){
+
+      try{
+
+        // ----------------------------------------------
+        // 1. Outdoor part of this candidate journey
+        // ----------------------------------------------
+
+        const candidateRoute =
+          await CampusOutdoorRouting.route(
+            originExit.lat,
+            originExit.lng,
+            destinationEntrance.lat,
+            destinationEntrance.lng,
+            {
+              avoidSteps: currentProfile === 'mobility'
+            }
+          );
+
+        if(
+          !candidateRoute ||
+          !candidateRoute.coordinates?.length ||
+          candidateRoute.coordinates.length < 2
+        ){
+          continue;
+        }
+
+
+        // ----------------------------------------------
+        // 2. Outdoor walking time
+        // ----------------------------------------------
+
+        const outdoorSeconds =
+          getOutdoorEtaSeconds(
+            candidateRoute.coordinates,
+            currentProfile === 'mobility'
+          );
+
+
+        // ----------------------------------------------
+        // 3. Indoor start → candidate exit
+        // ----------------------------------------------
+
+        let indoorSeconds = 0;
+
+        if(
+          originBuildingKey &&
+          indoorStartNodeId &&
+          indoorStartNodeId !== originExit.nodeId
+        ){
+          const candidateIndoorSeconds =
+            await getIndoorLegEtaSeconds(
+              originBuildingKey,
+              indoorStartNodeId,
+              originExit.nodeId,
+              currentProfile === 'mobility'
+            );
+
+          // If this exit cannot actually be reached from
+          // the indoor starting point, reject it.
+          if(candidateIndoorSeconds === null){
+            continue;
+          }
+
+          indoorSeconds = candidateIndoorSeconds;
+        }
+
+
+        // ----------------------------------------------
+        // 4. Complete candidate journey cost
+        // ----------------------------------------------
+
+        const totalJourneySeconds =
+          indoorSeconds + outdoorSeconds;
+
+
+        console.log?.(
+          'ENTRANCE CANDIDATE:',
+          originExit.nodeId,
+          '→',
+          destinationEntrance.nodeId,
+          '| indoor:',
+          indoorSeconds,
+          'sec | outdoor:',
+          outdoorSeconds,
+          'sec | total:',
+          totalJourneySeconds,
+          'sec'
+        );
+
+
+        // ----------------------------------------------
+        // 5. Keep the shortest COMPLETE journey
+        // ----------------------------------------------
+
+        if(totalJourneySeconds < shortestJourneySeconds){
+
+          shortestJourneySeconds =
+            totalJourneySeconds;
+
+          selectedOriginExit =
+            originExit;
+
+          selectedEntrance =
+            destinationEntrance;
+
+          selectedOutdoorRoute =
+            candidateRoute;
+        }
+
+      }catch(error){
+
+        console.warn(
+          'Could not test entrance combination:',
+          originExit.nodeId,
+          '→',
+          destinationEntrance.nodeId,
+          error
+        );
+      }
+    }
+  }
 }
 
-let routingEntrances = profileEntrances;
+if(
+  !selectedEntrance &&
+  !originBuildingKey &&
+  destinationEntrances.length &&
+  !sharedTransfer &&
+  !usesMainToMadrigaChain
+){
+  let shortestDestinationSeconds = Infinity;
 
-if(preferredEntranceId){
-  const preferredEntrances = profileEntrances.filter(
-    entrance => entrance.nodeId === preferredEntranceId
+  for(const destinationEntrance of destinationEntrances){
+    try{
+      const candidateRoute =
+        await CampusOutdoorRouting.route(
+          start.lat,
+          start.lng,
+          destinationEntrance.lat,
+          destinationEntrance.lng,
+          {
+            avoidSteps: currentProfile === 'mobility'
+          }
+        );
+
+      if(
+        !candidateRoute ||
+        !candidateRoute.coordinates?.length ||
+        candidateRoute.coordinates.length < 2
+      ){
+        continue;
+      }
+
+      const outdoorSeconds =
+        getOutdoorEtaSeconds(
+          candidateRoute.coordinates,
+          currentProfile === 'mobility'
+        );
+
+      console.log?.(
+        'DESTINATION ENTRANCE CANDIDATE:',
+        destinationEntrance.nodeId,
+        '| outdoor:',
+        outdoorSeconds,
+        'sec'
+      );
+
+      if(outdoorSeconds < shortestDestinationSeconds){
+        shortestDestinationSeconds = outdoorSeconds;
+        selectedEntrance = destinationEntrance;
+        selectedOutdoorRoute = candidateRoute;
+      }
+    }catch(error){
+      console.warn(
+        'Could not test destination entrance:',
+        destinationEntrance.nodeId,
+        error
+      );
+    }
+  }
+}
+
+// ==================================================
+// BEST MADRIGA → RABIN CANDIDATE
+// ==================================================
+// Stores the best route that leaves Madriga through
+// the indoor Rabin connection instead of a Madriga
+// outdoor exit.
+// ==================================================
+
+let bestMadrigaRabinCandidate = null;
+
+// ==================================================
+// TRACK WHETHER MADRIGA → RABIN WON
+// ==================================================
+// Prevent the normal direct-exit code from overwriting
+// the original Madriga starting position afterward.
+// ==================================================
+
+let usesMadrigaRabinRoute = false;
+// ==================================================
+// MADRIGA → RABIN TRANSFER ROUTE CANDIDATE
+// ==================================================
+
+
+if(
+  originBuildingKey === 'madriga' &&
+  destinationEntrances.length &&
+  !sharedTransfer &&
+  !usesMainToMadrigaChain
+){
+ const madrigaToRabinOptions =
+  currentProfile === 'mobility'
+    ? [
+        sharedIndoorTransfer(
+          'madriga',
+          'rabin',
+          'elevator'
+        )
+      ]
+    : [
+        sharedIndoorTransfer(
+          'madriga',
+          'rabin',
+          'stairs'
+        ),
+        sharedIndoorTransfer(
+          'madriga',
+          'rabin',
+          'elevator'
+        )
+      ];
+
+for(const madrigaToRabin of madrigaToRabinOptions){
+
+  // TEMPORARY: Madriga and Rabin share the same elevator, so for Eshkol
+// always continue through it instead of switching to the stairs.
+if(entranceKey === 'eshkol' && madrigaToRabin.method === 'stairs'){
+  continue;
+}
+
+    // ------------------------------------------------
+    // Rabin exits allowed for the active profile
+    // ------------------------------------------------
+
+    const rabinExits =
+      (BUILDING_ENTRANCES.rabin || []).filter(
+        entrance =>
+          currentProfile !== 'mobility' ||
+          (
+            !entrance.requiresStairs &&
+            !entrance.avoidForMobility
+          )
+      );
+
+
+    // ------------------------------------------------
+    // Starting point inside Madriga
+    // ------------------------------------------------
+
+    const madrigaStartNodeId =
+      buildingOnlyOrigin
+        ? primaryOriginEntrance?.nodeId
+        : customStart?.nodeId;
+
+
+    if(madrigaStartNodeId){
+
+      // ----------------------------------------------
+      // Madriga start → Madriga side of transfer
+      // ----------------------------------------------
+
+      const madrigaIndoorSeconds =
+        madrigaStartNodeId === madrigaToRabin.originNodeId
+          ? 0
+          : await getIndoorLegEtaSeconds(
+              'madriga',
+              madrigaStartNodeId,
+              madrigaToRabin.originNodeId,
+              currentProfile === 'mobility'
+            );
+
+
+            const arrivesByElevator =
+  madrigaStartNodeId === madrigaToRabin.originNodeId
+    ? madrigaToRabin.method === 'elevator'
+    : await indoorLegUsesElevator(
+        'madriga',
+        madrigaStartNodeId,
+        madrigaToRabin.originNodeId,
+        currentProfile === 'mobility'
+      );
+
+if(
+  arrivesByElevator &&
+  madrigaToRabin.method === 'stairs'
+){
+  continue;
+}
+
+console.log?.('TRANSFER CHECK', madrigaToRabin.method, {
+  arrivesByElevator,
+  madrigaIndoorSeconds,
+  originNodeId: madrigaToRabin.originNodeId
+});
+
+
+      if(madrigaIndoorSeconds !== null){
+
+        // --------------------------------------------
+        // Cost of crossing Madriga ↔ Rabin transfer
+        // --------------------------------------------
+
+const transferSeconds =
+  madrigaToRabin.method === 'elevator'
+    ? (arrivesByElevator ? 10 : 40)
+    : 30;
+
+        // --------------------------------------------
+        // Test every usable Rabin exit
+        // --------------------------------------------
+
+        for(const rabinExit of rabinExits){
+
+          const rabinIndoorSeconds =
+            madrigaToRabin.destinationNodeId === rabinExit.nodeId
+              ? 0
+              : await getIndoorLegEtaSeconds(
+                  'rabin',
+                  madrigaToRabin.destinationNodeId,
+                  rabinExit.nodeId,
+                  currentProfile === 'mobility'
+                );
+
+
+          // Exit cannot be reached through Rabin.
+          if(rabinIndoorSeconds === null){
+            continue;
+          }
+
+
+          // ------------------------------------------
+          // Test every destination entrance
+          // ------------------------------------------
+
+          for(const destinationEntrance of destinationEntrances){
+
+            try{
+
+              const candidateRoute =
+                await CampusOutdoorRouting.route(
+                  rabinExit.lat,
+                  rabinExit.lng,
+                  destinationEntrance.lat,
+                  destinationEntrance.lng,
+                  {
+                    avoidSteps:
+                      currentProfile === 'mobility'
+                  }
+                );
+
+
+              if(
+                !candidateRoute ||
+                !candidateRoute.coordinates?.length ||
+                candidateRoute.coordinates.length < 2
+              ){
+                continue;
+              }
+
+
+              const outdoorSeconds =
+                getOutdoorEtaSeconds(
+                  candidateRoute.coordinates,
+                  currentProfile === 'mobility'
+                );
+
+
+              const totalJourneySeconds =
+                madrigaIndoorSeconds +
+                transferSeconds +
+                rabinIndoorSeconds +
+                outdoorSeconds;
+            // --------------------------------------------------
+            // Remember the best Madriga → Rabin route
+            // --------------------------------------------------
+
+            if(
+              !bestMadrigaRabinCandidate ||
+              totalJourneySeconds <
+                bestMadrigaRabinCandidate.totalJourneySeconds
+            ){
+              bestMadrigaRabinCandidate = {
+                totalJourneySeconds,
+
+                madrigaStartNodeId,
+
+                madrigaTransferNodeId:
+                  madrigaToRabin.originNodeId,
+
+                rabinTransferNodeId:
+                  madrigaToRabin.destinationNodeId,
+
+                rabinExit,
+
+                destinationEntrance,
+
+                outdoorRoute: candidateRoute,
+
+                transferMethod:
+                  madrigaToRabin.method
+              };
+            }
+
+              console.log?.(
+                'MADRIGA → RABIN CANDIDATE:',
+                madrigaStartNodeId,
+                '→',
+                madrigaToRabin.originNodeId,
+                '→',
+                madrigaToRabin.destinationNodeId,
+                '→',
+                rabinExit.nodeId,
+                '→',
+                destinationEntrance.nodeId,
+                '| Madriga:',
+                madrigaIndoorSeconds,
+                'sec | transfer:',
+                transferSeconds,
+                'sec | Rabin:',
+                rabinIndoorSeconds,
+                'sec | outdoor:',
+                outdoorSeconds,
+                'sec | total:',
+                totalJourneySeconds,
+                'sec'
+              );
+
+            }catch(error){
+
+              console.warn(
+                'Could not test Madriga → Rabin candidate:',
+                rabinExit.nodeId,
+                '→',
+                destinationEntrance.nodeId,
+                error
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// ==================================================
+// CHOOSE BETWEEN:
+//   1. DIRECT MADRIGA EXIT
+//   2. MADRIGA → RABIN TRANSFER
+// ==================================================
+
+if(bestMadrigaRabinCandidate){
+
+  // The normal entrance comparison already selected
+  // the best direct Madriga route. Calculate its full
+  // journey time so both alternatives use the same unit.
+  let directMadrigaSeconds = Infinity;
+
+  if(
+    selectedOriginExit &&
+    selectedOutdoorRoute
+  ){
+   // --------------------------------------------------
+// Determine the Madriga start node for the direct route
+// --------------------------------------------------
+
+const directStartNodeId =
+  buildingOnlyOrigin
+    ? primaryOriginEntrance?.nodeId
+    : customStart?.nodeId;
+
+
+const directIndoorSeconds =
+  directStartNodeId === selectedOriginExit.nodeId
+    ? 0
+    : await getIndoorLegEtaSeconds(
+        'madriga',
+        directStartNodeId,
+        selectedOriginExit.nodeId,
+        currentProfile === 'mobility'
+      );
+
+    if(directIndoorSeconds !== null){
+
+      const directOutdoorSeconds =
+        getOutdoorEtaSeconds(
+          selectedOutdoorRoute.coordinates,
+          currentProfile === 'mobility'
+        );
+
+      directMadrigaSeconds =
+        directIndoorSeconds +
+        directOutdoorSeconds;
+    }
+  }
+
+
+  console.log?.(
+    'MADRIGA ROUTE COMPARISON:',
+    'direct =',
+    directMadrigaSeconds,
+    'sec | via Rabin =',
+    bestMadrigaRabinCandidate.totalJourneySeconds,
+    'sec'
   );
 
-  if(preferredEntrances.length){
-    routingEntrances = preferredEntrances;
+
+  // --------------------------------------------------
+  // Rabin route wins
+  // --------------------------------------------------
+
+  if(
+    bestMadrigaRabinCandidate.totalJourneySeconds <
+    directMadrigaSeconds
+  ){
+    // Madriga → Rabin beat the direct Madriga exits.
+    usesMadrigaRabinRoute = true;
+    const candidate =
+      bestMadrigaRabinCandidate;
+
+    selectedEntrance =
+      candidate.destinationEntrance;
+
+    selectedOutdoorRoute =
+      candidate.outdoorRoute;
+
+
+    // ----------------------------------------------
+    // Origin indoor journey:
+    // Madriga start → Madriga/Rabin transfer
+    // ----------------------------------------------
+
+    let startContext = {};
+
+    try{
+      startContext = JSON.parse(
+        sessionStorage.getItem(
+          'indoorStartContext'
+        ) || '{}'
+      );
+    }catch(error){
+      startContext = {};
+    }
+
+    startContext.buildingKey = 'madriga';
+
+    startContext.startNodeId =
+      candidate.madrigaStartNodeId;
+
+    startContext.exitEntranceId =
+      candidate.madrigaTransferNodeId;
+
+    sessionStorage.setItem(
+      'indoorStartContext',
+      JSON.stringify(startContext)
+    );
+
+
+    // ----------------------------------------------
+    // Save Madriga → Rabin transfer information
+    // ----------------------------------------------
+
+    sessionStorage.setItem(
+      'sharedIndoorTransfer',
+      JSON.stringify({
+        originBuilding: 'madriga',
+        destinationBuilding: 'rabin',
+        method: candidate.transferMethod
+      })
+    );
+
+
+    // ----------------------------------------------
+    // Rabin continuation:
+    // transfer node → chosen Rabin outdoor exit
+    // ----------------------------------------------
+
+    sessionStorage.setItem(
+      'intermediateIndoorTransfer',
+      JSON.stringify({
+        building: 'rabin',
+
+        startNodeId:
+          candidate.rabinTransferNodeId,
+
+        destinationNodeId:
+          candidate.rabinExit.nodeId,
+
+        destinationBuilding:
+          entranceKey
+      })
+    );
+
+    const rabinTransfer = JSON.parse(
+  sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+);
+
+if(rabinTransfer?.building === 'rabin'){
+  rabinTransfer.startNodeId = 'floor5_n104';
+
+  sessionStorage.setItem(
+    'intermediateIndoorTransfer',
+    JSON.stringify(rabinTransfer)
+  );
+}
+
+
+    // ----------------------------------------------
+    // Outdoor portion begins at the chosen Rabin exit
+    // ----------------------------------------------
+
+    console.log?.(
+      'SELECTED MADRIGA → RABIN ROUTE:',
+      candidate.rabinExit.nodeId,
+      '→',
+      candidate.destinationEntrance.nodeId,
+      '| total:',
+      candidate.totalJourneySeconds,
+      'sec'
+    );
   }
-}else if(
-  profileEntrances.some(entrance => entrance.primary)
+}
+
+// --------------------------------------------------
+// Fallback destination entrance
+// --------------------------------------------------
+//
+// Used when the trip does not start from a mapped
+// building or no connected entrance combination exists.
+// --------------------------------------------------
+if(!selectedEntrance){
+  selectedEntrance = destinationEntrances.reduce(
+    (nearest, entrance) => {
+
+      if(!nearest){
+        return entrance;
+      }
+
+      const entranceDistance =
+        CampusOutdoorRouting.distance(
+          [start.lat, start.lng],
+          [entrance.lat, entrance.lng]
+        );
+
+      const nearestDistance =
+        CampusOutdoorRouting.distance(
+          [start.lat, start.lng],
+          [nearest.lat, nearest.lng]
+        );
+
+      return entranceDistance < nearestDistance
+        ? entrance
+        : nearest;
+    },
+    null
+  );
+}
+
+// ==================================================
+// MAIN BUILDING — PRIMARY EXIT DESTINATIONS
+// ==================================================
+//
+// These destinations are physically reached from the
+// Floor 700 / primary side of Main Building.
+// Force the primary Main entrance as the origin exit.
+// ==================================================
+
+const mainPrimaryExitDestinations = [
+  'Eshkol Tower',
+  'Health Building',
+  'Bloom Building',
+  'Art Building'
+];
+
+if(
+  originBuildingKey === 'main' &&
+  mainPrimaryExitDestinations.includes(name)
 ){
-  routingEntrances = profileEntrances.filter(
+  const primaryMainExit = (
+    BUILDING_ENTRANCES.main || []
+  ).find(
     entrance => entrance.primary
   );
+
+  if(primaryMainExit){
+
+    selectedOriginExit = primaryMainExit;
+
+    // Recalculate the outdoor route from the required
+    // primary exit to the already selected destination entrance.
+    if(selectedEntrance){
+      try{
+        selectedOutdoorRoute =
+          await CampusOutdoorRouting.route(
+            primaryMainExit.lat,
+            primaryMainExit.lng,
+            selectedEntrance.lat,
+            selectedEntrance.lng,
+            {
+              avoidSteps: currentProfile === 'mobility'
+            }
+          );
+      }catch(error){
+        console.warn(
+          'Could not route from Main primary exit:',
+          error
+        );
+
+        selectedOutdoorRoute = null;
+      }
+    }
+  }
 }
 
-  const selectedEntrance = routingEntrances.reduce((nearest, entrance) => {
-    if(!nearest) return entrance;
+// ==================================================
+// MADRIGA → MAIN — BRIDGE-SIDE MAIN ENTRANCE
+// ==================================================
+// This journey passes through Rabin and enters Main
+// from the Floor 600 bridge side.
+if(
+  originBuildingKey === 'madriga' &&
+  entranceKey === 'main'
+){
+  selectedEntrance = (
+    BUILDING_ENTRANCES.main || []
+  ).find(
+    entrance => entrance.nodeId === 'floor600_n86'
+  );
+}
 
-    const entranceDistance = CampusOutdoorRouting.distance(
-      [start.lat, start.lng],
-      [entrance.lat, entrance.lng]
+// ==================================================
+// APPLY SELECTED ORIGIN EXIT
+// ==================================================
+if(
+  selectedOriginExit &&
+  !usesMadrigaRabinRoute
+){
+
+  customStart.lat = selectedOriginExit.lat;
+  customStart.lng = selectedOriginExit.lng;
+  customStart.entranceId = selectedOriginExit.nodeId;
+
+  // Tell indoor routing which exit won.
+  try{
+    const startContext = JSON.parse(
+      sessionStorage.getItem('indoorStartContext') || '{}'
     );
 
-    const nearestDistance = CampusOutdoorRouting.distance(
-      [start.lat, start.lng],
-      [nearest.lat, nearest.lng]
+    startContext.exitEntranceId =
+      selectedOriginExit.nodeId;
+
+    sessionStorage.setItem(
+      'indoorStartContext',
+      JSON.stringify(startContext)
     );
 
-    return entranceDistance < nearestDistance ? entrance : nearest;
-  }, null);
+  }catch(error){
+    console.warn(
+      'Could not save selected origin exit:',
+      error
+    );
+  }
+
+  console.log?.(
+    'SELECTED ORIGIN EXIT:',
+    selectedOriginExit
+  );
+}
 
 if(selectedEntrance){
   lat = selectedEntrance.lat;
   lng = selectedEntrance.lng;
+
+  console.log?.(
+  'SELECTED DESTINATION ENTRANCE:',
+  selectedEntrance
+);
 
   let indoorContext = {};
 
@@ -2815,32 +4542,23 @@ if(selectedEntrance){
 }
 
 if(sharedTransfer){
-  let startContext = {};
-
-  try{
-    startContext = JSON.parse(
-      sessionStorage.getItem('indoorStartContext') || '{}'
-    );
-  }catch(error){
-    startContext = {};
-  }
-
-  if(startContext.buildingKey !== originBuildingKey){
-    startContext = {};
-  }
-
-  startContext.buildingKey = originBuildingKey;
-  startContext.startNodeId =
-    customStart?.nodeId ||
-    startContext.startNodeId ||
-    null;
-  startContext.exitEntranceId =
-    sharedTransfer.originNodeId;
-
+  if(
+  customStart?.buildingKey === originBuildingKey &&
+  customStart?.nodeId &&
+  customStart.nodeId !== sharedTransfer.originNodeId
+){
   sessionStorage.setItem(
     'indoorStartContext',
-    JSON.stringify(startContext)
+    JSON.stringify({
+      buildingKey: originBuildingKey,
+      startNodeId: customStart.nodeId,
+      exitEntranceId: sharedTransfer.originNodeId,
+      label: customStart.label
+    })
   );
+}else{
+  sessionStorage.removeItem('indoorStartContext');
+}
 
   let destinationContext = {};
 
@@ -2878,13 +4596,18 @@ const startingBuildingKey =
   entranceKeyByBuilding[customStart?.label] ||
   null;
 
-// Check if start and destination are in the same building
+// ==================================================
+// OUTDOOR ROUTING
+// ==================================================
+
+// Check if start and destination are in the same building.
 const sameBuilding =
   startingBuildingKey !== null &&
   entranceKey !== null &&
   startingBuildingKey === entranceKey;
 
-let outdoorResult = null;
+// Reuse the shortest route already found while comparing entrances.
+let outdoorResult = selectedOutdoorRoute || null;
 
 const outdoorLegRequired =
   !activeSharedTransfer && !sameBuilding && !usesMainToMadrigaChain;
@@ -2917,7 +4640,14 @@ if(outdoorLegRequired && !outdoorResult && currentProfile === 'mobility'){
   return;
 }
 
-let waypoints;
+// ==================================================
+// MAIN ↔ RABIN BRIDGE ROUTE
+// ==================================================
+// Main ↔ Rabin now uses the REAL outdoor graph.
+//
+// Main ↔ Terrace also uses this graph segment:
+// Main ↔ Rabin happens outdoors across the mapped bridge,
+// while Rabin ↔ Terrace remains an indoor transfer.
 
 const usesMainRabinBridge =
   (
@@ -2929,29 +4659,124 @@ const usesMainRabinBridge =
     entranceKey === 'rabin'
   );
 
-  if(sameBuilding){
-  // Same building: no outdoor route needed
-  waypoints = [];}
 
-  else if(usesMainToMadrigaChain){
-  const mainBridgeEnd = [
-    32.761753,
-    35.019978
-  ];
+// ==================================================
+// CALCULATE REAL OUTDOOR ROUTE
+// ==================================================
 
-  const rabinBridgeEnd = [
-    32.761728,
-    35.020010
-  ];
+if(
+  !outdoorResult &&
+  !activeSharedTransfer &&
+  !sameBuilding
+){
+  try{
 
-  waypoints = [
-    [start.lat, start.lng],
-    mainBridgeEnd,
-    rabinBridgeEnd
-  ];
+    let outdoorStartLat = start.lat;
+    let outdoorStartLng = start.lng;
+
+    let outdoorDestinationLat = lat;
+    let outdoorDestinationLng = lng;
+
+
+    // ==============================================
+    // TERRACE → RABIN → MAIN
+    // ==============================================
+    // Terrace → Rabin happens indoors.
+    // Therefore the outdoor portion starts at
+    // Rabin's Floor 7 bridge entrance.
+
+    if(
+      usesMainToMadrigaChain &&
+      startingBuildingKey === 'madriga'
+    ){
+      const rabinBridgeEntrance =
+        BUILDING_ENTRANCES.rabin.find(
+          entrance =>
+            entrance.nodeId === 'floor7_n108'
+        );
+
+      const mainBridgeEntrance =
+        BUILDING_ENTRANCES.main.find(
+          entrance =>
+            entrance.nodeId === 'floor600_n86'
+        );
+
+      if(rabinBridgeEntrance){
+        outdoorStartLat = rabinBridgeEntrance.lat;
+        outdoorStartLng = rabinBridgeEntrance.lng;
+      }
+
+      if(mainBridgeEntrance){
+        outdoorDestinationLat = mainBridgeEntrance.lat;
+        outdoorDestinationLng = mainBridgeEntrance.lng;
+      }
+    }
+
+
+    // ==============================================
+    // MAIN → RABIN → TERRACE
+    // ==============================================
+    // Main → Rabin happens outdoors across the bridge.
+    // Rabin → Terrace then continues indoors.
+
+    else if(
+      usesMainToMadrigaChain &&
+      startingBuildingKey === 'main'
+    ){
+      const rabinBridgeEntrance =
+        BUILDING_ENTRANCES.rabin.find(
+          entrance =>
+            entrance.nodeId === 'floor7_n108'
+        );
+
+      if(rabinBridgeEntrance){
+        outdoorDestinationLat = rabinBridgeEntrance.lat;
+        outdoorDestinationLng = rabinBridgeEntrance.lng;
+      }
+    }
+
+
+    // ==============================================
+    // RUN REAL GRAPH ROUTER
+    // ==============================================
+
+    outdoorResult = await CampusOutdoorRouting.route(
+      outdoorStartLat,
+      outdoorStartLng,
+      outdoorDestinationLat,
+      outdoorDestinationLng,
+      {
+        avoidSteps: currentProfile === 'mobility',
+        preferFewerTurns: currentProfile === 'spatial'
+      }
+    );
+
+  }catch(error){
+    console.error(
+      'Outdoor routing failed:',
+      error
+    );
+  }
 }
 
-else if(activeSharedTransfer){
+if(requestId !== outdoorRouteRequestId) return;
+
+
+// ==================================================
+// BUILD MAP WAYPOINTS
+// ==================================================
+
+let waypoints;
+
+if(sameBuilding){
+
+  // Same building: no outdoor route needed.
+  waypoints = [];
+
+}else if(activeSharedTransfer){
+
+  // Direct shared indoor connection.
+  // No outdoor walking segment is required.
   waypoints = [
     [start.lat, start.lng],
     [
@@ -2960,61 +4785,46 @@ else if(activeSharedTransfer){
     ]
   ];
 
-}else if(usesMainRabinBridge){
-  const mainBridgeEnd = [
-    32.761753,
-    35.019978
-  ];
-
-  const rabinBridgeEnd = [
-    32.761728,
-    35.020010
-  ];
-
-  waypoints =
-    startingBuildingKey === 'rabin'
-      ? [
-          [start.lat, start.lng],
-          rabinBridgeEnd,
-          mainBridgeEnd,
-          [lat, lng]
-        ]
-      : [
-          [start.lat, start.lng],
-          mainBridgeEnd,
-          rabinBridgeEnd,
-          [lat, lng]
-        ];
-
-  const bridgeDistance = waypoints
-    .slice(1)
-    .reduce(
-      (total, point, index) =>
-        total +
-        CampusOutdoorRouting.distance(
-          waypoints[index],
-          point
-        ),
-      0
-    );
-
-  outdoorResult = {
-    coordinates: waypoints,
-    distance: bridgeDistance
-  };
-
 }else if(
   outdoorResult &&
   outdoorResult.coordinates.length > 1
 ){
 
-  // Real OSM pedestrian route
+  // ==================================================
+  // REAL OUTDOOR GRAPH ROUTE
+  // ==================================================
+  // This now includes the actual mapped Main ↔ Rabin
+  // bridge instead of hardcoded bridge coordinates.
+
   waypoints = outdoorResult.coordinates;
 
 }else{
 
-  // Temporary fallback for disconnected/missing OSM paths.
-  // This keeps CampusWay usable until we repair the campus graph.
+  // ==================================================
+  // TEMPORARY FALLBACK
+  // ==================================================
+  // Only used if the outdoor graph genuinely cannot
+  // produce a connected route.
+
+  if(currentProfile === 'mobility'){
+    if(routeLine){
+      map.removeLayer(routeLine);
+      routeLine = null;
+    }
+
+    clearInterval(window._dashAnim);
+    document.getElementById('routeCard').style.display = 'none';
+    document.getElementById('continueIndoorBtn').style.display = 'none';
+
+    alert({
+      en: 'No stair-free outdoor route was found in the mapped network.',
+      he: 'לא נמצא מסלול חיצוני ללא מדרגות ברשת השבילים הממופה.',
+      ar: 'لم يتم العثور على مسار خارجي بدون أدراج ضمن شبكة المسارات المرسومة.'
+    }[lang] || 'No stair-free outdoor route was found in the mapped network.');
+
+    return;
+  }
+
   const mid = [
     (start.lat + lat) / 2 + 0.0006,
     (start.lng + lng) / 2 - 0.0004
@@ -3030,45 +4840,108 @@ else if(activeSharedTransfer){
     'No connected OSM walking route found. Using temporary fallback.'
   );
 }
-
+// ==================================================
+// MAIN ↔ MADRIGA — INTERMEDIATE RABIN TRANSFER
+// ==================================================
 if(usesMainToMadrigaChain){
-  sessionStorage.setItem(
-    'intermediateIndoorTransfer',
-    JSON.stringify({
-      building: 'rabin',
-      startNodeId: 'floor7_n108',
-      destinationBuilding: 'madriga'
-    })
-  );
-}
 
+  if(startingBuildingKey === 'madriga'){
+
+    // Madriga → Rabin → Main
+    sessionStorage.setItem(
+      'intermediateIndoorTransfer',
+      JSON.stringify({
+        building: 'rabin',
+        startNodeId:
+          currentProfile === 'mobility'
+            ? 'floor5_n104'
+            : 'floor5_n204',
+        destinationNodeId: 'floor7_n108',
+        destinationBuilding: 'main'
+      })
+    );
+
+  }else{
+
+    // Main → Rabin → Madriga
+    // Keep the existing working direction unchanged.
+    sessionStorage.setItem(
+      'intermediateIndoorTransfer',
+      JSON.stringify({
+        building: 'rabin',
+        startNodeId: 'floor7_n108',
+        destinationBuilding: 'madriga'
+      })
+    );
+  }
+}
 const visualWaypoints = [...waypoints];
 
 if(waypoints.length > 1){
   const visualWaypoints = [...waypoints];
 
-  if(startingBuildingKey){
-  const startBuildingName = Object.keys(entranceKeyByBuilding).find(
-    name => entranceKeyByBuilding[name] === startingBuildingKey
-  );
+  // ==================================================
+// MAIN BUILDING → ESHKOL TOWER VISUAL ROUTE
+// ==================================================
+// ==================================================
+// VISUAL ROUTE START
+// ==================================================
+if(startingBuildingKey){
+  const startBuildingName =
+    Object.keys(entranceKeyByBuilding).find(
+      name =>
+        entranceKeyByBuilding[name] ===
+        startingBuildingKey
+    );
 
-  const startBuilding = CAMPUS_DATA.buildings.find(
-    building => building.name === startBuildingName
-  );
+  const startBuilding =
+    CAMPUS_DATA.buildings.find(
+      building =>
+        building.name === startBuildingName
+    );
 
   if(startBuilding){
-    visualWaypoints[0] = [
+    const startIcon = [
       startBuilding.lat,
       startBuilding.lng
     ];
+
+    if(
+      usesMainToMadrigaChain &&
+      startingBuildingKey === 'madriga'
+    ){
+      // Madriga → Rabin happens indoors.
+      // Keep the Rabin bridge waypoint and prepend
+      // Terrace so the full journey is visible.
+      visualWaypoints.unshift(startIcon);
+
+    }else{
+      // Normal route: replace the first route point
+      // with the visible building marker.
+      visualWaypoints[0] = startIcon;
+    }
   }
 }
 
+// ==================================================
+// VISUAL ROUTE DESTINATION
+// ==================================================
+if(
+  usesMainToMadrigaChain &&
+  startingBuildingKey === 'madriga'
+){
+  // Keep the real Main Floor 600 entrance in the route,
+  // then visually extend the line to the Main building marker.
+  visualWaypoints.push([
+    visualDestinationLat,
+    visualDestinationLng
+  ]);
+}else{
   visualWaypoints[visualWaypoints.length - 1] = [
     visualDestinationLat,
     visualDestinationLng
   ];
-
+}
 
   routeLine = L.polyline(
     visualWaypoints,
@@ -3179,9 +5052,13 @@ let displayDestination;
 let destinationType = '';
 
 if(isRestroomRoute){
-  displayDestination = 'Nearest restroom';
+  displayDestination = {
+  en: 'Nearest restroom',
+  he: 'השירותים הקרובים ביותר',
+  ar: 'أقرب مرحاض'
+}[lang] || 'Nearest restroom';
 
-}else if(sameBuilding){
+}else if(sameBuilding || sessionStorage.getItem('indoorContext')){
   try{
     const indoorContext = JSON.parse(
       sessionStorage.getItem('indoorContext') || 'null'
@@ -3216,7 +5093,18 @@ if(sameBuilding && displayDestination){
     startLabel = `Room ${startLabel}`;
   }
 }
-  document.getElementById('routeTitle').textContent = `${t.routeFrom} ${startLabel} → ${displayDestination}`;
+  startLabel = localizedBuildingNameByEnglishName(startLabel);
+displayDestination =
+  localizedBuildingNameByEnglishName(displayDestination);
+
+startLabel = startLabel.replace(/^Room\s+/i, `${t.room} `);
+displayDestination =
+  displayDestination.replace(/^Room\s+/i, `${t.room} `);
+
+const routeArrow = lang === 'en' ? '→' : '←';
+
+  document.getElementById('routeTitle').textContent =
+  `${t.routeFrom} ${startLabel} ${routeArrow} ${displayDestination}`;
   document.getElementById('routeSub').textContent = `${t.optimizedFor}: ${profile.label}`;
 const routeEta = document.getElementById('routeEta');
 
@@ -3238,49 +5126,73 @@ if(sameBuilding){
   'Education and Science': 'education'
 };
 
-if(INDOOR_BUILDINGS[name]){
+
+// ==================================================
+// INDOOR JOURNEY BUTTON
+// ==================================================
+//
+// Indoor navigation may be needed at the START even
+// when the destination has no indoor graph.
+// ==================================================
+
+
+const routeIndoorStartContext = JSON.parse(
+  sessionStorage.getItem('indoorStartContext') || 'null'
+);
+
+const hasOriginIndoorJourney =
+  Boolean(
+  routeIndoorStartContext &&
+  routeIndoorStartContext.buildingKey &&
+  routeIndoorStartContext.startNodeId &&
+  routeIndoorStartContext.exitEntranceId &&
+  routeIndoorStartContext.startNodeId !== routeIndoorStartContext.exitEntranceId
+  );
+
+const destinationIndoorContext = JSON.parse(
+  sessionStorage.getItem('indoorContext') || 'null'
+);
+
+const hasDestinationIndoorJourney =
+  Boolean(
+    INDOOR_BUILDINGS[name] &&
+    destinationIndoorContext &&
+    (
+      destinationIndoorContext.destinationNodeId ||
+      destinationIndoorContext.destinationLabel
+    )
+  );
+
+if(hasOriginIndoorJourney){
   indoorBtn.style.display = 'block';
 
-  let indoorStartContext = null;
+  indoorBtn.dataset.stage =
+    sameBuilding ? 'same-building' : 'origin';
 
-  try{
-    indoorStartContext = JSON.parse(
-      sessionStorage.getItem('indoorStartContext') || 'null'
-    );
-  }catch(error){
-    indoorStartContext = null;
+  indoorBtn.dataset.building =
+    routeIndoorStartContext.buildingKey;
+
+  if(hasDestinationIndoorJourney){
+    indoorBtn.dataset.destinationBuilding =
+      INDOOR_BUILDINGS[name];
+  }else{
+    delete indoorBtn.dataset.destinationBuilding;
   }
 
-if(
-  sameBuilding &&
-  indoorStartContext &&
-  indoorStartContext.buildingKey
-){
-  indoorBtn.dataset.stage = 'same-building';
-  indoorBtn.dataset.building = indoorStartContext.buildingKey;
+  document.getElementById('lbl-continue-indoor').textContent =
+    'Start indoor route →';
+
+}else if(hasDestinationIndoorJourney){
+  indoorBtn.style.display = 'block';
+
+  indoorBtn.dataset.stage = 'destination';
+  indoorBtn.dataset.building = INDOOR_BUILDINGS[name];
 
   delete indoorBtn.dataset.destinationBuilding;
 
   document.getElementById('lbl-continue-indoor').textContent =
-    'Start indoor route →';
+    t.continueIndoors;
 
-}else if(indoorStartContext && indoorStartContext.buildingKey){
-  indoorBtn.dataset.stage = 'origin';
-  indoorBtn.dataset.building = indoorStartContext.buildingKey;
-  indoorBtn.dataset.destinationBuilding = INDOOR_BUILDINGS[name];
-
-  document.getElementById('lbl-continue-indoor').textContent =
-    'Start indoor route →';
-
-}else{
-    indoorBtn.dataset.stage = 'destination';
-    indoorBtn.dataset.building = INDOOR_BUILDINGS[name];
-
-    delete indoorBtn.dataset.destinationBuilding;
-
-    document.getElementById('lbl-continue-indoor').textContent =
-      t.continueIndoors;
-  }
 }else{
   indoorBtn.style.display = 'none';
 
@@ -3313,6 +5225,12 @@ function clearIndoorStartJourney(){
   sessionStorage.removeItem('indoorStartContext');
   sessionStorage.removeItem('originIndoorComplete');
   sessionStorage.removeItem(OUTDOOR_JOURNEY_STORAGE_KEY);
+
+    // --------------------------------------------------
+  // Clear transfer state from the previous journey
+  // --------------------------------------------------
+  sessionStorage.removeItem('sharedIndoorTransfer');
+  sessionStorage.removeItem('intermediateIndoorTransfer');
 
   if(sessionStorage.getItem('journeyStage') === 'origin'){
     sessionStorage.removeItem('journeyStage');
@@ -3369,6 +5287,51 @@ function normalizeLocationQuery(value){
     .trim();
 }
 
+function indoorSearchName(node){
+  if(node.type === 'gym') return t.serviceGym || String(node.label || '');
+  if(node.type === 'library') return t.serviceLibrary || String(node.label || '');
+  if(node.type === 'landmark') return node.label || t.serviceLandmarks;
+
+  return node.type === 'room'
+    ? `${t.room} ${node.label}`
+    : String(node.label || '');
+}
+
+function searchableCampusPlaces(){
+  const points = CAMPUS_DATA.points || {};
+
+  return [
+    ...(points.food || []),
+    ...(points.shops || []),
+    ...(points.gates || []),
+    ...(points.clinic || [])
+  ];
+}
+
+function localizedPlaceName(place){
+  if(place.type === 'gate'){
+    return localizedBuildingNameByEnglishName(place.name);
+  }
+
+  if(place.type === 'clinic') return t.legendClinic;
+  if(lang === 'en') return place.name;
+
+  return PLACE_NAMES_HE[place.name] || place.name_he || place.name;
+}
+
+function placeMatchesSearch(place, query){
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+
+  return [
+    place.name,
+    place.name_en,
+    place.name_he,
+    localizedPlaceName(place)
+  ].some(name =>
+    String(name || '').toLowerCase().includes(normalizedQuery)
+  );
+}
+
 function getStartMatches(filter){
   const query = normalizeLocationQuery(filter);
   const searchableGraphs = [
@@ -3397,8 +5360,15 @@ function getStartMatches(filter){
   const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
     !query ||
     building.name.toLowerCase().includes(query) ||
-    (building.name_he || '').toLowerCase().includes(query)
+    (building.name_he || '').toLowerCase().includes(query) ||
+    localizedBuildingName(building).toLowerCase().includes(query)
   );
+
+  const placeMatches = query
+    ? searchableCampusPlaces().filter(place =>
+        placeMatchesSearch(place, query)
+      )
+    : [];
 
   const roomMatches = [];
   if(query){
@@ -3419,7 +5389,10 @@ function getStartMatches(filter){
 
           if(
             ['room', 'gym', 'library', 'landmark'].includes(node.type) &&
-            nodeLabel.toLowerCase().includes(query) &&
+            (
+              nodeLabel.toLowerCase().includes(query) ||
+              indoorSearchName(node).toLowerCase().includes(query)
+            ) &&
             connectedNodeIds.has(node.id) &&
             !/^node\s*\d+$/i.test(nodeLabel)
           ){
@@ -3458,13 +5431,22 @@ function getStartMatches(filter){
       aLabel.localeCompare(bLabel, undefined, {numeric:true});
   });
 
-  return {query, buildingMatches, roomMatches:uniqueRoomMatches};
+  return {
+    query,
+    buildingMatches,
+    roomMatches: uniqueRoomMatches,
+    placeMatches
+  };
 }
 
 function showStartSuggestions(filter, matches = getStartMatches(filter)){
-  const {buildingMatches, roomMatches} = matches;
+  const {
+    buildingMatches = [],
+    roomMatches = [],
+    placeMatches = []
+  } = matches;
 
-  if(!buildingMatches.length && !roomMatches.length){
+  if(!buildingMatches.length && !roomMatches.length && !placeMatches.length){
     startSuggestions.style.display = 'none';
     return;
   }
@@ -3491,10 +5473,11 @@ function showStartSuggestions(filter, matches = getStartMatches(filter)){
       onclick="pickIndoorStart(
         '${match.node.id}',
         '${String(match.node.label).replace(/'/g, "\\'")}',
-        '${match.buildingKey}'
+        '${match.buildingKey}',
+        '${indoorSearchName(match.node).replace(/'/g, "\\'")} · ${localizedBuildingNameByEnglishName(match.buildingName)}'
       )"
     >
-      <span>${t.room} ${match.node.label}</span>
+      <span>${indoorSearchName(match.node)}</span>
       <span style="color:var(--mid);font-size:11px;">
         ${localizedBuildingNameByEnglishName(match.buildingName)}
         · ${match.floor.replace('floorminus1','-1').replace('floor','')}
@@ -3502,12 +5485,49 @@ function showStartSuggestions(filter, matches = getStartMatches(filter)){
     </div>
   `).join('');
 
-  startSuggestions.innerHTML = buildingHTML + roomHTML;
-  startSuggestions.style.display = 'block';
+startSuggestions.innerHTML = buildingHTML + roomHTML;
+
+placeMatches.forEach(place => {
+  const row = document.createElement('div');
+  row.className = 'suggestion-item';
+
+  const name = document.createElement('span');
+  name.textContent = localizedPlaceName(place);
+
+  row.appendChild(name);
+
+  row.onclick = () => {
+    const nodeId = place.indoor?.nodeIds?.[0];
+
+    if(nodeId){
+      pickIndoorStart(
+        nodeId,
+        place.name,
+        place.indoor.buildingKey,
+        localizedPlaceName(place)
+      );
+    } else {
+      pickStart(
+        place.name,
+        place.lat,
+        place.lng,
+        localizedPlaceName(place)
+      );
+    }
+  };
+
+  startSuggestions.appendChild(row);
+});
+
+startSuggestions.style.display = 'block';
 }
 
 function showStartNotMapped(filter, matches = null){
-  if(matches && (matches.buildingMatches.length || matches.roomMatches.length)){
+  if(matches && (
+    matches.buildingMatches.length ||
+    matches.roomMatches.length ||
+    matches.placeMatches?.length
+  )){
     showStartSuggestions(filter, matches);
   }else{
     startSuggestions.innerHTML = '';
@@ -3526,50 +5546,58 @@ function showStartNotMapped(filter, matches = null){
 }
 
 
-function pickStart(name, lat, lng){
+function pickStart(name, lat, lng, displayLabel = ''){
 
-clearIndoorStartJourney();
+  clearIndoorStartJourney();
 
-if(name === 'Main Building'){
-  customStart = {
-    lat,
-    lng,
-    label: name,
-    buildingKey: 'main',
-    nodeId: 'floor700_n69'
-  };
-
-  sessionStorage.setItem(
-    'indoorStartContext',
-    JSON.stringify({
+  if(name === 'Main Building'){
+    customStart = {
+      lat,
+      lng,
+      label: name,
       buildingKey: 'main',
-      startNodeId: 'floor700_n69',
-      label: 'Main entrance 700'
-    })
-  );
-}else if(name === 'Rabin Building'){
-  customStart = {
-    lat,
-    lng,
-    label: name,
-    buildingKey: 'rabin',
-    nodeId: 'floor7_n108'
-  };
+      nodeId: 'floor700_n69'
+    };
 
-  sessionStorage.setItem(
-    'indoorStartContext',
-    JSON.stringify({
+    sessionStorage.setItem(
+      'indoorStartContext',
+      JSON.stringify({
+        buildingKey: 'main',
+        startNodeId: 'floor700_n69',
+        label: 'Main entrance 700'
+      })
+    );
+  }else if(name === 'Rabin Building'){
+    customStart = {
+      lat,
+      lng,
+      label: name,
       buildingKey: 'rabin',
-      startNodeId: 'floor7_n108',
-      label: 'Rabin entrance 700'
-    })
-  );
-}else{
-  customStart = {lat, lng, label:name};
-}
-  document.getElementById('startInput').value = name;
+      nodeId: 'floor7_n108'
+    };
+
+    sessionStorage.setItem(
+      'indoorStartContext',
+      JSON.stringify({
+        buildingKey: 'rabin',
+        startNodeId: 'floor7_n108',
+        label: 'Rabin entrance 700'
+      })
+    );
+  }else{
+    customStart = {lat, lng, label:name};
+  }
+
+  const inputLabel =
+    displayLabel || (
+      typeof localizedBuildingNameByEnglishName === 'function'
+        ? localizedBuildingNameByEnglishName(name)
+        : name
+    );
+
+  document.getElementById('startInput').value = inputLabel;
   selectedStartLocation = {
-    kind:'building', name, lat, lng, displayValue:name
+    kind:'building', name, lat, lng, displayValue:inputLabel
   };
   startSuggestions.style.display = 'none';
   if(gpsMarker) map.removeLayer(gpsMarker);
@@ -3588,7 +5616,7 @@ if(name === 'Main Building'){
   }
 }
 
-function pickIndoorStart(nodeId, label, buildingKey){
+function pickIndoorStart(nodeId, label, buildingKey, displayLabel = ''){
   const buildingNames = {
     madriga: 'Terrace Building',
     main: 'Main Building',
@@ -3606,14 +5634,21 @@ function pickIndoorStart(nodeId, label, buildingKey){
 
   const entrances = BUILDING_ENTRANCES[buildingKey] || [];
 
-  const profileEntrances =
-    currentProfile === 'mobility'
-      ? entrances.filter(
-          entrance =>
-            !entrance.requiresStairs &&
-            !entrance.avoidForMobility
-        )
-      : entrances;
+const profileEntrances =
+  entrances.filter(entrance => {
+    if(entrance.onlyForService){
+      return false;
+    }
+
+    if(currentProfile === 'mobility'){
+      return (
+        !entrance.requiresStairs &&
+        !entrance.avoidForMobility
+      );
+    }
+
+    return true;
+  });
 
   const routingEntrances =
     profileEntrances.some(entrance => entrance.primary)
@@ -3627,21 +5662,43 @@ function pickIndoorStart(nodeId, label, buildingKey){
   customStart = {
     lat: entrance.lat,
     lng: entrance.lng,
-    label: `${t.room} ${label} — ${localizedBuildingName(building)}`,
+    label: displayLabel ||
+  `${t.room} ${label} — ${localizedBuildingName(building)}`,
     buildingKey,
     nodeId,
     entranceId: entrance.nodeId
   };
+const defaultStartEntrance =
+  (BUILDING_ENTRANCES[buildingKey] || []).find(
+    item =>
+      item.primary &&
+      !item.onlyForService
+  ) ||
+  (BUILDING_ENTRANCES[buildingKey] || []).find(
+    item => !item.onlyForService
+  );
 
+const indoorStartNodeId =
+  nodeId ||
+  defaultStartEntrance?.nodeId ||
+  null;
+
+if(
+  indoorStartNodeId &&
+  indoorStartNodeId !== entrance.nodeId
+){
   sessionStorage.setItem(
     'indoorStartContext',
     JSON.stringify({
       buildingKey,
-      startNodeId: nodeId,
+      startNodeId: indoorStartNodeId,
       exitEntranceId: entrance.nodeId,
       label
     })
   );
+}else{
+  sessionStorage.removeItem('indoorStartContext');
+}
 
   document.getElementById('startInput').value = customStart.label;
   selectedStartLocation = {
@@ -3733,7 +5790,11 @@ function doStartSearch(value){
     return false;
   }
 
-  if(matches.buildingMatches.length || matches.roomMatches.length){
+  if(
+    matches.buildingMatches.length ||
+    matches.roomMatches.length ||
+    matches.placeMatches.length
+  ){
     showStartSuggestions(rawValue, matches);
     return false;
   }
@@ -3795,6 +5856,11 @@ function normalizeDestinationQuery(value){
 
 function getDestinationMatches(filter){
   const query = normalizeDestinationQuery(filter);
+  const placeMatches = query
+    ? searchableCampusPlaces().filter(place =>
+        placeMatchesSearch(place, query)
+      )
+    : [];
   const buildingMatches = CAMPUS_DATA.buildings.filter(building =>
     !query ||
     building.name.toLowerCase().includes(query) ||
@@ -3824,7 +5890,11 @@ function getDestinationMatches(filter){
           const label = String(node.label || '').trim().toLowerCase();
           if(
             !['room', 'gym', 'library', 'landmark'].includes(node.type) ||
-            !label.includes(query)
+            (
+              !label.includes(query) &&
+              !indoorSearchName(node).toLowerCase().includes(query)
+            ) ||
+            /^node\s*\d+$/i.test(label)
           ) continue;
 
           // Multiple doors to the same destination remain one result.
@@ -3849,14 +5919,19 @@ function getDestinationMatches(filter){
       aLabel.localeCompare(bLabel, undefined, { numeric: true });
   });
 
-  return { query, buildingMatches, roomMatches };
+  return { query, buildingMatches, roomMatches, placeMatches };
 }
 
 let selectedSearchDestination = null;
 
 function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
-  const { buildingMatches, roomMatches } = matches;
-  if(!buildingMatches.length && !roomMatches.length){
+  const {
+    buildingMatches = [],
+    roomMatches = [],
+    placeMatches = []
+  } = matches;
+
+  if(!buildingMatches.length && !roomMatches.length && !placeMatches.length){
     searchSuggestions.style.display = 'none';
     return;
   }
@@ -3894,29 +5969,94 @@ function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
       onclick="pickIndoorDestination(
         '${match.node.id}',
         '${String(match.node.label).replace(/'/g,"\\'")}',
-        '${match.buildingKey}'
+        '${match.buildingKey}',
+        '${indoorSearchName(match.node).replace(/'/g,"\\'")}'
       )"
     >
       <span>
-        ${match.node.type === 'room'
-          ? `${typeLabel} ${match.node.label}`
-          : match.node.label}
+      ${indoorSearchName(match.node)}
       </span>
 
       <span style="color:var(--mid);font-size:11px;">
         ${localizedBuildingNameByEnglishName(match.buildingName)}
         · ${match.floor.replace('floorminus1','-1').replace('floor','')}
       </span>
+      ${favouriteButton({
+        kind: 'indoor',
+        name: String(match.node.label).trim(),
+        nodeId: match.node.id,
+        type: match.node.type,
+        buildingKey: match.buildingKey,
+        buildingName: match.buildingName,
+        floor: match.floor
+      })}
     </div>
   `;
 }).join('');
 
-  searchSuggestions.innerHTML = buildingHTML + roomHTML;
-  searchSuggestions.style.display = 'block';
+searchSuggestions.innerHTML = buildingHTML + roomHTML;
+
+placeMatches.forEach(place => {
+  const row = document.createElement('div');
+  row.className = 'suggestion-item';
+
+  const name = document.createElement('span');
+  name.textContent = localizedPlaceName(place);
+
+  const detail = document.createElement('span');
+  detail.style.cssText = 'color:var(--mid);font-size:11px;';
+
+  const building = place.indoor
+    ? CAMPUS_DATA.buildings.find(
+        b => b.name === ({
+          madriga: 'Terrace Building',
+          main: 'Main Building',
+          rabin: 'Rabin Building',
+          student: 'Student House'
+        })[place.indoor.buildingKey]
+      )
+    : null;
+
+  detail.textContent = building
+    ? localizedBuildingName(building)
+    : ({
+    food: '🍽️',
+    shop: '🛍️',
+    gate: '🚪',
+    clinic: '🏥'
+  }[place.type] || '');
+
+  row.append(name, detail);
+
+  row.onclick = async () => {
+    if(!await ensureStartSelection()) return;
+
+    searchInput.value = localizedPlaceName(place);
+    searchSuggestions.style.display = 'none';
+
+  if(place.type === 'food'){
+    routeToFoodPlace(place);
+  } else if(place.type === 'shop'){
+    routeToShopPlace(place);
+  } else {
+    pickDestination(place.name, place.lat, place.lng);
+    searchInput.value = localizedPlaceName(place);
+  }
+  };
+
+  searchSuggestions.appendChild(row);
+});
+
+searchSuggestions.style.display = 'block';
 }
 
 
-async function pickIndoorDestination(nodeId, label, buildingKey){
+async function pickIndoorDestination(
+  nodeId,
+  label,
+  buildingKey,
+  displayLabel = ''
+){
 
 if(!await ensureStartSelection()) return;
 
@@ -3944,17 +6084,20 @@ const buildingNames = {
       startNodeId: null,
       destinationNodeId: nodeId,
       destinationLabel: label,
+      destinationDisplayLabel: displayLabel || label,
       buildingKey
     })
   );
 
   sessionStorage.setItem('indoorBuilding', buildingKey);
 
-  document.getElementById('searchInput').value =
-    `${t.room} ${label} — ${localizedBuildingName(building)}`;
+  const inputLabel =
+    `${displayLabel || `${t.room} ${label}`} — ${localizedBuildingName(building)}`;
+
+  document.getElementById('searchInput').value = inputLabel;
   selectedSearchDestination = {
-    kind: 'room', nodeId, label, buildingKey,
-    displayValue: document.getElementById('searchInput').value
+    kind: 'room', nodeId, label, buildingKey, displayLabel,
+    displayValue: inputLabel
   };
 
   searchSuggestions.style.display = 'none';
@@ -3976,9 +6119,12 @@ async function pickDestination(name, lat, lng){
   sessionStorage.removeItem('indoorContext');
   sessionStorage.removeItem('indoorBuilding');
 
-  document.getElementById('searchInput').value = name;
-  selectedSearchDestination = { kind: 'building', name, lat, lng, displayValue: name };
-  searchSuggestions.style.display='none';
+  const displayValue = localizedBuildingNameByEnglishName(name);
+  document.getElementById('searchInput').value = displayValue;
+  selectedSearchDestination = {
+    kind: 'building', name, lat, lng, displayValue
+  };
+  searchSuggestions.style.display = 'none';
   routeTo(name, lat, lng);
 }
 
@@ -4029,7 +6175,12 @@ function doSearch(q){
      String(q).trim() === selectedSearchDestination.displayValue){
     const selected = selectedSearchDestination;
     if(selected.kind === 'room'){
-      pickIndoorDestination(selected.nodeId, selected.label, selected.buildingKey);
+      pickIndoorDestination(
+        selected.nodeId,
+        selected.label,
+        selected.buildingKey,
+        selected.displayLabel
+      );
     }else{
       pickDestination(selected.name, selected.lat, selected.lng);
     }
@@ -4044,25 +6195,56 @@ function doSearch(q){
   const exactRooms = matches.roomMatches.filter(match =>
     String(match.node.label).trim().toLowerCase() === matches.query
   );
-  const exactCount = exactBuildings.length + exactRooms.length;
+  const exactPlaces = matches.placeMatches.filter(place =>
+    [
+      place.name,
+      place.name_en,
+      place.name_he,
+      localizedPlaceName(place)
+    ].some(value =>
+      String(value || '').trim().toLowerCase() === matches.query
+    )
+  );
+  const exactCount =
+    exactBuildings.length + exactRooms.length + exactPlaces.length;
 
   if(exactCount === 1){
     if(exactBuildings.length){
       const building = exactBuildings[0];
       pickDestination(building.name, building.lat, building.lng);
-    }else{
+    }else if(exactRooms.length){
       const match = exactRooms[0];
-      pickIndoorDestination(match.node.id, match.node.label, match.buildingKey);
+      pickIndoorDestination(
+        match.node.id,
+        match.node.label,
+        match.buildingKey,
+        indoorSearchName(match.node)
+      );
+    }else{
+      const place = exactPlaces[0];
+      searchInput.value = localizedPlaceName(place);
+      if(place.type === 'food'){
+        routeToFoodPlace(place);
+      }else if(place.type === 'shop'){
+        routeToShopPlace(place);
+      }else{
+        pickDestination(place.name, place.lat, place.lng);
+      }
     }
     return;
   }
 
   if(exactCount > 1){
-    showSearchSuggestions(q, {
-      buildingMatches: exactBuildings,
-      roomMatches: exactRooms
-    });
-  }else if(matches.buildingMatches.length || matches.roomMatches.length){
+      showSearchSuggestions(q, {
+        buildingMatches: exactBuildings,
+        roomMatches: exactRooms,
+        placeMatches: exactPlaces
+      });
+  }else if(
+    matches.buildingMatches.length ||
+    matches.roomMatches.length ||
+    matches.placeMatches.length
+  ){
     // Partial names/numbers need an explicit choice, even with one suggestion.
     showSearchSuggestions(q, matches);
   }else{
@@ -4075,33 +6257,210 @@ function doSearch(q){
 let recognition = null;
 let micActive = false;
 
-function toggleMic(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRecognition){ alert(t.voiceNotSupported); return; }
-  if(micActive){ recognition.stop(); return; }
+let voiceMeterStream = null;
+let voiceMeterContext = null;
+let voiceMeterSource = null;
+let voiceMeterFrame = null;
+let voiceMeterRequest = 0;
+
+function voiceMeterMessage(en, he, ar) {
+  return lang === 'he' ? he : lang === 'ar' ? ar : en;
+}
+
+function stopVoiceMeter() {
+  voiceMeterRequest++;
+
+  if (voiceMeterFrame !== null) {
+    cancelAnimationFrame(voiceMeterFrame);
+    voiceMeterFrame = null;
+  }
+
+  if (voiceMeterSource) {
+    voiceMeterSource.disconnect();
+    voiceMeterSource = null;
+  }
+
+  if (voiceMeterStream) {
+    voiceMeterStream.getTracks().forEach(track => track.stop());
+    voiceMeterStream = null;
+  }
+
+  if (voiceMeterContext) {
+    voiceMeterContext.close().catch(() => {});
+    voiceMeterContext = null;
+  }
+
+  const icon = document.querySelector('#micBtn svg');
+
+if (icon) {
+  icon.style.transform = '';
+}
+}
+async function startVoiceMeter() {
+  stopVoiceMeter();
+
+  const request = voiceMeterRequest;
+  const icon = document.querySelector('#micBtn svg');
+
+  const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (
+    !icon ||
+    !navigator.mediaDevices?.getUserMedia ||
+    !AudioContextClass
+  ) return;
+
+  try {
+    const context = new AudioContextClass();
+    voiceMeterContext = context;
+
+    await context.resume();
+
+    if (request !== voiceMeterRequest) return;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    });
+
+    if (request !== voiceMeterRequest) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+
+    voiceMeterStream = stream;
+
+    const source = context.createMediaStreamSource(stream);
+    voiceMeterSource = source;
+
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+
+    const samples = new Uint8Array(analyser.fftSize);
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    let smoothedLevel = 0;
+
+    function animateIcon() {
+      if (request !== voiceMeterRequest) return;
+
+      analyser.getByteTimeDomainData(samples);
+
+      let sum = 0;
+
+      for (const sample of samples) {
+        const value = (sample - 128) / 128;
+        sum += value * value;
+      }
+
+      const level = Math.min(
+        1,
+        Math.sqrt(sum / samples.length) * 5
+      );
+
+      smoothedLevel += (level - smoothedLevel) * 0.3;
+
+      if (!reduceMotion) {
+        icon.style.transform =
+          `scale(${1 + smoothedLevel * 0.65})`;
+      }
+
+      voiceMeterFrame = requestAnimationFrame(animateIcon);
+    }
+
+    animateIcon();
+  } catch (error) {
+    if (request !== voiceMeterRequest) return;
+
+    stopVoiceMeter();
+    console.warn('Microphone animation unavailable:', error);
+  }
+}
+
+function toggleMic() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert(t.voiceNotSupported);
+    return;
+  }
+
+  if (micActive) {
+    recognition.abort();
+    micActive = false;
+    stopVoiceMeter();
+
+    document.getElementById('micBtn').classList.remove('listening');
+    searchInput.placeholder = t.searchPlaceholder;
+    return;
+  }
 
   recognition = new SpeechRecognition();
-  recognition.lang = lang==='he'?'he-IL': lang==='ar'?'ar-SA':'en-US';
+  recognition.lang =
+    lang === 'he' ? 'he-IL' :
+    lang === 'ar' ? 'ar-SA' : 'en-US';
+
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
 
-  recognition.onstart = ()=>{
-    micActive=true;
+  micActive = true;
+
+  recognition.onstart = () => {
     document.getElementById('micBtn').classList.add('listening');
     searchInput.placeholder = t.voiceListening;
   };
-  recognition.onresult = e=>{
-    const transcript = e.results[0][0].transcript;
+
+  recognition.onresult = event => {
+    const transcript = event.results[0][0].transcript
+      .replace(/(\d)[,٬](?=\d)/g, '$1')
+      .trim();
+
     searchInput.value = transcript;
     runReadyDestinationSearch(transcript);
   };
-  recognition.onerror = recognition.onend = ()=>{
-    micActive=false;
+
+  recognition.onerror = event => {
+    console.error('Voice recognition error:', event.error);
+
+    stopVoiceMeter();
+
+    if (event.error !== 'aborted') {
+      alert('Voice recognition error: ' + event.error);
+    }
+  };
+
+  recognition.onend = () => {
+    micActive = false;
+    stopVoiceMeter();
+
     document.getElementById('micBtn').classList.remove('listening');
     searchInput.placeholder = t.searchPlaceholder;
   };
-  recognition.start();
+
+  // Start both from the user's tap.
+  startVoiceMeter();
+
+  try {
+    recognition.start();
+  } catch (error) {
+    micActive = false;
+    stopVoiceMeter();
+
+    document.getElementById('micBtn').classList.remove('listening');
+    searchInput.placeholder = t.searchPlaceholder;
+
+    alert('Voice recognition error: ' + error.message);
+  }
 }
+
+window.addEventListener('pagehide', () => {
+  if (recognition && micActive) recognition.abort();
+  stopVoiceMeter();
+});
 
 if(window.innerWidth <= 768){
   const sidebar = document.querySelector('.sidebar');
@@ -4109,7 +6468,21 @@ if(window.innerWidth <= 768){
   document.getElementById('map').addEventListener('click', ()=> sidebar.classList.remove('open'));
 }
 
+const FAVOURITES_KEY = 'campusway.favourites.v1';
+
 let favourites = [];
+
+try {
+  const saved = JSON.parse(
+    localStorage.getItem(FAVOURITES_KEY) || '[]'
+  );
+
+  if (Array.isArray(saved)) {
+    favourites = saved;
+  }
+} catch (error) {
+  console.warn('Could not load favourites:', error);
+}
 
 function toggleBuildingList(){
   const list = document.getElementById('buildingList');
@@ -4119,39 +6492,204 @@ function toggleBuildingList(){
   arrow.textContent = isOpen ? '▼' : '▲';
 }
 
-function toggleFavourite(name, lat, lng){
-  const idx = favourites.findIndex(f=>f.name===name);
-  if(idx >= 0){
-    favourites.splice(idx, 1);
-  } else {
-    favourites.push({name, lat, lng});
-  }
-  buildFavouriteList();
+function favouriteButton(place) {
+  const isSaved = favourites.some(
+    item => favouriteKey(item) === favouriteKey(place)
+  );
+
+  const payload = encodeURIComponent(
+    JSON.stringify(place)
+  ).replace(/'/g, '%27');
+
+  return `
+    <button
+      type="button"
+      data-favourite="${payload}"
+      aria-label="${t.saveToFav}"
+      aria-pressed="${isSaved}"
+      title="${t.saveToFav}"
+      style="
+        flex-shrink: 0;
+        background: transparent;
+        border: 0;
+        color: var(--amber);
+        font-size: 22px;
+        min-width: 44px;
+        min-height: 44px;
+        cursor: pointer;
+      "
+    >
+      ${isSaved ? '★' : '☆'}
+    </button>
+  `;
 }
 
-function buildFavouriteList(){
-  const el = document.getElementById('favouriteList');
-  const empty = document.getElementById('favEmpty');
-  if(!favourites.length){
-    empty.style.display = 'block';
-    el.querySelectorAll('.building-item').forEach(i=>i.remove());
-    return;
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-favourite]');
+
+  if (!button) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const place = JSON.parse(
+    decodeURIComponent(button.dataset.favourite)
+  );
+
+  toggleSavedPlace(place);
+}, true);
+
+
+function favouriteKey(place) {
+  if (place.kind === 'indoor') {
+    return `indoor:${place.buildingKey}:${place.name.trim().toLowerCase()}`;
   }
-  empty.style.display = 'none';
-  el.querySelectorAll('.building-item').forEach(i=>i.remove());
-  favourites.forEach(f=>{
-    const item = document.createElement('div');
-    item.className = 'building-item';
-    item.innerHTML = `<span>⭐ ${f.name}</span><span style="color:var(--mid);font-size:11px;cursor:pointer;" onclick="toggleFavourite('${f.name.replace(/'/g,"\\'")}',${f.lat},${f.lng})">✕</span>`;
-    item.onclick = (e)=>{
-      if(e.target.tagName === 'SPAN' && e.target.textContent === '✕') return;
-      map.flyTo([f.lat,f.lng],18,{duration:0.8});
-      setTimeout(()=> routeTo(f.name, f.lat, f.lng), 900);
-    };
-    el.insertBefore(item, empty);
+
+  return `place:${place.name}:${place.lat}:${place.lng}`;
+}
+
+function favouriteLabel(place) {
+  if (place.kind !== 'indoor') {
+    return place.name;
+  }
+
+  const name = place.type === 'room'
+    ? `${t.room} ${place.name.replace(/^room\s+/i, '')}`
+    : place.name;
+
+  const buildingName =
+    localizedBuildingNameByEnglishName(place.buildingName);
+
+  const shortBuildingName = lang === 'en'
+    ? buildingName.replace(/ Building$/, '')
+    : buildingName;
+
+  return `${name} · ${shortBuildingName}`;
+}
+
+function toggleSavedPlace(place) {
+  const key = favouriteKey(place);
+
+  const index = favourites.findIndex(
+    item => favouriteKey(item) === key
+  );
+
+  if (index >= 0) {
+    favourites.splice(index, 1);
+  } else {
+    favourites.push(place);
+  }
+
+  try {
+    localStorage.setItem(
+      FAVOURITES_KEY,
+      JSON.stringify(favourites)
+    );
+  } catch (error) {
+    console.warn('Could not save favourites:', error);
+  }
+
+  buildFavouriteList();
+
+  document.querySelectorAll('[data-favourite]').forEach(button => {
+    const savedPlace = JSON.parse(
+      decodeURIComponent(button.dataset.favourite)
+    );
+
+    const isSaved = favourites.some(
+      item => favouriteKey(item) === favouriteKey(savedPlace)
+    );
+
+    button.textContent = isSaved ? '★' : '☆';
+    button.setAttribute('aria-pressed', String(isSaved));
   });
 }
 
+// Keeps the existing building save buttons working.
+function toggleFavourite(name, lat, lng) {
+  toggleSavedPlace({
+    kind: 'place',
+    name,
+    lat,
+    lng
+  });
+}
+
+function buildFavouriteList() {
+  const list = document.getElementById('favouriteList');
+  const empty = document.getElementById('favEmpty');
+
+  list.querySelectorAll('.building-item').forEach(
+    item => item.remove()
+  );
+
+  empty.style.display = favourites.length ? 'none' : 'block';
+
+  favourites.forEach(place => {
+    const item = document.createElement('div');
+    item.className = 'building-item';
+
+    const destination = document.createElement('button');
+    destination.type = 'button';
+    destination.textContent = `⭐ ${favouriteLabel(place)}`;
+
+    destination.style.cssText = `
+      flex: 1;
+      text-align: start;
+      background: none;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      min-height: 44px;
+    `;
+
+    destination.onclick = () => {
+      if (place.kind === 'indoor') {
+        pickIndoorDestination(
+          place.nodeId,
+          place.name,
+          place.buildingKey
+        );
+      } else if (place.indoor) {
+        routeToFoodPlace(place);
+      } else {
+        pickDestination(place.name, place.lat, place.lng);
+      }
+    };
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '✕';
+
+    const removeText = lang === 'he'
+      ? 'הסר'
+      : lang === 'ar'
+        ? 'إزالة'
+        : 'Remove';
+
+    remove.setAttribute(
+      'aria-label',
+      `${removeText} ${favouriteLabel(place)}`
+    );
+
+    remove.style.cssText = `
+      background: none;
+      border: 0;
+      color: var(--mid);
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+    `;
+
+    remove.onclick = () => toggleSavedPlace(place);
+
+    item.append(destination, remove);
+    list.insertBefore(item, empty);
+  });
+}
+
+buildFavouriteList();
 
 function storedJourneyFallback(){
   let startContext = null;
@@ -4466,17 +7004,22 @@ async function handleCampusPageShow(){
       'continueIndoorBtn'
     );
 
-  const destinationBuilding =
-    indoorBtn.dataset.destinationBuilding;
+const destinationBuilding =
+  indoorBtn.dataset.destinationBuilding;
 
   if(
     !resumedJourney.restored &&
     !destinationBuilding
   ){
+    indoorBtn.style.display = 'none';
+    delete indoorBtn.dataset.stage;
+    delete indoorBtn.dataset.building;
+    delete indoorBtn.dataset.destinationBuilding;
+    sessionStorage.removeItem('originIndoorComplete');
     return;
   }
 
-    let intermediateTransfer = null;
+  let intermediateTransfer = null;
 
 try{
   intermediateTransfer = JSON.parse(

@@ -1440,7 +1440,7 @@
           "type": "room",
           "connectorId": "",
           "x": 0.711251,
-          "y": 0.312708,
+          "y": 0.314608,
           "floor": "floor600"
         },
         {
@@ -1475,8 +1475,8 @@
           "label": "623",
           "type": "room",
           "connectorId": "",
-          "x": 0.721956,
-          "y": 0.348634,
+          "x": 0.721495,
+          "y": 0.349169,
           "floor": "floor600"
         },
         {
@@ -1484,8 +1484,8 @@
           "label": "623/1",
           "type": "room",
           "connectorId": "",
-          "x": 0.740428,
-          "y": 0.349525,
+          "x": 0.739882,
+          "y": 0.349762,
           "floor": "floor600"
         },
         {
@@ -1646,8 +1646,8 @@
           "label": "631",
           "type": "room",
           "connectorId": "",
-          "x": 0.727071,
-          "y": 0.532931,
+          "x": 0.725668,
+          "y": 0.531727,
           "floor": "floor600"
         },
         {
@@ -1664,8 +1664,8 @@
           "label": "629",
           "type": "room",
           "connectorId": "",
-          "x": 0.652813,
-          "y": 0.54137,
+          "x": 0.65163,
+          "y": 0.540915,
           "floor": "floor600"
         },
         {
@@ -1790,8 +1790,8 @@
           "label": "609",
           "type": "room",
           "connectorId": "",
-          "x": 0.829357,
-          "y": 0.505815,
+          "x": 0.829738,
+          "y": 0.506068,
           "floor": "floor600"
         },
         {
@@ -2087,8 +2087,8 @@
           "label": "Node 81",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.768402,
-          "y": 0.316904,
+          "x": 0.768766,
+          "y": 0.317221,
           "floor": "floor600"
         },
         {
@@ -2096,8 +2096,8 @@
           "label": "Node 82",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.761895,
-          "y": 0.519002,
+          "x": 0.759377,
+          "y": 0.519591,
           "floor": "floor600"
         },
         {
@@ -2159,8 +2159,8 @@
           "label": "Node 92",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.966317,
-          "y": 0.390585,
+          "x": 0.966046,
+          "y": 0.389563,
           "floor": "floor600"
         },
         {
@@ -2188,15 +2188,6 @@
           "connectorId": "56",
           "x": 0.700392,
           "y": 0.438242,
-          "floor": "floor600"
-        },
-        {
-          "id": "floor600_n96",
-          "label": "Garden",
-          "type": "food",
-          "connectorId": "",
-          "x": 0.995165,
-          "y": 0.368791,
           "floor": "floor600"
         },
         {
@@ -2366,8 +2357,8 @@
           "label": "Node 117",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.725371,
-          "y": 0.543349,
+          "x": 0.726036,
+          "y": 0.544036,
           "floor": "floor600"
         },
         {
@@ -2431,15 +2422,6 @@
           "connectorId": "",
           "x": 0.207179,
           "y": 0.514549,
-          "floor": "floor600"
-        },
-        {
-          "id": "floor600_n124",
-          "label": "Node 125",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.995547,
-          "y": 0.388769,
           "floor": "floor600"
         },
         {
@@ -2546,8 +2528,8 @@
           "label": "Node 138",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.831164,
-          "y": 0.519992,
+          "x": 0.830718,
+          "y": 0.519244,
           "floor": "floor600"
         },
         {
@@ -2738,6 +2720,24 @@
           "x": 0.814939,
           "y": 0.317786,
           "floor": "floor600"
+        },
+        {
+          "id": "floor600_n160",
+          "label": "Teachers Room Buffet",
+          "type": "food",
+          "connectorId": "",
+          "x": 0.720739,
+          "y": 0.307363,
+          "floor": "floor600"
+        },
+        {
+          "id": "floor600_n161",
+          "label": "Node 162",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.700514,
+          "y": 0.384798,
+          "floor": "floor600"
         }
       ],
       "connections": [
@@ -2788,14 +2788,6 @@
         {
           "from": "floor600_n72",
           "to": "floor600_n73"
-        },
-        {
-          "from": "floor600_n96",
-          "to": "floor600_n124"
-        },
-        {
-          "from": "floor600_n124",
-          "to": "floor600_n86"
         },
         {
           "from": "floor600_n97",
@@ -3198,10 +3190,6 @@
           "to": "floor600_n60"
         },
         {
-          "from": "floor600_n72",
-          "to": "floor600_n7"
-        },
-        {
           "from": "floor600_n73",
           "to": "floor600_n115"
         },
@@ -3332,9 +3320,25 @@
         {
           "from": "floor600_n158",
           "to": "floor600_n74"
+        },
+        {
+          "from": "floor600_n104",
+          "to": "floor600_n160"
+        },
+        {
+          "from": "floor600_n7",
+          "to": "floor600_n6"
+        },
+        {
+          "from": "floor600_n161",
+          "to": "floor600_n0"
+        },
+        {
+          "from": "floor600_n115",
+          "to": "floor600_n161"
         }
       ],
-      "nextNodeId": 160
+      "nextNodeId": 163
     },
     "floor700": {
       "nodes": [

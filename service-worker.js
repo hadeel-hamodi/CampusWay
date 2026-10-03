@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v28-canonical-indoor-graphs';
+const CACHE_NAME = 'campusway-v30-canonical-indoor-graphs';
 
 const APP_FILES = [
 './',
@@ -13,7 +13,6 @@ const APP_FILES = [
   './app/prototype/outdoor-routing.js',
   './app/prototype/campus-osm.json',
   './app/prototype/madriga-graph.js',
-  './app/prototype/main-graph.js',
   './app/prototype/multi-purpose-graph.js',
   './app/prototype/indoor.js',
 
@@ -24,6 +23,9 @@ const APP_FILES = [
   './wayframe/wheelchair-navigation.js',
   './wayframe/route-planner.js',
   './wayframe/sensor-test.html',
+  './wayframe/audio-guide.js',
+  './wayframe/audio-test.html',
+  './wayframe/mic-test.html',
 
   './buildings/education/education-indoor-graph.json',
   './buildings/education/floors/floor0.svg',

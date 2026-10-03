@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusWay Audio Test</title>
+<style>
+  body{font-family:Arial,sans-serif;max-width:600px;margin:24px auto;padding:0 16px;line-height:1.4}
+  h1{font-size:22px}
+  button{font-size:17px;padding:12px 16px;margin:4px 4px 4px 0;min-height:48px}
+  .row{margin:14px 0}
+  .on{outline:3px solid #0a7;}
+  #sample{font-size:20px;margin:10px 0;padding:10px;background:#f3f4f6;border-radius:8px}
+  #log,#voices{margin-top:16px;padding:12px;background:#f3f4f6;border-radius:8px;font-size:14px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>CampusWay Audio Test</h1>
+
+<div class="row">
+  <button id="audioBtn">Audio: off</button>
+</div>
+
+<div class="row">
+  Language:
+  <button data-lang="en" class="on">English</button>
+  <button data-lang="he">עברית</button>
+  <button data-lang="ar">العربية</button>
+</div>
+
+<div id="sample"></div>
+
+<div class="row">
+  <button id="instrBtn">Next instruction</button>
+  <button id="sameBtn">Same instruction again</button>
+  <button id="floorBtn">Floor change</button>
+  <button id="warnBtn">Direction warning</button>
+  <button id="arriveBtn">Arrival</button>
+  <button id="repeatBtn">Repeat instruction</button>
+</div>
+
+<div id="log">Turn audio on first. On iPhone, speech only works after a tap.</div>
+<div id="voices"></div>
+
+<script src="audio-guide.js"></script>
+<script>
+const PHRASES = {
+  en: {
+    on: 'Audio guide on.',
+    steps: ['Turn left and continue 20 metres.', 'Continue straight to the stairs.', 'Turn right at the corridor.'],
+    floor: 'Take the elevator to floor 4.',
+    warn: 'Direction unclear. Stop and check which way you are facing.',
+    arrive: 'You have arrived.'
+  },
+  he: {
+    on: 'המדריך הקולי פועל.',
+    steps: [
+    'פנה שמאלה והמשך עשרים מטרים.',
+    'המשך ישר עד המדרגות.',
+    'פנה ימינה במסדרון.'
+    ],
+    floor: 'השתמש במעלית כדי להגיע לקומה ארבע.',
+    warn: 'הכיוון לא ברור. עצור ובדוק לאיזה כיוון אתה פונה.',
+    arrive: 'הגעת ליעד.'
+  },
+  ar: {
+    on: 'الدليل الصوتي مفعّل.',
+    steps: ['انعطف يسارًا وتابع 20 مترًا.', 'تابع مباشرة حتى الدرج.', 'انعطف يمينًا عند الممر.'],
+    floor: 'استخدم المصعد إلى الطابق 4.',
+    warn: 'الاتجاه غير واضح. توقف وتحقق من الاتجاه الذي تواجهه.',
+    arrive: 'لقد وصلت إلى وجهتك.'
+  }
+};
+
+const $ = id => document.getElementById(id);
+let lang = 'en';
+let stepIndex = 0;
+
+const audio = new CampusAudioGuide({ language: lang, onStatus: status => log(JSON.stringify(status)) });
+
+function log(message){
+  $('log').textContent = new Date().toLocaleTimeString() + '  ' + message + '\n' + $('log').textContent;
+}
+
+function showSample(){
+  const box = $('sample');
+  box.dir = lang === 'en' ? 'ltr' : 'rtl';
+  box.textContent = PHRASES[lang].steps[stepIndex % 3];
+}
+
+function showVoices(){
+  if(!('speechSynthesis' in window)){ $('voices').textContent = 'speechSynthesis is not supported in this browser.'; return; }
+  const all = speechSynthesis.getVoices();
+  const pick = prefix => all.filter(v => v.lang.toLowerCase().replace('_','-').startsWith(prefix) || (prefix === 'he' && v.lang.toLowerCase().startsWith('iw')));
+  const line = (name, list) => name + ': ' + (list.length ? list.map(v => v.name + ' (' + v.lang + (v.localService ? ', on-device' : ', online') + ')').join('; ') : 'NO VOICE FOUND');
+  $('voices').textContent = line('English', pick('en')) + '\n\n' + line('Hebrew', pick('he')) + '\n\n' + line('Arabic', pick('ar'));
+}
+showVoices();
+if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', showVoices);
+
+function refreshAudioButton(){
+  $('audioBtn').textContent = 'Audio: ' + (audio.enabled ? 'on' : 'off');
+}
+refreshAudioButton();
+
+$('audioBtn').onclick = () => {
+  audio.setEnabled(!audio.enabled, PHRASES[lang].on);
+  refreshAudioButton();
+};
+
+document.querySelectorAll('[data-lang]').forEach(button => {
+  button.onclick = () => {
+    lang = button.dataset.lang;
+    audio.setLanguage(lang);
+    document.querySelectorAll('[data-lang]').forEach(b => b.classList.toggle('on', b === button));
+    stepIndex = 0;
+    showSample();
+    log('Language: ' + lang);
+  };
+});
+
+$('instrBtn').onclick = () => {
+  stepIndex++;
+  showSample();
+  const spoken = audio.instruction(PHRASES[lang].steps[stepIndex % 3], 'step-' + stepIndex);
+  log('instruction spoken: ' + spoken);
+};
+$('sameBtn').onclick = () => {
+  // Same key as the last step: should NOT be spoken twice.
+  const spoken = audio.instruction(PHRASES[lang].steps[stepIndex % 3], 'step-' + stepIndex);
+  log('same instruction spoken (expect false): ' + spoken);
+};
+$('floorBtn').onclick = () => log('floor spoken: ' + audio.announce(PHRASES[lang].floor, 'floor-4'));
+$('warnBtn').onclick = () => log('warning spoken: ' + audio.announce(PHRASES[lang].warn, 'warn-' + Date.now()));
+$('arriveBtn').onclick = () => log('arrival spoken: ' + audio.announce(PHRASES[lang].arrive, 'arrive'));
+$('repeatBtn').onclick = () => log('repeat spoken: ' + audio.repeat());
+
+showSample();
+</script>
+</body>
+</html>
