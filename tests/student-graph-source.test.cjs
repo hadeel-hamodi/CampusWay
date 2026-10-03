@@ -1,0 +1,241 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const {test} = require('node:test');
+
+const root = path.join(__dirname, '..');
+const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const navigation = fs.readFileSync(
+  path.join(root, 'wayframe', 'navigation-demo.html'),
+  'utf8'
+);
+const serviceWorker = fs.readFileSync(
+  path.join(root, 'service-worker.js'),
+  'utf8'
+);
+const dataSource = fs.readFileSync(
+  path.join(root, 'app', 'prototype', 'data.js'),
+  'utf8'
+);
+const graphPath = path.join(
+  root,
+  'buildings',
+  'student',
+  'student-indoor-graph.json'
+);
+const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+
+function between(source, start, end){
+  const a = source.indexOf(start);
+  const b = source.indexOf(end, a);
+  assert.ok(a >= 0 && b > a, `missing ${start}`);
+  return source.slice(a, b);
+}
+
+function allNodes(value){
+  return Object.values(value.floors)
+    .flatMap(floor => floor.nodes || []);
+}
+
+function connectedNodeIds(value, starts, options = {}){
+  const nodes = allNodes(value).filter(
+    node => !(options.avoidStairs && node.type === 'stairs')
+  );
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const adjacency = new Map(nodes.map(node => [node.id, new Set()]));
+
+  for(const floor of Object.values(value.floors)){
+    for(const connection of (floor.connections || [])){
+      if(
+        options.avoidStairs &&
+        (!byId.has(connection.from) || !byId.has(connection.to))
+      ){
+        continue;
+      }
+      assert.ok(byId.has(connection.from), `missing ${connection.from}`);
+      assert.ok(byId.has(connection.to), `missing ${connection.to}`);
+      adjacency.get(connection.from).add(connection.to);
+      adjacency.get(connection.to).add(connection.from);
+    }
+  }
+
+  const connectors = new Map();
+  for(const node of nodes){
+    if(
+      !['stairs', 'elevator'].includes(node.type) ||
+      !node.connectorId
+    ) continue;
+    const key = `${node.type}:${node.connectorId}`;
+    if(!connectors.has(key)) connectors.set(key, []);
+    connectors.get(key).push(node.id);
+  }
+
+  for(const ids of connectors.values()){
+    for(let index = 1; index < ids.length; index += 1){
+      const previous = ids[index - 1];
+      const current = ids[index];
+      adjacency.get(previous).add(current);
+      adjacency.get(current).add(previous);
+    }
+  }
+
+  const reached = new Set();
+  const queue = starts.filter(id => byId.has(id));
+  while(queue.length){
+    const current = queue.shift();
+    if(reached.has(current)) continue;
+    reached.add(current);
+    for(const next of adjacency.get(current)){
+      if(!reached.has(next)) queue.push(next);
+    }
+  }
+  return reached;
+}
+
+test('main page loads the canonical Student graph before using it', async () => {
+  const requests = [];
+  const context = vm.createContext({
+    fetch:async url => {
+      requests.push(url);
+      return {
+        ok:true,
+        status:200,
+        async json(){return graph;}
+      };
+    },
+    console:{error(){}}
+  });
+
+  vm.runInContext(
+    between(index, 'let STUDENT_GRAPH = null;', 'let customStart = null;'),
+    context
+  );
+  await vm.runInContext('studentGraphReady', context);
+
+  assert.deepEqual(requests, [
+    'buildings/student/student-indoor-graph.json'
+  ]);
+  assert.equal(
+    vm.runInContext('STUDENT_GRAPH', context).floors.floor1.nodes.length,
+    graph.floors.floor1.nodes.length
+  );
+});
+
+test('a delayed Student graph load cannot show stale search suggestions', async () => {
+  let finishLoading;
+  const calls = [];
+  const context = vm.createContext({
+    studentGraphReady:new Promise(resolve => {
+      finishLoading = resolve;
+    }),
+    showStartSuggestions(value){calls.push(value);},
+    doStartSearch(){throw new Error('search should not run');}
+  });
+
+  vm.runInContext(
+    between(
+      index,
+      'let startSearchRequestId = 0;',
+      "startInput.addEventListener('focus'"
+    ),
+    context
+  );
+
+  const oldRequest = vm.runInContext(
+    "showReadyStartSuggestions('old')",
+    context
+  );
+  const newRequest = vm.runInContext(
+    "showReadyStartSuggestions('new')",
+    context
+  );
+  finishLoading(graph);
+  await Promise.all([oldRequest, newRequest]);
+
+  assert.deepEqual(calls, ['new']);
+});
+
+test('main page, indoor navigation and offline cache share one Student graph', () => {
+  const canonical = 'buildings/student/student-indoor-graph.json';
+  assert.match(index, new RegExp(canonical.replaceAll('.', '\\.')));
+  assert.match(
+    navigation,
+    /buildings\/\$\{BUILDING\}\/\$\{BUILDING\}-indoor-graph\.json/
+  );
+  assert.match(serviceWorker, /buildings\/student\/student-indoor-graph\.json/);
+  assert.doesNotMatch(index, /app\/prototype\/student-graph\.js/);
+  assert.doesNotMatch(serviceWorker, /app\/prototype\/student-graph\.js/);
+  assert.match(index, /function pickLang\(l, dir\)/);
+  assert.doesNotMatch(index, /async function pickLang\(l, dir\)/);
+  assert.equal(
+    fs.existsSync(path.join(root, 'app', 'prototype', 'student-graph.js')),
+    false
+  );
+  assert.equal(
+    fs.existsSync(path.join(
+      root,
+      'buildings',
+      'student',
+      'floors',
+      'student-indoor-graph.json'
+    )),
+    false
+  );
+});
+
+test('canonical Student graph has unique nodes and every node is reachable', () => {
+  const nodes = allNodes(graph);
+  const nodeIds = nodes.map(node => node.id);
+  assert.equal(new Set(nodeIds).size, nodeIds.length);
+
+  const data = vm.createContext({});
+  vm.runInContext(`${dataSource};this.entrances=BUILDING_ENTRANCES.student`, data);
+  const entranceIds = Array.from(data.entrances, entrance => entrance.nodeId);
+  assert.deepEqual(entranceIds, ['floor1_n105', 'floor4_n3']);
+
+  const reached = connectedNodeIds(graph, entranceIds);
+  assert.equal(reached.size, nodes.length);
+
+  const accessibleReached = connectedNodeIds(
+    graph,
+    entranceIds,
+    {avoidStairs:true}
+  );
+  const userDestinations = nodes.filter(node =>
+    ['room', 'restroom', 'landmark', 'shelter', 'parking'].includes(
+      node.type
+    )
+  );
+  for(const destination of userDestinations){
+    assert.ok(
+      accessibleReached.has(destination.id),
+      `${destination.id} is not reachable without stairs`
+    );
+  }
+});
+
+test('Student room search uses destinations from the canonical graph', () => {
+  const context = vm.createContext({
+    CAMPUS_DATA:{buildings:[{
+      name:'Student House',
+      name_he:'בית הסטודנט',
+      lat:1,
+      lng:2
+    }]},
+    STUDENT_GRAPH:graph
+  });
+
+  vm.runInContext(
+    between(index, 'function normalizeLocationQuery', 'function pickStart('),
+    context
+  );
+
+  const added = vm.runInContext("getStartMatches('372')", context);
+  assert.equal(added.roomMatches.length, 1);
+  assert.equal(added.roomMatches[0].buildingKey, 'student');
+  assert.equal(added.roomMatches[0].node.label, '372');
+
+  const removed = vm.runInContext("getStartMatches('001')", context);
+  assert.equal(removed.roomMatches.length, 0);
+});

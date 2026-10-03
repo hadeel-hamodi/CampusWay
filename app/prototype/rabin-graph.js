@@ -2764,7 +2764,7 @@
         },
         {
           "id": "floor6_n59",
-          "label": "60009",
+          "label": "6009",
           "type": "room",
           "connectorId": "",
           "x": 0.127297,

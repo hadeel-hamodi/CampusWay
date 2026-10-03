@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v20';
+const CACHE_NAME = 'campusway-v21';
 
 const APP_FILES = [
 './',
@@ -24,6 +24,9 @@ const APP_FILES = [
   './wayframe/step-detector.js',
   './wayframe/heading-tracker.js',
   './wayframe/route-progress.js',
+
+  './wayframe/route-planner.js',
+  './wayframe/wheelchair-navigation.js',
 
   './buildings/education/education-indoor-graph.json',
   './buildings/education/floors/floor0.svg',

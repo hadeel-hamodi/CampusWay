@@ -803,7 +803,18 @@ const T = {
 // ═══════════════════════════════════════════
 let lang = 'en';
 let t = T.en;
-let currentProfile = 'general';
+const PROFILE_IDS = new Set([
+  'general', 'mobility', 'visual', 'spatial', 'mental'
+]);
+
+const storedProfile =
+  sessionStorage.getItem('accessibilityProfile');
+
+let currentProfile = PROFILE_IDS.has(storedProfile)
+  ? storedProfile
+  : 'general';
+
+sessionStorage.setItem('accessibilityProfile', currentProfile);
 let audioOn = false;
 let customStart = null; // {lat, lng, label}
 let userLocationMarker = null;
@@ -1003,7 +1014,8 @@ function buildProfiles(){
   el.innerHTML = '';
   t.profiles.forEach((p,i)=>{
     const btn = document.createElement('button');
-    btn.className = 'profile-btn'+(p.id==='general'?' active':'');
+    btn.className =
+    'profile-btn' + (p.id === currentProfile ? ' active' : '');
     btn.dataset.id = p.id;
     btn.innerHTML = `<div class="profile-icon">${ICONS[ICON_KEYS[i]]}</div>
       <div class="profile-text"><strong>${p.label}</strong><small>${p.sub}</small></div>`;
@@ -1014,12 +1026,16 @@ function buildProfiles(){
       sessionStorage.setItem('accessibilityProfile', currentProfile);
       //showAlert(p.id);//
       speak(p.label + '. ' + p.sub);
+      if(selectedRouteDestination){
+      const {name, lat, lng} = selectedRouteDestination;
+      routeTo(name, lat, lng);
+    }
     };
     el.appendChild(btn);
   });
 }
 
-/*function showAlert(profileId){
+/*(function showAlert(profileId){
   const area = document.getElementById('alertArea');
   const msg = t.alerts[profileId];
   if(!msg){ area.innerHTML=''; return; }
