@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v21';
+const CACHE_NAME = 'campusway-v22-merge';
 
 const APP_FILES = [
 './',
@@ -20,6 +20,7 @@ const APP_FILES = [
   './app/prototype/indoor.js',
 
   './wayframe/navigation-demo.html',
+  './wayframe/sensor-test.html',
 
   './wayframe/step-detector.js',
   './wayframe/heading-tracker.js',
@@ -74,18 +75,21 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(APP_FILES))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(names =>
-      Promise.all(
-        names
-          .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
+    caches.keys()
+      .then(names =>
+        Promise.all(
+          names
+            .filter(name => name !== CACHE_NAME)
+            .map(name => caches.delete(name))
+        )
       )
-    )
+      .then(() => self.clients.claim())
   );
 });
 

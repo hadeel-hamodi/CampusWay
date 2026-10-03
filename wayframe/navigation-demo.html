@@ -1838,7 +1838,7 @@ if(a.floor!==b.floor){
 
 function heldDirectionMessage(){
   $('status').textContent = localizedInstruction(
-    'Direction unclear. Position updates pause until readings are usable.',
+    'Direction unclear. Position updates are paused and will resume automatically when readings are usable.',
     'الاتجاه غير واضح. يتوقف تحديث الموقع حتى تتحسن القراءات.',
     'הכיוון אינו ברור. עדכון המיקום מושהה עד שהקריאות יהיו תקינות.'
   );
@@ -2485,13 +2485,91 @@ return;
 }
 }
 
+function requireDirectionCalibration(){
+  if(navMode !== 'sensor') return;
+
+  // Keep an elevator/stairs confirmation available.
+  // Walking is already blocked during this transition.
+  if(sensorElevatorRide){
+    headingTracker.invalidate();
+    deviceHeading = null;
+    return;
+  }
+
+  stopNavigationMotion();
+
+  $('startBtn').disabled = routeNodes.length < 2;
+
+  if(!routeNodes.length) return;
+
+  const atDestination =
+    progressIndex === routeNodes.length - 1;
+
+  $('status').textContent = atDestination
+    ? localizedInstruction(
+        'Point your phone back along the route toward the starting location, then press Start navigation.',
+        'وجّه الهاتف على المسار نحو نقطة البداية، ثم اضغط ابدأ الملاحة.',
+        'כוון את הטלפון חזרה לאורך המסלול אל נקודת ההתחלה, ואז לחץ התחל ניווט.'
+      )
+    : localizedInstruction(
+        'Point your phone along the route toward your destination, then press Start navigation.',
+        'وجّه الهاتف على المسار نحو وجهتك، ثم اضغط ابدأ الملاحة.',
+        'כוון את הטלפון לאורך המסלול אל היעד, ואז לחץ התחל ניווט.'
+      );
+}
+
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){
+    requireDirectionCalibration();
+  }
+});
+
+window.addEventListener('orientationchange', () => {
+  requireDirectionCalibration();
+});
+
+function updateSensorDirectionStatus(now = performance.now()){
+  if(
+    navMode !== 'sensor' ||
+    !navigationActive ||
+    motionUnavailable ||
+    sensorElevatorRide
+  ){
+    return;
+  }
+
+  if(headingTracker.mapHeading(now) === null){
+    if(!sensorHeadingPaused){
+      sensorHeadingPaused = true;
+      heldDirectionMessage();
+    }
+
+    return;
+  }
+
+  if(!sensorHeadingPaused) return;
+
+  sensorHeadingPaused = false;
+
+  if(sensorFloorBoundary){
+    showFloorBoundary();
+    return;
+  }
+
+  $('status').textContent = localizedInstruction(
+    'Direction readings restored. Position updates resume with your next clear steps.',
+    'عادت قراءات الاتجاه. يستأنف تحديث الموقع مع خطواتك التالية ذات الاتجاه الواضح.',
+    'נתוני הכיוון חזרו. עדכון המיקום יתחדש בצעדים הבאים שכיוונם ברור.'
+  );
+}
+
 
 function updateDeviceHeading(e){
-  const screenAngle =
-    screen.orientation &&
-    Number.isFinite(screen.orientation.angle)
-      ? screen.orientation.angle
-      : Number(window.orientation) || 0;
+
+const screenAngle =
+  window.screen?.orientation?.angle ??
+  window.orientation ??
+  0;
 
   headingTracker.update(
     e,
@@ -2516,32 +2594,60 @@ function updateDeviceHeading(e){
     );
   }
 
-  if(navMode === 'sensor' && navigationActive){
-    drawBaseMap();
+if(navMode === 'sensor' && navigationActive){
+  if(!sensorElevatorRide && !headingTracker.isCalibrated){
+    requireDirectionCalibration();
+    return;
   }
-}
 
+  updateSensorDirectionStatus(performance.now());
+  drawBaseMap();
+}
+}
 function updateDeviceMotion(e){
   sensorEvents++;
 
-  const result = stepDetector.updateMotion(
-    e,
-    performance.now()
-  );
+  const now = performance.now();
+  const result = stepDetector.updateMotion(e, now);
 
   filteredAccel = result.filteredAccel;
   isWalking = result.isWalking;
 
   if(
     navMode !== 'sensor' ||
-    !navigationActive
+    !navigationActive ||
+    sensorElevatorRide
   ){
     return;
   }
 
-for(const stepTime of result.stepTimes){
-  handleDetectedStep(stepTime);
-}
+  if(!result.valid){
+    motionUnavailable = true;
+
+    $('status').textContent = localizedInstruction(
+      'Motion readings unavailable. Keep this page open and check sensor access.',
+      'قراءات الحركة غير متاحة. أبقِ الصفحة مفتوحة وتحقق من إذن الحساسات.',
+      'נתוני תנועה אינם זמינים. השאר את הדף פתוח ובדוק הרשאה לחיישנים.'
+    );
+
+    return;
+  }
+
+  if(motionUnavailable){
+    motionUnavailable = false;
+
+    $('status').textContent = localizedInstruction(
+      'Motion readings restored. Start walking.',
+      'عادت قراءات الحركة. ابدأ المشي.',
+      'נתוני התנועה חזרו. התחל ללכת.'
+    );
+  }
+
+  for(const stepTime of result.stepTimes){
+    handleDetectedStep(stepTime);
+  }
+
+  updateSensorDirectionStatus(now);
 }
 
 async function requestSensorPermission(token){
@@ -2762,99 +2868,6 @@ $('sensorConfirmBtn').hidden = true;
 
   updateWheelchairControls();
 }
-
-async function startNavigation(){
-if(navigationActive || !routeNodes.length) return;
-
-const requestedMode = navMode;
-const requestedRoute = routeNodes;
-const token = ++navigationStartToken;
-
-const requestIsCurrent = () =>
-  token === navigationStartToken &&
-  requestedMode === navMode &&
-  requestedRoute === routeNodes;
-
-$('startBtn').disabled = true;
-
-if(requestedMode === 'sensor'){
-  if(!sensorsEnabled){
-    await enableSensors(token);
-
-    if(!requestIsCurrent()) return;
-
-    if(!sensorsEnabled){
-      $('startBtn').disabled = false;
-      return;
-    }
-  }
-
-  const calibrated =
-    await calibrateHeadingAutomatically(token);
-
-  if(!requestIsCurrent()) return;
-
-  if(!calibrated){
-    $('startBtn').disabled = false;
-    return;
-  }
-}
-navigationActive=true;
-detectedSteps=0;
-stepDetector.reset();
-
-  isWalking=false;
-  pendingStepDistance=0;
-  stepMovementQueue = [];
-  projectedStepCursor = null;
-  lastMovementFrameTime=0;
-
-  if(movementAnimationFrame!==null){
-    cancelAnimationFrame(movementAnimationFrame);
-    movementAnimationFrame=null;
-  }
-
-  $('startBtn').disabled=true;
-
-if(navMode === 'auto'){
-  followCamera = false;
-  $('status').textContent = 'Auto navigation running.';
-  $('instruction').textContent = 'Navigation started';
-  startAutoDemo();
-
-}else if(navMode === 'sensor'){
-  followCamera = true;
-  $('status').textContent =
-    'Walk normally — CampusWay will move when steps are detected.';
-  $('instruction').textContent = 'Start walking';
-
-}else if(navMode === 'wheelchair'){
-  followCamera = true;
-
-  $('status').textContent = localizedInstruction(
-    'Manual navigation started.',
-    'بدأت الملاحة اليدوية.',
-    'הניווט הידני התחיל.'
-  );
-
-  $('wheelchairStatus').textContent = localizedInstruction(
-    'Follow the highlighted route. Confirm the next point only after reaching it.',
-    'اتبع المسار المحدد. أكّد النقطة التالية فقط بعد وصولك إليها.',
-    'התקדם במסלול המסומן. אשר את הנקודה הבאה רק לאחר ההגעה.'
-  );
-}
-
-updateTurnInstruction();
-updateWheelchairControls();
-}
-
-$('fromFloor').onchange=()=>{
-  fillLocationSelect($('fromFloor').value,'from','Choose start location...');
-};
-
-$('toFloor').onchange=()=>{
-  fillLocationSelect($('toFloor').value,'to','Choose destination...');
-};
 
 function moveWheelchairToCheckpoint(direction){
   if(
@@ -3143,6 +3156,100 @@ $('wheelchairNextBtn').textContent = atDestination
   }
 }
 
+async function startNavigation(){
+if(navigationActive || !routeNodes.length) return;
+
+const requestedMode = navMode;
+const requestedRoute = routeNodes;
+const token = ++navigationStartToken;
+
+const requestIsCurrent = () =>
+  token === navigationStartToken &&
+  requestedMode === navMode &&
+  requestedRoute === routeNodes;
+
+$('startBtn').disabled = true;
+
+if(requestedMode === 'sensor'){
+  if(!sensorsEnabled){
+    await enableSensors(token);
+
+    if(!requestIsCurrent()) return;
+
+    if(!sensorsEnabled){
+      $('startBtn').disabled = false;
+      return;
+    }
+  }
+
+  const calibrated =
+    await calibrateHeadingAutomatically(token);
+
+  if(!requestIsCurrent()) return;
+
+  if(!calibrated){
+    $('startBtn').disabled = false;
+    return;
+  }
+}
+navigationActive=true;
+detectedSteps=0;
+stepDetector.reset();
+
+  isWalking=false;
+  pendingStepDistance=0;
+  stepMovementQueue = [];
+  projectedStepCursor = null;
+  lastMovementFrameTime=0;
+
+  if(movementAnimationFrame!==null){
+    cancelAnimationFrame(movementAnimationFrame);
+    movementAnimationFrame=null;
+  }
+
+  $('startBtn').disabled=true;
+
+if(navMode === 'auto'){
+  followCamera = false;
+  $('status').textContent = 'Auto navigation running.';
+  $('instruction').textContent = 'Navigation started';
+  startAutoDemo();
+
+}else if(navMode === 'sensor'){
+  followCamera = true;
+  $('status').textContent =
+    'Walk normally — CampusWay will move when steps are detected.';
+  $('instruction').textContent = 'Start walking';
+
+}else if(navMode === 'wheelchair'){
+  followCamera = true;
+
+  $('status').textContent = localizedInstruction(
+    'Manual navigation started.',
+    'بدأت الملاحة اليدوية.',
+    'הניווט הידני התחיל.'
+  );
+
+  $('wheelchairStatus').textContent = localizedInstruction(
+    'Follow the highlighted route. Confirm the next point only after reaching it.',
+    'اتبع المسار المحدد. أكّد النقطة التالية فقط بعد وصولك إليها.',
+    'התקדם במסלול המסומן. אשר את הנקודה הבאה רק לאחר ההגעה.'
+  );
+}
+
+updateTurnInstruction();
+updateWheelchairControls();
+}
+
+$('fromFloor').onchange=()=>{
+  fillLocationSelect($('fromFloor').value,'from','Choose start location...');
+};
+
+$('toFloor').onchange=()=>{
+  fillLocationSelect($('toFloor').value,'to','Choose destination...');
+};
+
+
 let navMode = 'auto';
 
 function setNavigationMode(mode){
@@ -3155,7 +3262,7 @@ function setNavigationMode(mode){
 
   const wheelchairMode = mode === 'wheelchair';
   const mobilityProfile =
-    sessionStorage.getItem('accessibilityProfile') === 'mobility';
+  selectedRoutingProfile() === 'mobility';
 
   if(wheelchairMode){
     $('accessibleRoute').checked = true;

@@ -12,7 +12,48 @@ function harness(testPage=false,permission){
   const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,hidden:false,className:'',attributes:{},setAttribute(name,value){this.attributes[name]=String(value);}});return elements.get(id);};
   const document={getElementById:element,addEventListener(name,fn){listeners.set(name,fn);},hidden:false};
   const window={screen:{orientation:{angle:0}},addEventListener(name,fn){listeners.set(name,fn);}};
-  const context=vm.createContext({console:{log(){},warn(){},error(){}},document,window,performance:{now:()=>clock},
+  const storage = new Map();
+
+const sessionStorage = {
+  getItem(key){
+    return storage.has(key) ? storage.get(key) : null;
+  },
+  setItem(key, value){
+    storage.set(key, String(value));
+  },
+  removeItem(key){
+    storage.delete(key);
+  },
+  clear(){
+    storage.clear();
+  }
+};
+
+window.sessionStorage = sessionStorage;
+const timeouts = new Map();
+
+function setTimeoutMock(callback, delay = 0){
+  const id = ++serial;
+
+  timeouts.set(id, {
+    callback,
+    due: clock + Math.max(0, Number(delay) || 0)
+  });
+
+  return id;
+}
+
+function clearTimeoutMock(id){
+  timeouts.delete(id);
+}
+
+window.setTimeout = setTimeoutMock;
+window.clearTimeout = clearTimeoutMock;
+  const context=vm.createContext({
+  sessionStorage,
+  setTimeout: setTimeoutMock,
+  clearTimeout: clearTimeoutMock,
+  console:{log(){},warn(){},error(){}},document,window,performance:{now:()=>clock},
     setInterval(fn){const id=++serial;timers.set(id,fn);return id;},clearInterval(id){timers.delete(id);},
     requestAnimationFrame(fn){const id=++serial;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);},
     DeviceMotionEvent:permission?{requestPermission:permission}:undefined});
@@ -57,11 +98,54 @@ function harness(testPage=false,permission){
     }
     assert.equal(frames.size,0,'movement animation must finish');return positions;
   };
-  const chooseRoute=()=>{for(const id of ['fromFloor','toFloor'])element(id).value='floor500';element('from').value='a';element('to').value='b';run('route()');};
-  return {run,element,listeners,timers,frames,document,window,orient,stable,injectSteps,setRoute,position,drain,chooseRoute,setClock:t=>{clock=t;}};
+  async function advanceTime(milliseconds){
+  const targetTime = clock + milliseconds;
+
+  for(let guard = 0; guard < 1000; guard++){
+    // Let pending async functions schedule their next timer.
+    for(let i = 0; i < 5; i++){
+      await Promise.resolve();
+    }
+
+    const next = [...timeouts.entries()]
+      .filter(([, timer]) => timer.due <= targetTime)
+      .sort((a, b) => a[1].due - b[1].due)[0];
+
+    if(!next){
+      clock = targetTime;
+      return;
+    }
+
+    const [id, timer] = next;
+    timeouts.delete(id);
+    clock = Math.max(clock, timer.due);
+    timer.callback();
+  }
+
+  throw new Error('Fake timers did not finish.');
 }
-async function startSensor(h,heading=0,start=0){
-  h.run("setNavigationMode('sensor')");await h.run('startNavigation()');h.stable(start,start+400,heading);await h.run('calibrateAndStart()');assert.equal(h.run('navigationActive'),true);
+  const chooseRoute=()=>{for(const id of ['fromFloor','toFloor'])element(id).value='floor500';element('from').value='a';element('to').value='b';run('route()');};
+  return {advanceTime,run,element,listeners,timers,frames,document,window,orient,stable,injectSteps,setRoute,position,drain,chooseRoute,setClock:t=>{clock=t;}};
+}
+async function startSensor(h, heading = 0, start = 0){
+  h.run("setNavigationMode('sensor')");
+  h.setClock(start);
+
+  const starting = h.run('startNavigation()');
+
+  // Supply compass readings while automatic calibration runs.
+  for(let elapsed = 0; elapsed <= 400; elapsed += 50){
+    h.orient(start + elapsed, heading);
+    await h.advanceTime(50);
+  }
+
+  await starting;
+
+  assert.equal(
+    h.run('navigationActive'),
+    true,
+    'Navigation should start after stable automatic calibration'
+  );
 }
 async function startWheelchair(h){
   h.element('accessibleRoute').checked=true;
@@ -84,11 +168,29 @@ test('scripts parse and shared helpers load before both consumers',()=>{
   assert.match(sw,/clients\.claim\(\)/);
 });
 
-test('sensors wait for a stable explicit calibration before counting or moving',async()=>{
-  const h=harness();h.run("setNavigationMode('sensor')");await h.run('startNavigation()');
-  assert.equal(h.run('navigationActive'),false);assert.equal(h.frames.size,0);
-  h.injectSteps(50,[25]);assert.equal(h.run('detectedSteps'),0);await h.run('calibrateAndStart()');assert.equal(h.run('navigationActive'),false);
-  h.stable(100,500,40);await h.run('calibrateAndStart()');assert.equal(h.run('navigationActive'),true);near(travelled(h),0);
+test('sensors wait for stable automatic calibration before counting or moving', async () => {
+  const h = harness();
+
+  h.run("setNavigationMode('sensor')");
+  const starting = h.run('startNavigation()');
+
+  assert.equal(h.run('navigationActive'), false);
+  assert.equal(h.frames.size, 0);
+
+  h.injectSteps(50, [25]);
+
+  assert.equal(h.run('detectedSteps'), 0);
+  assert.equal(h.run('navigationActive'), false);
+
+  for(let time = 100; time <= 500; time += 50){
+    h.orient(time, 40);
+    await h.advanceTime(50);
+  }
+
+  await starting;
+
+  assert.equal(h.run('navigationActive'), true);
+  near(travelled(h), 0);
 });
 
 test('navigation and diagnostic count identical raw slow-walking samples',async()=>{
@@ -130,8 +232,9 @@ test('start/end bounds clamp steps and estimated arrival still permits turnaroun
 test('endpoint pause and recalibration facing start allows backtracking',async()=>{
   const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-0.65/101.2}]);await startSensor(h);
   h.stable(450,850,0);h.injectSteps(850,[800]);h.drain();near(travelled(h),0.65);
-  h.document.hidden=true;h.listeners.get('visibilitychange')();assert.match(h.element('directionStatus').textContent,/toward the starting location/);
-  h.document.hidden=false;h.stable(1500,1950,210);await h.run('calibrateAndStart()');assert.equal(h.run('navigationActive'),true);
+  h.document.hidden=true;h.listeners.get('visibilitychange')();assert.match(h.element('status').textContent,/toward the starting location/);
+  h.document.hidden = false;
+await startSensor(h, 210, 1500);
   h.stable(2000,2400,210);h.injectSteps(2400,[2350]);h.drain();near(travelled(h),0);
 });
 
@@ -149,10 +252,35 @@ test('sensors stop at floor connector and can retreat on the current floor',asyn
   assert.equal(h.position().floor,'floor500');assert.equal(h.run('sensorFloorBoundary'),false);
 });
 
-test('Auto to Sensors cancels automatic movement and waits for calibration',async()=>{
-  const h=harness();await h.run('startNavigation()');const oldTick=[...h.timers.values()][0];oldTick();const before=travelled(h);
-  h.run("setNavigationMode('sensor')");assert.equal(h.timers.size,0);assert.equal(h.run('navigationActive'),false);assert.equal(h.element('startBtn').disabled,false);
-  await h.run('startNavigation()');oldTick();near(travelled(h),before);assert.equal(h.run('navigationActive'),false);
+test('Auto to Sensors cancels automatic movement and waits for calibration', async () => {
+  const h = harness();
+
+  await h.run('startNavigation()');
+
+  const oldTick = [...h.timers.values()][0];
+  oldTick();
+
+  const before = travelled(h);
+
+  h.run("setNavigationMode('sensor')");
+
+  assert.equal(h.timers.size, 0);
+  assert.equal(h.run('navigationActive'), false);
+  assert.equal(h.element('startBtn').disabled, false);
+
+  const starting = h.run('startNavigation()');
+
+  oldTick();
+
+  near(travelled(h), before);
+  assert.equal(h.run('navigationActive'), false);
+
+  // With no compass readings, calibration should time out.
+  await h.advanceTime(3000);
+  await starting;
+
+  assert.equal(h.run('navigationActive'), false);
+  assert.equal(h.element('startBtn').disabled, false);
 });
 
 test('Sensors to Auto drops queued motion and ignores stale sensor callbacks',async()=>{
@@ -191,7 +319,7 @@ test('background, screen rotation or reference change cancels movement for recal
     const h=harness();await startSensor(h);h.stable(450,800,0);h.injectSteps(800,[750]);
     if(reason==='hidden'){h.document.hidden=true;h.listeners.get('visibilitychange')();}if(reason==='screen')h.listeners.get('orientationchange')();
     if(reason==='reference')h.orient(850,0,{absolute:true});if(reason==='source')h.orient(850,0,{webkitCompassHeading:0});
-    assert.equal(h.run('navigationActive'),false,reason);assert.equal(h.frames.size,0);assert.equal(h.run('headingTracker.isCalibrated'),false);assert.equal(h.element('calibrateBtn').disabled,false);near(travelled(h),0);
+    assert.equal(h.run('navigationActive'),false,reason);assert.equal(h.frames.size,0);assert.equal(h.run('headingTracker.isCalibrated'),false);assert.equal(h.element('startBtn').disabled,false);near(travelled(h),0);
   }
 });
 
@@ -202,7 +330,7 @@ test('temporary tilt pauses new steps and resumes forward or reverse without res
     h.stable(2000,2400,bearing,{beta:80});
     assert.equal(h.run('headingTracker.isCalibrated'),true,'tilt must preserve the reference');
     assert.equal(h.run('navigationActive'),true,'temporary pause must not require Start');
-    assert.equal(h.element('calibrateBtn').disabled,true);
+   assert.equal(h.element('startBtn').disabled, true);
     assert.match(h.element('status').textContent,/paused/i);
     assert.match(h.element('status').textContent,/automatic/i);
     h.injectSteps(2400,[2150,2350]);h.drain();near(travelled(h),before);
@@ -272,7 +400,7 @@ test('switching from Auto to wheelchair resets simulated progress to the route s
   assert.equal(h.run('progressIndex'),0);
   assert.equal(h.run('progressT'),0);
   assert.equal(h.run('navigationActive'),false);
-  assert.match(h.element('status').textContent,/route start/i);
+  assert.match(h.element('status').textContent,/Start navigation/i);
 });
 
 test('wheelchair buttons skip raw corridor nodes, allow correction and keep Previous at arrival',async()=>{
@@ -290,14 +418,14 @@ test('wheelchair buttons skip raw corridor nodes, allow correction and keep Prev
   h.element('wheelchairNextBtn').onclick();
   assert.equal(h.run('progressIndex'),4);
   assert.equal(h.run('navigationActive'),true);
-  assert.equal(h.element('wheelchairNextBtn').disabled,true);
-  assert.equal(h.element('wheelchairBackBtn').disabled,false);
-  assert.match(h.element('instruction').textContent,/arrived/i);
-  assert.match(h.element('subInstruction').textContent,/sign or landmark/i);
-  assert.doesNotMatch(h.element('subInstruction').textContent,/room sign/i);
+assert.equal(h.element('wheelchairNextBtn').disabled, false);
+assert.equal(h.element('wheelchairBackBtn').disabled, false);
+assert.match(h.element('instruction').textContent, /confirm arrival/i);
+assert.match(h.element('wheelchairNextBtn').textContent, /Confirm arrival/i);
+assert.equal(h.element('subInstruction').textContent, 'Accessible Restroom');
   h.element('wheelchairBackBtn').onclick();
   assert.equal(h.run('progressIndex'),2);
-  assert.doesNotMatch(h.element('instruction').textContent,/arrived/i);
+assert.doesNotMatch(h.element('instruction').textContent, /confirm arrival/i);
   assert.equal(h.element('wheelchairNextBtn').disabled,false);
   h.element('wheelchairBackBtn').onclick();
   assert.equal(h.run('progressIndex'),0);
