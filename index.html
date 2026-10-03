@@ -13,7 +13,6 @@
 <script src="app/prototype/outdoor-routing.js"></script>
 <script src="app/prototype/madriga-graph.js"></script>
 <script src="app/prototype/main-graph.js"></script>
-<script src="app/prototype/rabin-graph.js"></script>
 
 <!-- Not mapped/exported yet -->
 <!-- <script src="app/prototype/education-graph.js"></script> -->
@@ -810,30 +809,54 @@ const storedProfile = sessionStorage.getItem('accessibilityProfile');
 let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
 sessionStorage.setItem('accessibilityProfile', currentProfile);
 let audioOn = false;
-// Search and navigation share this one canonical Student House graph.
+// Search and navigation share the canonical indoor graph files.
+let RABIN_GRAPH = null;
 let STUDENT_GRAPH = null;
+const RABIN_GRAPH_URL =
+  'buildings/rabin/rabin-indoor-graph.json';
 const STUDENT_GRAPH_URL =
   'buildings/student/student-indoor-graph.json';
-const studentGraphReady = fetch(STUDENT_GRAPH_URL)
+
+function loadCanonicalIndoorGraph(url, buildingName){
+  return fetch(url)
   .then(response => {
     if(!response.ok){
       throw new Error(
-        `Could not load Student House graph (${response.status})`
+        `Could not load ${buildingName} graph (${response.status})`
       );
     }
     return response.json();
   })
   .then(graph => {
     if(!graph || !graph.floors){
-      throw new Error('Student House graph has no floors');
+      throw new Error(`${buildingName} graph has no floors`);
     }
-    STUDENT_GRAPH = graph;
     return graph;
   })
   .catch(error => {
-    console.error('Could not load Student House graph:', error);
+    console.error(`Could not load ${buildingName} graph:`, error);
     return null;
   });
+}
+
+const rabinGraphReady = loadCanonicalIndoorGraph(
+  RABIN_GRAPH_URL,
+  'Rabin Building'
+).then(graph => {
+  RABIN_GRAPH = graph;
+  return graph;
+});
+const studentGraphReady = loadCanonicalIndoorGraph(
+  STUDENT_GRAPH_URL,
+  'Student House'
+).then(graph => {
+  STUDENT_GRAPH = graph;
+  return graph;
+});
+const indoorSearchGraphsReady = Promise.all([
+  rabinGraphReady,
+  studentGraphReady
+]);
 let customStart = null; // {lat, lng, label}
 let selectedStartLocation = null;
 let userLocationMarker = null;
@@ -1700,7 +1723,7 @@ async function findNearbyService(type){
     'landmark',
     'rest-space'
   ].includes(type)){
-    await studentGraphReady;
+    await indoorSearchGraphsReady;
   }
 
   if(requestId !== nearbyServiceRequestId) return;
@@ -3719,7 +3742,8 @@ function doStartSearch(value){
   return false;
 }
 
-function ensureStartSelection(){
+async function ensureStartSelection(){
+  await indoorSearchGraphsReady;
   const value = startInput.value.trim();
   if(!value) return true;
   return doStartSearch(value);
@@ -3729,14 +3753,14 @@ let startSearchRequestId = 0;
 
 async function showReadyStartSuggestions(value){
   const requestId = ++startSearchRequestId;
-  await studentGraphReady;
+  await indoorSearchGraphsReady;
   if(requestId !== startSearchRequestId) return;
   showStartSuggestions(value);
 }
 
 async function runReadyStartSearch(value){
   const requestId = ++startSearchRequestId;
-  await studentGraphReady;
+  await indoorSearchGraphsReady;
   if(requestId !== startSearchRequestId) return false;
   return doStartSearch(value);
 }
@@ -3892,9 +3916,9 @@ function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
 }
 
 
-function pickIndoorDestination(nodeId, label, buildingKey){
+async function pickIndoorDestination(nodeId, label, buildingKey){
 
-if(!ensureStartSelection()) return;
+if(!await ensureStartSelection()) return;
 
 const buildingNames = {
   madriga: 'Terrace Building',
@@ -3945,8 +3969,8 @@ const buildingNames = {
   );
 }
 
-function pickDestination(name, lat, lng){
-  if(!ensureStartSelection()) return;
+async function pickDestination(name, lat, lng){
+  if(!await ensureStartSelection()) return;
 
   // A building-only destination must not reuse an old room.
   sessionStorage.removeItem('indoorContext');
@@ -3962,14 +3986,14 @@ let destinationSearchRequestId = 0;
 
 async function showReadySearchSuggestions(value){
   const requestId = ++destinationSearchRequestId;
-  await studentGraphReady;
+  await indoorSearchGraphsReady;
   if(requestId !== destinationSearchRequestId) return;
   showSearchSuggestions(value);
 }
 
 async function runReadyDestinationSearch(value){
   const requestId = ++destinationSearchRequestId;
-  await studentGraphReady;
+  await indoorSearchGraphsReady;
   if(requestId !== destinationSearchRequestId) return;
   return doSearch(value);
 }

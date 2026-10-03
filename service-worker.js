@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v27-canonical-student-graph';
+const CACHE_NAME = 'campusway-v28-canonical-indoor-graphs';
 
 const APP_FILES = [
 './',
@@ -14,7 +14,6 @@ const APP_FILES = [
   './app/prototype/campus-osm.json',
   './app/prototype/madriga-graph.js',
   './app/prototype/main-graph.js',
-  './app/prototype/rabin-graph.js',
   './app/prototype/multi-purpose-graph.js',
   './app/prototype/indoor.js',
 
