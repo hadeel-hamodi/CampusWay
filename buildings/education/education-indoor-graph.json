@@ -2268,6 +2268,14 @@
         {
           "from": "floor1_n78",
           "to": "floor1_n82"
+        },
+        {
+          "from": "floor1_n60",
+          "to": "floor1_n53"
+        },
+        {
+          "from": "floor1_n10",
+          "to": "floor1_n60"
         }
       ],
       "nextNodeId": 83
@@ -3893,6 +3901,51 @@
           "x": 0.454254,
           "y": 0.47731,
           "floor": "floor2"
+        },
+        {
+          "id": "floor2_n184",
+          "label": "Node 185",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.7495,
+          "y": 0.5426,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n185",
+          "label": "Node 186",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.7687,
+          "y": 0.5626,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n186",
+          "label": "Node 187",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.5684,
+          "y": 0.5362,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n187",
+          "label": "Node 188",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.4452,
+          "y": 0.5008,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n188",
+          "label": "Node 189",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.501,
+          "y": 0.524,
+          "floor": "floor2"
         }
       ],
       "connections": [
@@ -4575,9 +4628,69 @@
         {
           "from": "floor2_n92",
           "to": "floor2_n181"
+        },
+        {
+          "from": "floor2_n115",
+          "to": "floor2_n92"
+        },
+        {
+          "from": "floor2_n30",
+          "to": "floor2_n110"
+        },
+        {
+          "from": "floor2_n3",
+          "to": "floor2_n184"
+        },
+        {
+          "from": "floor2_n4",
+          "to": "floor2_n184"
+        },
+        {
+          "from": "floor2_n184",
+          "to": "floor2_n185"
+        },
+        {
+          "from": "floor2_n185",
+          "to": "floor2_n123"
+        },
+        {
+          "from": "floor2_n144",
+          "to": "floor2_n186"
+        },
+        {
+          "from": "floor2_n186",
+          "to": "floor2_n130"
+        },
+        {
+          "from": "floor2_n143",
+          "to": "floor2_n187"
+        },
+        {
+          "from": "floor2_n187",
+          "to": "floor2_n188"
+        },
+        {
+          "from": "floor2_n188",
+          "to": "floor2_n144"
+        },
+        {
+          "from": "floor2_n89",
+          "to": "floor2_n187"
+        },
+        {
+          "from": "floor2_n42",
+          "to": "floor2_n40"
+        },
+        {
+          "from": "floor2_n43",
+          "to": "floor2_n42"
+        },
+        {
+          "from": "floor2_n47",
+          "to": "floor2_n143"
         }
       ],
-      "nextNodeId": 184
+      "nextNodeId": 189
     },
     "floor6": {
       "nodes": [
@@ -8662,7 +8775,7 @@
         },
         {
           "id": "floor3_n36",
-          "label": "Pelpelet",
+          "label": "Pilpelet Cafe",
           "type": "food",
           "connectorId": "",
           "x": 0.557421,
@@ -8671,7 +8784,7 @@
         },
         {
           "id": "floor3_n37",
-          "label": "Pelpelet",
+          "label": "Pilpelet Cafe",
           "type": "food",
           "connectorId": "",
           "x": 0.414372,
@@ -9100,6 +9213,15 @@
           "x": 0.090452,
           "y": 0.432556,
           "floor": "floor3"
+        },
+        {
+          "id": "floor3_n85",
+          "label": "Node 86",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.1054,
+          "y": 0.4356,
+          "floor": "floor3"
         }
       ],
       "connections": [
@@ -9390,9 +9512,25 @@
         {
           "from": "floor3_n83",
           "to": "floor3_n25"
+        },
+        {
+          "from": "floor3_n12",
+          "to": "floor3_n44"
+        },
+        {
+          "from": "floor3_n27",
+          "to": "floor3_n79"
+        },
+        {
+          "from": "floor3_n84",
+          "to": "floor3_n85"
+        },
+        {
+          "from": "floor3_n85",
+          "to": "floor3_n27"
         }
       ],
-      "nextNodeId": 85
+      "nextNodeId": 86
     }
   }
 }

@@ -295,7 +295,7 @@
         },
         {
           "id": "floor500_n37",
-          "label": "agoda",
+          "label": "Cafe Aguda",
           "type": "food",
           "connectorId": "",
           "x": 0.776846,
@@ -628,7 +628,7 @@
         },
         {
           "id": "floor500_n79",
-          "label": "entarnce to parkinng",
+          "label": "Entrance to parking",
           "type": "entrance",
           "connectorId": "",
           "x": 0.193148,
@@ -1922,7 +1922,7 @@
         },
         {
           "id": "floor600_n59",
-          "label": "cafeteria",
+          "label": "Cafeteria",
           "type": "food",
           "connectorId": "",
           "x": 0.175693,

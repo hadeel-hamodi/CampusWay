@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v32-sensor-direction-retry';
+const CACHE_NAME = 'campusway-v38-share-link-qr';
 
 const APP_FILES = [
 './',
@@ -9,8 +9,18 @@ const APP_FILES = [
   './app/vendor/leaflet.js',
   './app/vendor/images/cw2.png',
 
+  './app/ui/campusway.css',
+  './app/ui/campus-map.css',
+  './app/ui/campus-ui.js',
+  './app/ui/indoor-nav.css',
+  './app/ui/qr-code.js',
+  './app/ui/share.js',
+  './app/ui/campus-status.js',
+  './app/data/campus-status.json',
+
   './app/prototype/data.js',
   './app/prototype/outdoor-routing.js',
+  './app/prototype/route-instructions.js',
   './app/prototype/campus-osm.json',
   './app/prototype/madriga-graph.js',
   './app/prototype/multi-purpose-graph.js',
@@ -92,6 +102,23 @@ self.addEventListener('fetch', event => {
 
   // Only handle normal GET requests.
   if(event.request.method !== 'GET'){
+    return;
+  }
+
+  // Live campus status: try the network first so new outages and closures
+  // show up at once; use the saved copy when offline.
+  if(new URL(event.request.url).pathname.endsWith('/app/data/campus-status.json')){
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if(response.ok){
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request, {ignoreSearch: true}))
+    );
     return;
   }
 

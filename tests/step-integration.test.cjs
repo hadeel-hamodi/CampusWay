@@ -426,3 +426,21 @@ test('switching away from wheelchair mode hides controls and stale presses canno
 test('diagnostic reset clears totals without registering listeners again',async()=>{
   const h=harness(true);await h.run('enableSensors()');const before=h.listeners.size;h.element('resetBtn').onclick();assert.equal(Number(h.element('steps').textContent),0);assert.equal(h.listeners.size,before);assert.equal(h.run('sensorsEnabled'),true);
 });
+
+test('auto mode rides straight to the final floor without showing pass-through floors',async()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'start',label:'Start',type:'room',floor:'floor500',x:0,y:0},
+    {id:'lift-500',label:'Lift',type:'elevator',connectorId:'L',floor:'floor500',x:0.2,y:0},
+    {id:'lift-600',label:'Lift',type:'elevator',connectorId:'L',floor:'floor600',x:0.2,y:0},
+    {id:'lift-700',label:'Lift',type:'elevator',connectorId:'L',floor:'floor700',x:0.2,y:0},
+    {id:'end',label:'Room',type:'room',floor:'floor700',x:0.4,y:0}
+  ]);
+  h.run("setNavigationMode('auto')");
+  await h.run('startNavigation()');
+  h.run('advanceAutoAlongRoute(1000)');
+  assert.equal(h.run('progressIndex'),3);
+  assert.equal(h.run('activeFloor'),'floor700');
+  assert.match(h.element('instruction').textContent,/Take the elevator to Floor floor700/);
+  assert.doesNotMatch(h.element('instruction').textContent,/floor600/);
+});

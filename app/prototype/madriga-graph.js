@@ -1026,7 +1026,7 @@
         },
         {
           "id": "floor3_n38",
-          "label": "staris",
+          "label": "Stairs",
           "type": "stairs",
           "connectorId": "null",
           "x": 0.529672,
@@ -1035,7 +1035,7 @@
         },
         {
           "id": "floor3_n39",
-          "label": "staris",
+          "label": "Stairs",
           "type": "stairs",
           "connectorId": "StairsC",
           "x": 0.530303,
@@ -1341,7 +1341,7 @@
         },
         {
           "id": "floor3_n82",
-          "label": "pelpelet",
+          "label": "Pilpelet Cafe",
           "type": "food",
           "connectorId": "",
           "x": 0.477229,
@@ -5419,7 +5419,7 @@
         },
         {
           "id": "floor4_n47",
-          "label": "starirs",
+          "label": "Stairs",
           "type": "stairs",
           "connectorId": "",
           "x": 0.524621,

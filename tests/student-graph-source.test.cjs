@@ -107,7 +107,7 @@ function connectedNodeIds(value, starts, options = {}){
   return reached;
 }
 
-test('main page loads canonical Main, Rabin and Student graphs before using them', async () => {
+test('main page loads canonical Main, Rabin, Student and Education graphs before using them', async () => {
   const requests = [];
   const context = vm.createContext({
     fetch:async url => {
@@ -133,7 +133,8 @@ test('main page loads canonical Main, Rabin and Student graphs before using them
   assert.deepEqual(requests, [
     'buildings/main/main-indoor-graph.json',
     'buildings/rabin/rabin-indoor-graph.json',
-    'buildings/student/student-indoor-graph.json'
+    'buildings/student/student-indoor-graph.json',
+    'buildings/education/education-indoor-graph.json'
   ]);
   assert.equal(
     vm.runInContext('MAIN_GRAPH', context).floors.floor600.nodes.length,
