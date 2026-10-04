@@ -795,3 +795,20 @@ test('shared ride exit confirmation resumes at the exact route elevator', async 
   assert.equal(h.timers.size, 0);
   assert.equal(h.frames.size, 0);
 });
+test('auto mode rides straight to the final floor without showing pass-through floors',async()=>{
+  const h=harness();
+  h.setRoute([
+    {id:'start',label:'Start',type:'room',floor:'floor500',x:0,y:0},
+    {id:'lift-500',label:'Lift',type:'elevator',connectorId:'L',floor:'floor500',x:0.2,y:0},
+    {id:'lift-600',label:'Lift',type:'elevator',connectorId:'L',floor:'floor600',x:0.2,y:0},
+    {id:'lift-700',label:'Lift',type:'elevator',connectorId:'L',floor:'floor700',x:0.2,y:0},
+    {id:'end',label:'Room',type:'room',floor:'floor700',x:0.4,y:0}
+  ]);
+  h.run("setNavigationMode('auto')");
+  await h.run('startNavigation()');
+  h.run('advanceAutoAlongRoute(1000)');
+  assert.equal(h.run('progressIndex'),3);
+  assert.equal(h.run('activeFloor'),'floor700');
+  assert.match(h.element('instruction').textContent,/Take the elevator to Floor floor700/);
+  assert.doesNotMatch(h.element('instruction').textContent,/floor600/);
+});

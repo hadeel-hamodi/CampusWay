@@ -2452,16 +2452,59 @@ function closestNodesBetweenComponents(componentA, componentB){
   // Dijkstra
   // --------------------------------------------------
 
+  // --------------------------------------------------
+  // Live restrictions (campus status file)
+  // --------------------------------------------------
+  // blockedAreas: polygons of [lat, lng] to walk around ("no-go zones").
+  // avoidElevator: the outdoor elevator is out of service.
+  let restrictions = {blockedAreas: [], avoidElevator: false};
+
+  function setRestrictions(next = {}){
+    restrictions = {
+      blockedAreas: Array.isArray(next.blockedAreas)
+        ? next.blockedAreas.filter(area => Array.isArray(area) && area.length > 2)
+        : [],
+      avoidElevator: next.avoidElevator === true
+    };
+  }
+
+  function pointInArea(lat, lon, area){
+    let inside = false;
+    for(let i = 0, j = area.length - 1; i < area.length; j = i++){
+      const [latA, lonA] = area[i];
+      const [latB, lonB] = area[j];
+      if(((latA > lat) !== (latB > lat)) &&
+        lon < (lonB - lonA) * (lat - latA) / (latB - latA) + lonA){
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function edgeIsBlocked(fromId, edge){
+    if(restrictions.avoidElevator && edge.type === 'elevator') return true;
+    if(!restrictions.blockedAreas.length) return false;
+    const a = coordinates.get(fromId);
+    const b = coordinates.get(edge.node);
+    if(!a || !b) return false;
+    const midLat = (a[0] + b[0]) / 2;
+    const midLon = (a[1] + b[1]) / 2;
+    return restrictions.blockedAreas.some(area =>
+      pointInArea(midLat, midLon, area) ||
+      pointInArea(b[0], b[1], area)
+    );
+  }
+
 function shortestPath(start, end, options = {}) {
     const result = CampusRoutePlanner.findPath({
       nodeIds: () => graph.keys(),
       neighbors: nodeId => graph.get(nodeId) || [],
       edgeTarget: edge => edge.node,
       edgeWeight: edge => edge.weight,
-      edgeAllowed: edge => !(
+      edgeAllowed: (edge, fromId) => !(
         options.avoidSteps &&
         edge.type === 'steps'
-      ),
+      ) && !edgeIsBlocked(fromId, edge),
       point: nodeId => {
         const coordinate = coordinates.get(nodeId);
         if(!coordinate) return null;
@@ -2716,6 +2759,7 @@ return {
   load,
   route,
   distance,
+  setRestrictions,
   inspectNearestNode,
   getDebugGraph,
   findClosestEdge,

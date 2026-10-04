@@ -2975,7 +2975,7 @@
         },
         {
           "id": "floor2_n112",
-          "label": "emergency",
+          "label": "Emergency exit",
           "type": "entrance",
           "connectorId": "",
           "x": 0.795599,
@@ -3092,7 +3092,7 @@
         },
         {
           "id": "floor2_n129",
-          "label": "emergency",
+          "label": "Emergency exit",
           "type": "entrance",
           "connectorId": "",
           "x": 0.846027,
@@ -4493,7 +4493,7 @@
         },
         {
           "id": "floor3_n102",
-          "label": "emergency",
+          "label": "Emergency exit",
           "type": "entrance",
           "connectorId": "",
           "x": 0.66194,
@@ -5123,7 +5123,7 @@
         },
         {
           "id": "floor4_n3",
-          "label": "enter to the bulding",
+          "label": "Entrance",
           "type": "entrance",
           "connectorId": "",
           "x": 0.476134,
