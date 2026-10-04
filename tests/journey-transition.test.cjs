@@ -5,11 +5,12 @@ const assert = require('node:assert/strict');
 const {test} = require('node:test');
 
 const root = path.join(__dirname, '..');
-const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+  .replace(/\r\n/g, '\n');
 const navigation = fs.readFileSync(
   path.join(root, 'wayframe', 'navigation-demo.html'),
   'utf8'
-);
+).replace(/\r\n/g, '\n');
 
 function between(source, start, end) {
   const a = source.indexOf(start);

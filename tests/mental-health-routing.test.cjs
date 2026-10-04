@@ -126,6 +126,8 @@ test('same-building rest-space title is not presented as a room', () => {
     name:'Student House',
     sameBuilding:true,
     startLabel:'Room 101',
+    lang:'en',
+    t:{room:'Room'},
     sessionStorage:{
       getItem(key){
         assert.equal(key, 'indoorContext');

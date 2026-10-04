@@ -6,10 +6,10 @@ const {test} = require('node:test');
 
 const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const mainGraphSource = fs.readFileSync(
-  path.join(root, 'app', 'prototype', 'main-graph.js'),
+const mainGraph = JSON.parse(fs.readFileSync(
+  path.join(root, 'buildings', 'main', 'main-indoor-graph.json'),
   'utf8'
-);
+));
 
 function between(source, start, end){
   const a = source.indexOf(start);
@@ -32,13 +32,13 @@ function searchHarness(extra = {}){
     localizedBuildingNameByEnglishName(name){return name;},
     customStart:null,
     selectedStartLocation:null,
+    MAIN_GRAPH:mainGraph,
     pickStart(...args){calls.push(['building', ...args]);},
     pickIndoorStart(...args){calls.push(['room', ...args]);},
     alert(message){calls.push(['alert', message]);},
     ...extra
   });
 
-  vm.runInContext(`${mainGraphSource};this.MAIN_GRAPH=MAIN_GRAPH`, context);
   vm.runInContext(
     between(index, 'function normalizeLocationQuery', 'function pickStart('),
     context

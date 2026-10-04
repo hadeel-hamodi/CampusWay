@@ -626,10 +626,9 @@ function saveAll(){
 
 async function loadPublishedBuildingGraph(building){
   try{
-   const response =
-  await fetch(
+  const response = await fetch(
     `../buildings/${building}/${building}-indoor-graph.json`,
-    { cache: 'no-store' }
+    {cache:'no-store'}
   );
 
     if(!response.ok){

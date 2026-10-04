@@ -25,6 +25,20 @@ const graphPath = path.join(
   'student-indoor-graph.json'
 );
 const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+const mainGraphPath = path.join(
+  root,
+  'buildings',
+  'main',
+  'main-indoor-graph.json'
+);
+const mainGraph = JSON.parse(fs.readFileSync(mainGraphPath, 'utf8'));
+const rabinGraphPath = path.join(
+  root,
+  'buildings',
+  'rabin',
+  'rabin-indoor-graph.json'
+);
+const rabinGraph = JSON.parse(fs.readFileSync(rabinGraphPath, 'utf8'));
 
 function between(source, start, end){
   const a = source.indexOf(start);
@@ -93,7 +107,7 @@ function connectedNodeIds(value, starts, options = {}){
   return reached;
 }
 
-test('main page loads the canonical Student graph before using it', async () => {
+test('main page loads canonical Main, Rabin and Student graphs before using them', async () => {
   const requests = [];
   const context = vm.createContext({
     fetch:async url => {
@@ -101,32 +115,45 @@ test('main page loads the canonical Student graph before using it', async () => 
       return {
         ok:true,
         status:200,
-        async json(){return graph;}
+        async json(){
+          if(url.includes('/main/')) return mainGraph;
+          return url.includes('/rabin/') ? rabinGraph : graph;
+        }
       };
     },
     console:{error(){}}
   });
 
   vm.runInContext(
-    between(index, 'let STUDENT_GRAPH = null;', 'let customStart = null;'),
+    between(index, 'let MAIN_GRAPH = null;', 'let customStart = null;'),
     context
   );
-  await vm.runInContext('studentGraphReady', context);
+  await vm.runInContext('indoorSearchGraphsReady', context);
 
   assert.deepEqual(requests, [
+    'buildings/main/main-indoor-graph.json',
+    'buildings/rabin/rabin-indoor-graph.json',
     'buildings/student/student-indoor-graph.json'
   ]);
+  assert.equal(
+    vm.runInContext('MAIN_GRAPH', context).floors.floor600.nodes.length,
+    mainGraph.floors.floor600.nodes.length
+  );
+  assert.equal(
+    vm.runInContext('RABIN_GRAPH', context).floors.floor5.nodes.length,
+    rabinGraph.floors.floor5.nodes.length
+  );
   assert.equal(
     vm.runInContext('STUDENT_GRAPH', context).floors.floor1.nodes.length,
     graph.floors.floor1.nodes.length
   );
 });
 
-test('a delayed Student graph load cannot show stale search suggestions', async () => {
+test('a delayed graph load cannot show stale search suggestions', async () => {
   let finishLoading;
   const calls = [];
   const context = vm.createContext({
-    studentGraphReady:new Promise(resolve => {
+    indoorSearchGraphsReady:new Promise(resolve => {
       finishLoading = resolve;
     }),
     showStartSuggestions(value){calls.push(value);},
@@ -156,18 +183,69 @@ test('a delayed Student graph load cannot show stale search suggestions', async 
   assert.deepEqual(calls, ['new']);
 });
 
-test('main page, indoor navigation and offline cache share one Student graph', () => {
-  const canonical = 'buildings/student/student-indoor-graph.json';
-  assert.match(index, new RegExp(canonical.replaceAll('.', '\\.')));
+test('choosing a destination waits before validating a typed indoor start', async () => {
+  let finishLoading;
+  const calls = [];
+  const context = vm.createContext({
+    indoorSearchGraphsReady:new Promise(resolve => {
+      finishLoading = resolve;
+    }),
+    startInput:{value:'5014'},
+    doStartSearch(value){
+      calls.push(value);
+      return true;
+    }
+  });
+
+  vm.runInContext(
+    between(
+      index,
+      'async function ensureStartSelection(){',
+      'let startSearchRequestId = 0;'
+    ),
+    context
+  );
+
+  const pending = vm.runInContext('ensureStartSelection()', context);
+  assert.deepEqual(calls, []);
+  finishLoading();
+  assert.equal(await pending, true);
+  assert.deepEqual(calls, ['5014']);
+});
+
+test('main page, indoor navigation and offline cache share canonical graphs', () => {
+  const canonicalGraphs = [
+    'buildings/main/main-indoor-graph.json',
+    'buildings/rabin/rabin-indoor-graph.json',
+    'buildings/student/student-indoor-graph.json'
+  ];
+  for(const canonical of canonicalGraphs){
+    assert.match(index, new RegExp(canonical.replaceAll('.', '\\.')));
+    assert.match(
+      serviceWorker,
+      new RegExp(canonical.replaceAll('.', '\\.'))
+    );
+  }
   assert.match(
     navigation,
     /buildings\/\$\{BUILDING\}\/\$\{BUILDING\}-indoor-graph\.json/
   );
-  assert.match(serviceWorker, /buildings\/student\/student-indoor-graph\.json/);
+  assert.doesNotMatch(index, /app\/prototype\/main-graph\.js/);
+  assert.doesNotMatch(index, /app\/prototype\/rabin-graph\.js/);
   assert.doesNotMatch(index, /app\/prototype\/student-graph\.js/);
+  assert.doesNotMatch(serviceWorker, /app\/prototype\/main-graph\.js/);
+  assert.doesNotMatch(serviceWorker, /app\/prototype\/rabin-graph\.js/);
   assert.doesNotMatch(serviceWorker, /app\/prototype\/student-graph\.js/);
   assert.match(index, /function pickLang\(l, dir\)/);
   assert.doesNotMatch(index, /async function pickLang\(l, dir\)/);
+  assert.equal(
+    fs.existsSync(path.join(root, 'app', 'prototype', 'main-graph.js')),
+    false
+  );
+  assert.equal(
+    fs.existsSync(path.join(root, 'app', 'prototype', 'rabin-graph.js')),
+    false
+  );
   assert.equal(
     fs.existsSync(path.join(root, 'app', 'prototype', 'student-graph.js')),
     false
@@ -182,6 +260,52 @@ test('main page, indoor navigation and offline cache share one Student graph', (
     )),
     false
   );
+});
+
+test('canonical Main graph includes the latest connected floor 600 updates', () => {
+  const nodes = allNodes(mainGraph);
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  assert.equal(new Set(byId.keys()).size, nodes.length);
+
+  const buffet = byId.get('floor600_n160');
+  assert.equal(buffet?.label, 'Teachers Room Buffet');
+  assert.equal(buffet?.type, 'food');
+  assert.equal(byId.get('floor600_n161')?.type, 'corridor');
+
+  const data = vm.createContext({});
+  vm.runInContext(`${dataSource};this.entrances=BUILDING_ENTRANCES.main`, data);
+  const entranceIds = Array.from(data.entrances, entrance => entrance.nodeId);
+  const reached = connectedNodeIds(mainGraph, entranceIds);
+  assert.ok(reached.has('floor600_n160'));
+  assert.ok(reached.has('floor600_n161'));
+});
+
+test('canonical Rabin graph includes its verified Madriga transfer', () => {
+  const nodes = allNodes(rabinGraph);
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  assert.equal(new Set(byId.keys()).size, nodes.length);
+
+  const entrance = byId.get('floor5_n161');
+  assert.equal(entrance?.type, 'entrance');
+
+  const transfer = byId.get('floor5_n204');
+  assert.equal(transfer?.type, 'entrance');
+  assert.equal(transfer?.label, 'madriga');
+  assert.ok(
+    rabinGraph.floors.floor5.connections.some(connection =>
+      [connection.from, connection.to].includes('floor5_n204') &&
+      [connection.from, connection.to].includes('floor5_n122')
+    )
+  );
+
+  const reached = connectedNodeIds(rabinGraph, [
+    'floor7_n108',
+    'floor6_n73',
+    'floor5_n162',
+    'floor7_n109'
+  ]);
+  assert.ok(reached.has('floor5_n161'));
+  assert.ok(reached.has('floor5_n204'));
 });
 
 test('canonical Student graph has unique nodes and every node is reachable', () => {
@@ -223,7 +347,9 @@ test('Student room search uses destinations from the canonical graph', () => {
       lat:1,
       lng:2
     }]},
-    STUDENT_GRAPH:graph
+    STUDENT_GRAPH:graph,
+    t:{room:'Room'},
+    localizedBuildingName(building){return building.name;}
   });
 
   vm.runInContext(

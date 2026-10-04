@@ -55,6 +55,7 @@ window.clearTimeout = clearTimeoutMock;
   clearTimeout: clearTimeoutMock,
   console:{log(){},warn(){},error(){}},document,window,performance:{now:()=>clock},
     setInterval(fn){const id=++serial;timers.set(id,fn);return id;},clearInterval(id){timers.delete(id);},
+    setTimeout(fn,delay=0){const id=++serial;clock+=Math.max(0,Number(delay)||0);Promise.resolve().then(fn);return id;},clearTimeout(){},
     requestAnimationFrame(fn){const id=++serial;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);},
     DeviceMotionEvent:permission?{requestPermission:permission}:undefined});
   const run=code=>vm.runInContext(code,context);
@@ -229,13 +230,23 @@ test('start/end bounds clamp steps and estimated arrival still permits turnaroun
   h.stable(3600,4000,180);h.injectSteps(4000,[3800,3950]);h.drain();near(travelled(h),0);
 });
 
-test('endpoint pause and recalibration facing start allows backtracking',async()=>{
+test('endpoint pause and automatic recalibration facing start allows backtracking',async()=>{
   const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-0.65/101.2}]);await startSensor(h);
   h.stable(450,850,0);h.injectSteps(850,[800]);h.drain();near(travelled(h),0.65);
   h.document.hidden=true;h.listeners.get('visibilitychange')();assert.match(h.element('status').textContent,/toward the starting location/);
   h.document.hidden = false;
 await startSensor(h, 210, 1500);
   h.stable(2000,2400,210);h.injectSteps(2400,[2350]);h.drain();near(travelled(h),0);
+});
+
+test('mid-route reverse interruption keeps the return prompt and direction',async()=>{
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:0}]);await startSensor(h);
+  h.run('progressIndex=0;progressT=0.5;lastTravelDirection=-1');h.listeners.get('orientationchange')();
+  assert.match(h.element('directionStatus').textContent,/toward the starting location/);
+  const restarting=h.element('calibrateBtn').onclick();h.stable(1000,1400,180);await restarting;
+  assert.equal(h.run('navigationActive'),true);assert.equal(h.run('lastTravelDirection'),-1);
+  const classification=h.run("headingTracker.classify(performance.now(),CampusRouteProgress.candidates(routeNodes,{index:progressIndex,t:progressT}))");
+  assert.equal(classification.direction,-1);
 });
 
 test('old heading cannot keep pushing beyond the corner tolerance',async()=>{
@@ -245,11 +256,59 @@ test('old heading cannot keep pushing beyond the corner tolerance',async()=>{
   h.stable(4200,4650,0);h.injectSteps(4650,[4600]);h.drain();near(travelled(h),1.3);
 });
 
-test('sensors stop at floor connector and can retreat on the current floor',async()=>{
-  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Lift',floor:'floor500',x:0,y:1-0.65/101.2},{id:'c',label:'Lift',floor:'floor600',x:0,y:1-0.65/101.2},{id:'d',label:'D',floor:'floor600',x:0,y:0}]);await startSensor(h);
-  h.stable(450,1100,0);h.injectSteps(1100,[700,1000]);h.drain();near(travelled(h),0.65);assert.equal(h.position().floor,'floor500');assert.equal(h.run('sensorFloorBoundary'),true);
-  assert.match(h.element('instruction').textContent,/Confirm your location/);h.stable(1600,2100,180);h.injectSteps(2100,[2050]);h.drain();near(travelled(h),0);
-  assert.equal(h.position().floor,'floor500');assert.equal(h.run('sensorFloorBoundary'),false);
+test('stairs confirmation blocks steps, changes floor and resumes navigation', async () => {
+  const h = harness();
+
+  h.setRoute([
+    {id:'a', label:'A', floor:'floor500', x:0, y:1},
+    {
+      id:'s500', label:'Stairs', type:'stairs',
+      floor:'floor500', x:0, y:1-0.65/101.2
+    },
+    {
+      id:'s600', label:'Stairs', type:'stairs',
+      floor:'floor600', x:0, y:1-0.65/101.2
+    },
+    {id:'d', label:'D', floor:'floor600', x:0, y:0}
+  ]);
+
+  await startSensor(h);
+
+  h.stable(450, 1100, 0);
+  h.injectSteps(1100, [700, 1000]);
+  h.drain();
+
+  assert.equal(h.run('progressIndex'), 1);
+  assert.equal(h.position().floor, 'floor500');
+  assert.match(h.element('instruction').textContent, /Take the stairs/);
+  assert.equal(h.element('sensorConfirmBtn').hidden, false);
+
+  // Walking readings cannot move the dot during floor confirmation.
+  const count = h.run('detectedSteps');
+  h.stable(1600, 2100, 180);
+  h.injectSteps(2100, [2050]);
+  h.drain();
+
+  assert.equal(h.run('progressIndex'), 1);
+  assert.equal(h.position().floor, 'floor500');
+  assert.equal(h.run('detectedSteps'), count);
+
+  // Confirm the new floor and supply readings for recalibration.
+  h.setClock(2200);
+  const confirming = h.element('sensorConfirmBtn').onclick();
+
+  for(let elapsed = 0; elapsed <= 500; elapsed += 50){
+    h.orient(2200 + elapsed, 0);
+    await h.advanceTime(50);
+  }
+
+  await confirming;
+
+  assert.equal(h.run('progressIndex'), 2);
+  assert.equal(h.run('activeFloor'), 'floor600');
+  assert.equal(h.element('sensorConfirmBtn').hidden, true);
+  assert.equal(h.run('navigationActive'), true);
+  assert.equal(h.run('headingTracker.isCalibrated'), true);
 });
 
 test('Auto to Sensors cancels automatic movement and waits for calibration', async () => {
@@ -422,7 +481,10 @@ assert.equal(h.element('wheelchairNextBtn').disabled, false);
 assert.equal(h.element('wheelchairBackBtn').disabled, false);
 assert.match(h.element('instruction').textContent, /confirm arrival/i);
 assert.match(h.element('wheelchairNextBtn').textContent, /Confirm arrival/i);
-assert.equal(h.element('subInstruction').textContent, 'Accessible Restroom');
+assert.match(
+  h.element('subInstruction').textContent,
+  /Accessible Restroom/
+);
   h.element('wheelchairBackBtn').onclick();
   assert.equal(h.run('progressIndex'),2);
 assert.doesNotMatch(h.element('instruction').textContent, /confirm arrival/i);

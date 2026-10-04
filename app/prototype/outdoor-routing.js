@@ -24,7 +24,7 @@ const CampusOutdoorRouting = (() => {
 
   let loaded = false;
   let loadingPromise = null;
-  
+
   let rawOsmData = null;
 
   // --------------------------------------------------
@@ -135,8 +135,8 @@ function removeEdge(aId, bId){
     );
   }
 }
-  
-  
+
+
   function addCampusNode(id, lat, lng){
 
   coordinates.set(
@@ -1070,7 +1070,7 @@ addCampusNode(
 
 addCampusNode(
   'campus_floor6_buffet_path_start',
-  32.76264044382852, 
+  32.76264044382852,
   35.01938190311194
 );
 
@@ -2308,16 +2308,24 @@ addEdge(
   // Find closest OSM routing node
   // --------------------------------------------------
 
-  function nearestNode(lat, lon) {
+  function nearestNode(lat, lon, options = {}) {
 
     let best = null;
     let bestDistance = Infinity;
 
     const point = [lat, lon];
+    const avoidSteps = options.avoidSteps === true;
 
     for(const [id, coord] of coordinates.entries()){
 
       if(!graph.has(id)){
+        continue;
+      }
+
+      if(
+        avoidSteps &&
+        !(graph.get(id) || []).some(edge => edge.type !== 'steps')
+      ){
         continue;
       }
 
@@ -2445,120 +2453,35 @@ function closestNodesBetweenComponents(componentA, componentB){
   // --------------------------------------------------
 
 function shortestPath(start, end, options = {}) {
-
-    const distances = new Map();
-    const previous = new Map();
-    const previousEdge = new Map();
-
-    const unvisited =
-      new Set(graph.keys());
-
-    for(const node of graph.keys()){
-      distances.set(node, Infinity);
-    }
-
-    distances.set(start, 0);
-
-    while(unvisited.size){
-
-      let current = null;
-      let currentDistance = Infinity;
-
-      for(const node of unvisited){
-
-        const d = distances.get(node);
-
-        if(d < currentDistance){
-          current = node;
-          currentDistance = d;
-        }
+    const result = CampusRoutePlanner.findPath({
+      nodeIds: () => graph.keys(),
+      neighbors: nodeId => graph.get(nodeId) || [],
+      edgeTarget: edge => edge.node,
+      edgeWeight: edge => edge.weight,
+      edgeAllowed: edge => !(
+        options.avoidSteps &&
+        edge.type === 'steps'
+      ),
+      point: nodeId => {
+        const coordinate = coordinates.get(nodeId);
+        if(!coordinate) return null;
+        const [lat, lon] = coordinate;
+        const referenceLatitude =
+          (BOUNDS.south + BOUNDS.north) / 2;
+        return {
+          x: lon * 111320 * Math.cos(referenceLatitude * Math.PI / 180),
+          y: lat * 110540,
+          floor: 'outdoor'
+        };
       }
+    }, start, end, {
+      preferFewerTurns: options.preferFewerTurns === true
+    });
 
-      if(
-        current === null ||
-        currentDistance === Infinity
-      ){
-        break;
-      }
+    if(!result) return null;
 
-      if(current === end){
-        break;
-      }
-
-      unvisited.delete(current);
-for(const edge of graph.get(current) || []){
-
-  if(!unvisited.has(edge.node)){
-    continue;
-  }
-
-    if(
-    options.avoidSteps &&
-    edge.type === 'steps'
-  ){
-    continue;
-  }
-
-
-        const alt =
-          currentDistance +
-          edge.weight;
-
-        if(alt < distances.get(edge.node)){
-
-          distances.set(
-            edge.node,
-            alt
-          );
-
-          previous.set(
-            edge.node,
-            current
-          );
-
-          previousEdge.set(
-            edge.node,
-            edge
-          );
-        }
-      }
-    }
-
-    if(
-      start !== end &&
-      !previous.has(end)
-    ){
-      return null;
-    }
-
-    const nodes = [];
-    const edges = [];
-
-    let current = end;
-
-    nodes.push(current);
-
-    while(current !== start){
-
-      const edge =
-        previousEdge.get(current);
-
-      const previousNode =
-        previous.get(current);
-
-      if(!edge || !previousNode){
-        return null;
-      }
-
-      edges.push(edge);
-
-      current = previousNode;
-
-      nodes.push(current);
-    }
-
-    nodes.reverse();
-    edges.reverse();
+    const nodes = result.nodes;
+    const edges = result.edges;
 
     const realDistance =
       edges.reduce(
@@ -2697,16 +2620,24 @@ async function route(
 ){
   await load();
 
+  const routeOptions = {
+    avoidSteps: options.avoidSteps === true,
+    preferFewerTurns:
+      options.preferFewerTurns === true
+  };
+
   const startNode =
     nearestNode(
       startLat,
-      startLng
+      startLng,
+      routeOptions
     );
 
   const endNode =
     nearestNode(
       endLat,
-      endLng
+      endLng,
+      routeOptions
     );
 
   if(
@@ -2720,7 +2651,7 @@ async function route(
     shortestPath(
       startNode,
       endNode,
-      options
+      routeOptions
     );
 
   if(!result){
