@@ -463,36 +463,49 @@ test('switching from Auto to wheelchair resets simulated progress to the route s
   assert.match(h.element('status').textContent,/Start navigation/i);
 });
 
-test('wheelchair buttons skip raw corridor nodes, allow correction and keep Previous at arrival',async()=>{
-  const h=harness();
+test('wheelchair buttons skip corridor nodes, allow correction before arrival and finish with one confirmation', async () => {
+  const h = harness();
+
   h.setRoute([
-    {id:'start',label:'Start',floor:'floor500',x:0,y:0},
-    {id:'noise',label:'Corridor',floor:'floor500',x:0.1,y:0},
-    {id:'corner',label:'Corner',floor:'floor500',x:0.2,y:0},
-    {id:'noise-2',label:'Corridor',floor:'floor500',x:0.2,y:0.1},
-    {id:'end',label:'Accessible Restroom',type:'restroom',floor:'floor500',x:0.2,y:0.2}
+    {id:'start', label:'Start', floor:'floor500', x:0, y:0},
+    {id:'noise', label:'Corridor', floor:'floor500', x:0.1, y:0},
+    {id:'corner', label:'Corner', floor:'floor500', x:0.2, y:0},
+    {id:'noise-2', label:'Corridor', floor:'floor500', x:0.2, y:0.1},
+    {
+      id:'end',
+      label:'Accessible Restroom',
+      type:'restroom',
+      floor:'floor500',
+      x:0.2,
+      y:0.2
+    }
   ]);
+
   await startWheelchair(h);
+
+  // Skip the corridor node and reach the corner.
   h.element('wheelchairNextBtn').onclick();
-  assert.equal(h.run('progressIndex'),2);
+  assert.equal(h.run('progressIndex'), 2);
+  assert.equal(h.run('navigationActive'), true);
+  assert.equal(h.element('wheelchairBackBtn').disabled, false);
+
+  // Correction is available before confirming the destination.
+  h.element('wheelchairBackBtn').onclick();
+  assert.equal(h.run('progressIndex'), 0);
+  assert.equal(h.element('wheelchairBackBtn').disabled, true);
+
   h.element('wheelchairNextBtn').onclick();
-  assert.equal(h.run('progressIndex'),4);
-  assert.equal(h.run('navigationActive'),true);
-assert.equal(h.element('wheelchairNextBtn').disabled, false);
-assert.equal(h.element('wheelchairBackBtn').disabled, false);
-assert.match(h.element('instruction').textContent, /confirm arrival/i);
-assert.match(h.element('wheelchairNextBtn').textContent, /Confirm arrival/i);
-assert.match(
-  h.element('subInstruction').textContent,
-  /Accessible Restroom/
-);
-  h.element('wheelchairBackBtn').onclick();
-  assert.equal(h.run('progressIndex'),2);
-assert.doesNotMatch(h.element('instruction').textContent, /confirm arrival/i);
-  assert.equal(h.element('wheelchairNextBtn').disabled,false);
-  h.element('wheelchairBackBtn').onclick();
-  assert.equal(h.run('progressIndex'),0);
-  assert.equal(h.element('wheelchairBackBtn').disabled,true);
+  assert.equal(h.run('progressIndex'), 2);
+  assert.equal(h.element('wheelchairNextBtn').disabled, false);
+
+  // One destination confirmation completes navigation.
+  h.element('wheelchairNextBtn').onclick();
+  assert.equal(h.run('progressIndex'), 4);
+  assert.equal(h.run('progressT'), 0);
+  assert.equal(h.run('navigationActive'), false);
+  assert.match(h.element('instruction').textContent, /You have arrived/i);
+  assert.match(h.element('subInstruction').textContent, /Accessible Restroom/);
+  assert.equal(h.element('startBtn').disabled, true);
 });
 
 test('wheelchair turn instruction uses simplified checkpoints instead of noisy raw neighbors',async()=>{

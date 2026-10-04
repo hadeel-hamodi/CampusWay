@@ -2783,6 +2783,21 @@ if(direction === 1 && progressIndex === routeNodes.length - 1){
   progressT=0;
   lastTravelDirection=direction;
   activeFloor=routeNodes[targetIndex].floor;
+  // One confirmation is enough at the final destination.
+const arrivalStage = sessionStorage.getItem('journeyStage');
+
+if(
+  direction === 1 &&
+  targetIndex === routeNodes.length - 1 &&
+  (
+    !arrivalStage ||
+    arrivalStage === 'destination' ||
+    arrivalStage === 'same-building'
+  )
+){
+  completeNavigation();
+  return;
+}
   // Reaching an outdoor exit already confirms arrival.
 if(
   direction === 1 &&
