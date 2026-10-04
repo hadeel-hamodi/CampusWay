@@ -334,7 +334,7 @@ select:disabled{background-color:var(--surface-2);color:#94A3B8;cursor:not-allow
   opacity:.6;
   transition:opacity .3s ease;
 }
-#mapSvg.has-route .map-network{opacity:0;}
+#mapSvg.has-route .map-network{opacity:.6;}
 
 .map-route path{fill:none;stroke-linecap:round;stroke-linejoin:round;}
 .route-halo{stroke:#FFFFFF;stroke-opacity:.95;stroke-width:calc(var(--u,1) * 17px);}

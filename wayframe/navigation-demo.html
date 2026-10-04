@@ -35,6 +35,15 @@
       </select>
     </div>
 
+    <label style="display:flex;align-items:center;gap:8px">
+  <input
+    id="showFloorPlan"
+    type="checkbox"
+    onchange="drawBaseMap()"
+  >
+  <span id="lbl-show-floor-plan">Show floor plan</span>
+</label>
+
     <button id="indoorEmergencyBtn" class="emergency-btn" type="button">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 2 3 6v6c0 5 3.8 9.3 9 10 5.2-.7 9-5 9-10V6z"/><path d="M12 8v5M12 16.5v.5"/></svg>
       <span id="lbl-indoor-emergency">Nearest shelter</span>
@@ -417,14 +426,31 @@ function localizedInstruction(en, ar, he){
 }
 
 function applyIndoorTranslations(){
+  const floorPlanLabel = $('lbl-show-floor-plan');
+
+if(floorPlanLabel){
+  floorPlanLabel.textContent = localizedInstruction(
+    'Show floor plan',
+    'عرض مخطط الطابق',
+    'הצג תוכנית קומה'
+  );
+}
   const buildingNames={
     en:{madriga:'Terrace Building (Madriga)',education:'Education and Science',main:'Main Building','multi-purpose':'Multi-Purpose Building',rabin:'Rabin Building',student:'Student House'},
     ar:{madriga:'مبنى مدرجة',education:'مبنى التربية والعلوم',main:'المبنى الرئيسي','multi-purpose':'المبنى متعدد الأغراض',rabin:'مبنى رابين',student:'بيت الطالب'},
     he:{madriga:'בניין מדרגה',education:'בניין חינוך ומדעים',main:'הבניין הראשי','multi-purpose':'בניין רב-תכליתי',rabin:'בניין רבין',student:'בית הסטודנט'}
   };
-  document.querySelectorAll('#building option').forEach(option=>{
-    option.textContent=buildingNames[indoorLang]?.[option.value] || buildingNames.en[option.value] || option.textContent;
-  });
+document.querySelectorAll('#building option').forEach(option => {
+  option.textContent =
+    buildingNames[indoorLang]?.[option.value] ||
+    buildingNames.en[option.value] ||
+    option.textContent;
+});
+
+if($('currentBuildingName')){
+  $('currentBuildingName').textContent =
+    $('building').selectedOptions[0]?.textContent || BUILDING;
+}
   $('directionTitle').textContent=localizedInstruction('Automatic direction setup','تحديد الاتجاه تلقائيًا','הגדרת כיוון אוטומטית');
   $('directionHelp').textContent=localizedInstruction(
     'Press Start and point the top of your phone along the route. CampusWay sets the initial direction automatically. Keep the phone generally facing your walk; ordinary changes in tilt do not need a new setup. Unclear readings pause position updates, which resume automatically when usable readings return. Turning around can move the marker back; walking backwards without turning is not supported. Position is estimated on this floor; leaving the route is not detected.',
@@ -1875,7 +1901,12 @@ function drawBaseMap(){
   const unitsPerPx=mapUnitsPerPixel();
   svg.style.setProperty('--u', unitsPerPx.toFixed(4));
 
+  if($('showFloorPlan')?.checked){
   mountFloorPlan(BUILDING, activeFloor);
+}else{
+  mountedPlanKey = null;
+  mapLayers.plan?.replaceChildren();
+}
   updateNetworkLayer(floorData);
   updateRouteLayer();
   updateRouteMarkers(unitsPerPx);
