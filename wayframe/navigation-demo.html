@@ -2705,21 +2705,59 @@ function updateWheelchairInstruction(){
     `${distanceText} حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
     `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`
   );
+let isOutdoorExit = false;
+
+if(
+  targetIndex === routeNodes.length - 1 &&
+  target.type === 'entrance'
+){
+  try{
+    const stage = sessionStorage.getItem('journeyStage');
+    const sharedTransfer = JSON.parse(
+      sessionStorage.getItem('sharedIndoorTransfer') || 'null'
+    );
+    const intermediateTransfer = JSON.parse(
+      sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+    );
+
+    isOutdoorExit =
+      (
+        stage === 'origin' &&
+        sharedTransfer?.originBuilding !== BUILDING
+      ) ||
+      (
+        stage === 'intermediate' &&
+        intermediateTransfer?.destinationBuilding !== 'madriga'
+      );
+  }catch(error){
+    console.warn('Could not read the outdoor handoff:', error);
+  }
+}
+
 $('wheelchairNextBtn').textContent =
-  target.type === 'elevator'
+  isOutdoorExit
     ? localizedInstruction(
-        '✓ I reached the elevator',
-        '✓ وصلت إلى المصعد',
-        '✓ הגעתי למעלית'
+        '✓ I reached the exit — continue outdoors',
+        '✓ وصلت إلى المخرج — تابع خارج المبنى',
+        '✓ הגעתי ליציאה — המשך החוצה'
       )
-    : targetIndex === routeNodes.length - 1
+    : target.type === 'elevator'
       ? localizedInstruction(
-          '✓ I reached the destination',
-          '✓ وصلت إلى الوجهة',
-          '✓ הגעתי ליעד'
+          '✓ I reached the elevator',
+          '✓ وصلت إلى المصعد',
+          '✓ הגעתי למעלית'
         )
-      : it('nextPoint');
-  $('eta').textContent=localizedInstruction('Manual','يدوي','ידני');
+      : targetIndex === routeNodes.length - 1
+        ? localizedInstruction(
+            '✓ I reached the destination',
+            '✓ وصلت إلى الوجهة',
+            '✓ הגעתי ליעד'
+          )
+        : it('nextPoint');
+
+$('eta').textContent = localizedInstruction(
+  'Manual', 'يدوي', 'ידני'
+);
 }
 
 function moveWheelchairToCheckpoint(direction){
@@ -2745,6 +2783,41 @@ if(direction === 1 && progressIndex === routeNodes.length - 1){
   progressT=0;
   lastTravelDirection=direction;
   activeFloor=routeNodes[targetIndex].floor;
+  // Reaching an outdoor exit already confirms arrival.
+if(
+  direction === 1 &&
+  targetIndex === routeNodes.length - 1 &&
+  routeNodes[targetIndex].type === 'entrance'
+){
+  const stage = sessionStorage.getItem('journeyStage');
+
+  try{
+    const sharedTransfer = JSON.parse(
+      sessionStorage.getItem('sharedIndoorTransfer') || 'null'
+    );
+
+    const intermediateTransfer = JSON.parse(
+      sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+    );
+
+    const continuesOutdoors =
+      (
+        stage === 'origin' &&
+        sharedTransfer?.originBuilding !== BUILDING
+      ) ||
+      (
+        stage === 'intermediate' &&
+        intermediateTransfer?.destinationBuilding !== 'madriga'
+      );
+
+    if(continuesOutdoors){
+      completeNavigation();
+      return;
+    }
+  }catch(error){
+    console.warn('Could not read the outdoor handoff:', error);
+  }
+}
   followCamera=true;
   followNode(routeNodes[targetIndex]);
   floorButtons();
@@ -3262,9 +3335,14 @@ function completeNavigation(){
       'הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.'
     );
 
-    arrivalNextStep={kind:'outdoor', run:returnToOutdoorJourney};
-    announceArrival();
-    return;
+$('status').textContent = localizedInstruction(
+  'Opening the outdoor route...',
+  'جارٍ فتح المسار الخارجي...',
+  'פותח את המסלול החיצוני...'
+);
+
+setTimeout(returnToOutdoorJourney, 400);
+return;
   }
 
   if(journeyStage==='intermediate'){
@@ -3313,9 +3391,14 @@ function completeNavigation(){
     $('status').textContent=localizedInstruction(
       'Exit reached. Continue on the outdoor route when you are ready.','وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.','הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.'
     );
-    arrivalNextStep={kind:'outdoor', run:returnToOutdoorJourney};
-    announceArrival();
-    return;
+$('status').textContent = localizedInstruction(
+  'Opening the outdoor route...',
+  'جارٍ فتح المسار الخارجي...',
+  'פותח את המסלול החיצוני...'
+);
+
+setTimeout(returnToOutdoorJourney, 400);
+return;
   }
 
   announceArrival();
