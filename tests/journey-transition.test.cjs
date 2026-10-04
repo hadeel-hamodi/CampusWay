@@ -230,7 +230,7 @@ test('saved language is restored before a resumed journey is shown', () => {
   assert.deepEqual(calls, [['ar', 'rtl']]);
 });
 
-test('finishing the origin indoor leg asks before opening the saved outdoor journey', () => {
+test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {
   const session = storage({
     journeyStage: 'origin',
     outdoorJourneyContext: '{}'
@@ -298,14 +298,14 @@ test('finishing the origin indoor leg asks before opening the saved outdoor jour
 
   assert.equal(session.values.get('originIndoorComplete'), 'true');
   assert.equal(session.values.get('journeyStage'), 'destination');
-  // Arrival shows a message; it must not leave the page by itself.
-  assert.equal(timers.length, 0);
+    // Completion schedules the outdoor handoff without another confirmation.
+  assert.equal(timers.length, 1);
   assert.equal(replaced, null);
-  assert.match(element('status').textContent, /outdoor route/i);
-  assert.equal(vm.runInContext('arrivalNextStep.kind', context), 'outdoor');
+  assert.match(element('status').textContent, /Opening the outdoor route/i);
+  assert.equal(vm.runInContext('arrivalNextStep', context), null);
 
-  // "Continue outdoors" in the arrival message opens the outdoor journey.
-  vm.runInContext('arrivalNextStep.run()', context);
+  // Run the scheduled handoff.
+  timers[0].fn();
 
   assert.equal(
     session.values.get('campusTransitionDirection'),

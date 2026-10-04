@@ -24,8 +24,8 @@
     </div>
 
     <div class="controlGroup building-picker">
-      <label for="building">BUILDING</label>
-      <select id="building">
+<span id="currentBuildingName"></span>
+<select id="building" disabled style="display:none">
         <option value="madriga">Madriga</option>
         <option value="education">Education</option>
         <option value="main">Main</option>
@@ -45,7 +45,7 @@
     <aside class="controlPanel" aria-label="Indoor route">
 
       <!-- 1. Where from / where to -->
-      <section class="card controls" aria-labelledby="routeFormTitle">
+     <section class="card controls" aria-labelledby="routeFormTitle" style="display:none">
         <h2 class="card-title" id="routeFormTitle">Your route</h2>
 
         <fieldset class="locGroup">
@@ -517,6 +517,8 @@ async function loadGraph(){
 
   initialBuildingQueryApplied=true;
   BUILDING = $('building').value;
+  $('currentBuildingName').textContent =
+  $('building').selectedOptions[0]?.textContent || BUILDING;
 
   const graphUrl=new URL(
     `../buildings/${BUILDING}/${BUILDING}-indoor-graph.json`,
