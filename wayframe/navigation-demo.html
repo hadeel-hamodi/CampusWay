@@ -345,7 +345,7 @@ button{cursor:pointer;font-weight:700}
 
         <div class="navStack">
           <div class="navBanner">
-            <div class="turnIcon">↑</div>
+            <div class="turnIcon" id="turnIcon">↑</div>
             <div class="bannerText" role="status" aria-live="polite">
               <strong id="instruction">Choose a destination</strong>
               <span id="subInstruction">Your route will appear here.</span>
@@ -1978,10 +1978,11 @@ function updateSpatialInstruction(){
   if(targetIndex===null) return;
 
   if(current.floor!==next.floor){
+    if($('turnIcon')) $('turnIcon').textContent = '↕';
     const target=routeNodes[targetIndex];
     const method=(current.type==='elevator'||next.type==='elevator')
       ? localizedInstruction('elevator','المصعد','מעלית')
-      : localizedInstruction('stairs','الدرج','מדרגות');
+      : localizedInstruction('stairs','الأدراج','מדרגות');
     $('instruction').textContent=localizedInstruction(
       `Take the ${method} to Floor ${floorLabel(target.floor)}`,
       `استخدم ${method} إلى ${localizedFloor(target.floor)}`,
@@ -2003,6 +2004,12 @@ function updateSpatialInstruction(){
   );
   const distanceText=spatialDistanceText(distance);
   const currentTurn=progressT===0 ? wheelchairTurnAt(progressIndex) : 0;
+  if($('turnIcon')){
+  $('turnIcon').textContent =
+    currentTurn > 0 ? '↱' :
+    currentTurn < 0 ? '↰' :
+    '↑';
+}
 
   $('instruction').textContent=currentTurn>0
     ? localizedInstruction('Turn right, then continue','انعطف يمينًا، ثم تابع','פנה ימינה והמשך')
@@ -2038,70 +2045,164 @@ function updateSpatialInstruction(){
       : localizedInstruction(`${distanceText} to the next point`,`${distanceText} حتى النقطة التالية`,`${distanceText} עד הנקודה הבאה`);
 }
 
-
 function updateTurnInstruction(){
-  if(showPendingSharedElevatorRide()) return;
-    if(showSharedElevatorEntry()) return;
+  const icon = $('turnIcon');
+  const setIcon = symbol => {
+    if(icon) icon.textContent = symbol;
+  };
+
+  setIcon('↑');
+
+  if(showPendingSharedElevatorRide()){
+    setIcon('↕');
+    return;
+  }
+
+  if(showSharedElevatorEntry()){
+    setIcon('↕');
+    return;
+  }
+
   if(navMode === 'wheelchair'){
     updateWheelchairInstruction();
     return;
   }
+
   if(navMode === 'sensor' && sensorFloorBoundary){
     showFloorBoundary();
+    setIcon('↕');
     return;
   }
-  if(navMode === 'sensor' && lastTravelDirection === -1){
-    $('instruction').textContent=localizedInstruction('Returning along the route','ترجع على المسار','חוזר לאורך המסלול');
-    $('subInstruction').textContent=localizedInstruction('Estimated position — keep the phone facing your walk.','موقع تقديري — أبقِ الهاتف باتجاه مشيك.','מיקום משוער — שמור את הטלפון בכיוון ההליכה.');
-    return;
-  }
-  if(navMode === 'sensor') $('subInstruction').textContent=localizedInstruction('Estimated position on the planned route.','موقع تقديري على المسار المحدد.','מיקום משוער לאורך המסלול המתוכנן.');
-  if(routeNodes.length<2 || progressIndex>=routeNodes.length-1) return;
 
-  if(selectedRoutingProfile()==='spatial'){
+  if(navMode === 'sensor' && lastTravelDirection === -1){
+    setIcon('↶');
+
+    $('instruction').textContent = localizedInstruction(
+      'Returning along the route',
+      'ترجع على المسار',
+      'חוזר לאורך המסלול'
+    );
+
+    $('subInstruction').textContent = localizedInstruction(
+      'Estimated position — keep the phone facing your walk.',
+      'موقع تقديري — أبقِ الهاتف باتجاه مشيك.',
+      'מיקום משוער — שמור את הטלפון בכיוון ההליכה.'
+    );
+
+    return;
+  }
+
+  if(navMode === 'sensor'){
+    $('subInstruction').textContent = localizedInstruction(
+      'Estimated position on the planned route.',
+      'موقع تقديري على المسار المحدد.',
+      'מיקום משוער לאורך המסלול המתוכנן.'
+    );
+  }
+
+  if(
+    routeNodes.length < 2 ||
+    progressIndex >= routeNodes.length - 1
+  ){
+    return;
+  }
+
+  if(selectedRoutingProfile() === 'spatial'){
     updateSpatialInstruction();
     return;
   }
 
-  const a=routeNodes[progressIndex];
-  const b=routeNodes[progressIndex+1];
+  const a = routeNodes[progressIndex];
+  const b = routeNodes[progressIndex + 1];
 
-if(a.floor!==b.floor){
-  const method =
-    (a.type === 'elevator' || b.type === 'elevator')
-      ? 'elevator'
-      : 'stairs';
+  if(a.floor !== b.floor){
+    setIcon('↕');
 
-  $('instruction').textContent =
-    `Take the ${method} to Floor ${floorLabel(b.floor)}`;
+    const usesElevator =
+      a.type === 'elevator' ||
+      b.type === 'elevator';
 
-  $('subInstruction').textContent =
-    `Continue on Floor ${floorLabel(b.floor)}`;
+    $('instruction').textContent = usesElevator
+      ? localizedInstruction(
+          `Take the elevator to Floor ${floorLabel(b.floor)}`,
+          `استخدم المصعد إلى ${localizedFloor(b.floor)}`,
+          `סע במעלית אל ${localizedFloor(b.floor)}`
+        )
+      : localizedInstruction(
+          `Take the stairs to Floor ${floorLabel(b.floor)}`,
+          `استخدم الأدراج إلى ${localizedFloor(b.floor)}`,
+          `עלה או רד במדרגות אל ${localizedFloor(b.floor)}`
+        );
 
-  return;
-}
+    $('subInstruction').textContent = localizedInstruction(
+      `Continue on Floor ${floorLabel(b.floor)}`,
+      `تابع في ${localizedFloor(b.floor)}`,
+      `המשך ב${localizedFloor(b.floor)}`
+    );
 
-  if(progressIndex>=routeNodes.length-2){
-    $('instruction').textContent='Continue to destination';
     return;
   }
 
-  const c=routeNodes[progressIndex+2];
-  if(!c || b.floor!==c.floor){
-    $('instruction').textContent='Continue straight';
+  if(progressIndex >= routeNodes.length - 2){
+    $('instruction').textContent = localizedInstruction(
+      'Continue to destination',
+      'تابع إلى الوجهة',
+      'המשך אל היעד'
+    );
     return;
   }
 
-  const pA=mapPoint(a), pB=mapPoint(b), pC=mapPoint(c);
-  const v1={x:pB.x-pA.x,y:pB.y-pA.y};
-  const v2={x:pC.x-pB.x,y:pC.y-pB.y};
-  const cross=v1.x*v2.y-v1.y*v2.x;
-  const dot=v1.x*v2.x+v1.y*v2.y;
-  const angle=Math.atan2(cross,dot)*180/Math.PI;
+  const c = routeNodes[progressIndex + 2];
 
-  if(Math.abs(angle)<25) $('instruction').textContent='Continue straight';
-  else if(angle>0) $('instruction').textContent='Turn right';
-  else $('instruction').textContent='Turn left';
+  if(!c || b.floor !== c.floor){
+    $('instruction').textContent = localizedInstruction(
+      'Continue straight',
+      'تابع مباشرة',
+      'המשך ישר'
+    );
+    return;
+  }
+
+  const pA = mapPoint(a);
+  const pB = mapPoint(b);
+  const pC = mapPoint(c);
+
+  const v1 = {
+    x: pB.x - pA.x,
+    y: pB.y - pA.y
+  };
+
+  const v2 = {
+    x: pC.x - pB.x,
+    y: pC.y - pB.y
+  };
+
+  const cross = v1.x * v2.y - v1.y * v2.x;
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const angle = Math.atan2(cross, dot) * 180 / Math.PI;
+
+  if(Math.abs(angle) < 25){
+    setIcon('↑');
+    $('instruction').textContent = localizedInstruction(
+      'Continue straight',
+      'تابع مباشرة',
+      'המשך ישר'
+    );
+  }else if(angle > 0){
+    setIcon('↱');
+    $('instruction').textContent = localizedInstruction(
+      'Turn right',
+      'انعطف يمينًا',
+      'פנה ימינה'
+    );
+  }else{
+    setIcon('↰');
+    $('instruction').textContent = localizedInstruction(
+      'Turn left',
+      'انعطف يسارًا',
+      'פנה שמאלה'
+    );
+  }
 }
 
 function wheelchairTarget(direction){
@@ -2146,6 +2247,7 @@ function wheelchairTurnAt(index){
 function updateWheelchairInstruction(){
   if(!routeNodes.length) return;
   if(progressIndex>=routeNodes.length-1){
+    if($('turnIcon')) $('turnIcon').textContent = '✓';
     const destination=routeNodes.at(-1);
     const label=destination._displayLabel||destination.label;
     $('instruction').textContent = localizedInstruction(
@@ -2174,6 +2276,7 @@ function updateWheelchairInstruction(){
   const target=routeNodes[targetIndex];
 
   if(progressT===0 && current && next && current.floor!==next.floor){
+    if($('turnIcon')) $('turnIcon').textContent = '↕';
     const usesElevator=routeNodes.slice(progressIndex,targetIndex+1).some(node=>node.type==='elevator');
     const method=usesElevator
       ? localizedInstruction('elevator','المصعد','מעלית')
@@ -2198,6 +2301,12 @@ function updateWheelchairInstruction(){
   }
 
   const turn=progressT===0 ? wheelchairTurnAt(progressIndex) : 0;
+  if($('turnIcon')){
+  $('turnIcon').textContent =
+    turn > 0 ? '↱' :
+    turn < 0 ? '↰' :
+    '↑';
+}
   $('instruction').textContent=turn>0
     ? localizedInstruction('Turn right and follow the highlighted route','انعطف يمينًا واتبع المسار المحدد','פנה ימינה והמשך במסלול המסומן')
     : turn<0
