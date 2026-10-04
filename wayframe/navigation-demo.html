@@ -463,6 +463,30 @@ const headingTracker=new CampusHeadingTracker();
 let lastTravelDirection=1;
 let sensorFloorBoundary=false;
 let sensorElevatorRide=null;
+
+let pendingSharedElevatorRide = null;
+
+const SHARED_ELEVATOR_STORAGE_KEY =
+  'campusway.pendingSharedElevatorRide';
+
+function savePendingSharedElevatorRide(ride){
+  // Save before switching pages so a reload can restore the ride.
+  sessionStorage.setItem(
+    SHARED_ELEVATOR_STORAGE_KEY,
+    JSON.stringify(ride)
+  );
+
+  pendingSharedElevatorRide = ride;
+}
+
+function clearPendingSharedElevatorRide(){
+  pendingSharedElevatorRide = null;
+
+  sessionStorage.removeItem(
+    SHARED_ELEVATOR_STORAGE_KEY
+  );
+}
+
 let sensorHeadingPaused=false;
 let navigationStartToken=0;
 let motionUnavailable=false;
@@ -1041,6 +1065,11 @@ if(context.destinationType === 'rest-space'){
     route();
   }
 
+    if(restorePendingSharedElevatorRide()){
+    sessionStorage.removeItem('sharedNavigationResume');
+    return;
+  }
+
   const savedResume=sessionStorage.getItem('sharedNavigationResume');
   if(savedResume){
     sessionStorage.removeItem('sharedNavigationResume');
@@ -1061,6 +1090,7 @@ if(context.destinationType === 'rest-space'){
 }
 
 document.getElementById('building').onchange = async () => {
+clearPendingSharedElevatorRide();
 stopNavigationMotion();
 BUILDING = document.getElementById('building').value;
 routePath = [];
@@ -1813,6 +1843,7 @@ $('eta').textContent = `${walkingMinutes} min`;
 }
 
 function clearRouteState(title=it('noRoute'), help=it('noRouteHelp')){
+  clearPendingSharedElevatorRide();
   stopNavigationMotion();
   routePath=[];
   routeNodes=[];
@@ -1833,6 +1864,9 @@ function clearRouteState(title=it('noRoute'), help=it('noRouteHelp')){
 }
 
 function route(){
+    if(pendingSharedElevatorRide){
+    clearPendingSharedElevatorRide();
+  }
   const rawFrom=$('from').value, rawTo=$('to').value;
   if(!$('fromFloor').value||!$('toFloor').value){
     clearRouteState(it('noRoute'), it('noRouteHelp'));
@@ -1999,6 +2033,8 @@ function updateSpatialInstruction(){
 
 
 function updateTurnInstruction(){
+  if(showPendingSharedElevatorRide()) return;
+    if(showSharedElevatorEntry()) return;
   if(navMode === 'wheelchair'){
     updateWheelchairInstruction();
     return;
@@ -2181,9 +2217,18 @@ function updateWheelchairInstruction(){
 }
 
 function moveWheelchairToCheckpoint(direction){
+    if(pendingSharedElevatorRide){
+    if(direction === 1){
+      void confirmSharedElevatorExit();
+    }
+    return;
+  }
   if(navMode!=='wheelchair' || !navigationActive || (direction!==1 && direction!==-1)) return;
   if(direction===1 && progressIndex===routeNodes.length-1){
     completeNavigation();
+    return;
+  }
+    if(direction === 1 && beginSharedElevatorRide()){
     return;
   }
   const targetIndex=wheelchairTarget(direction);
@@ -2351,6 +2396,11 @@ function findSensorElevatorRide(startIndex,direction=1){
 
 function showFloorBoundary(direction=lastTravelDirection){
   if(navMode!=='sensor' || !navigationActive) return;
+    if(showSharedElevatorEntry()){
+    stepMovementQueue = [];
+    projectedStepCursor = null;
+    return;
+  }
   if(!sensorElevatorRide){
     sensorElevatorRide =
       findSensorElevatorRide(progressIndex, direction);
@@ -2718,7 +2768,409 @@ function screenOrientationAngle(){
   return window.screen?.orientation?.angle ?? window.orientation ?? 0;
 }
 
+function sharedElevatorDeparture(){
+  if(
+    !['sensor', 'wheelchair'].includes(navMode) ||
+    !isSharedElevatorTransferEnd()
+  ){
+    return null;
+  }
+
+  const current = routeNodes[progressIndex];
+  const last = routeNodes.at(-1);
+
+  if(
+    progressT !== 0 ||
+    current?.type !== 'elevator' ||
+    !cid(current) ||
+    cid(current) !== cid(last)
+  ){
+    return null;
+  }
+
+  // Only combine an uninterrupted ride in the same elevator.
+  const remaining = routeNodes.slice(progressIndex);
+
+  if(
+    remaining.some(node =>
+      node.type !== 'elevator' ||
+      cid(node) !== cid(current)
+    )
+  ){
+    return null;
+  }
+
+  try{
+    const stage = sessionStorage.getItem('journeyStage');
+
+    const intermediate = JSON.parse(
+      sessionStorage.getItem('intermediateIndoorTransfer') ||
+      'null'
+    );
+
+    if(stage === 'origin'){
+      const transfer = JSON.parse(
+        sessionStorage.getItem('sharedIndoorTransfer') ||
+        'null'
+      );
+
+      if(!transfer) return null;
+
+      return {
+        originBuilding: BUILDING,
+        destinationBuilding: transfer.destinationBuilding,
+        nextStage:
+          intermediate?.building === transfer.destinationBuilding
+            ? 'intermediate'
+            : 'destination'
+      };
+    }
+
+    if(stage === 'intermediate' && intermediate){
+      return {
+        originBuilding: BUILDING,
+        destinationBuilding: intermediate.destinationBuilding,
+        nextStage: 'destination'
+      };
+    }
+  }catch(error){
+    console.warn('Could not read elevator departure:', error);
+  }
+
+  return null;
+}
+
+function beginSharedElevatorRide(){
+  const departure = sharedElevatorDeparture();
+
+  if(!departure) return false;
+
+  const mode = navMode;
+  const previousStage =
+    sessionStorage.getItem('journeyStage');
+
+  stopNavigationMotion();
+
+  // Preserve the existing Main → Rabin → Madriga handoff.
+  if(
+    previousStage === 'intermediate' &&
+    departure.destinationBuilding === 'madriga'
+  ){
+    sessionStorage.setItem(
+      'madrigaTransferEntrance',
+      'floor4_n43'
+    );
+
+    sessionStorage.removeItem(
+      'intermediateIndoorTransfer'
+    );
+  }
+
+  sessionStorage.setItem(
+    'journeyStage',
+    departure.nextStage
+  );
+
+  sessionStorage.setItem(
+    'indoorBuilding',
+    departure.destinationBuilding
+  );
+
+  sessionStorage.removeItem('originIndoorComplete');
+  sessionStorage.removeItem('sharedNavigationResume');
+
+  savePendingSharedElevatorRide({
+    ...departure,
+    mode,
+    entered: true,
+    destinationContext:
+      sessionStorage.getItem('indoorContext'),
+    intermediateContext:
+      sessionStorage.getItem('intermediateIndoorTransfer')
+  });
+
+  $('instruction').textContent = localizedInstruction(
+    'Stay in the elevator',
+    'ابقَ في المصعد',
+    'הישאר במעלית'
+  );
+
+  $('subInstruction').textContent = localizedInstruction(
+    'Opening the next building. Your exit floor still needs confirmation.',
+    'يتم فتح المبنى التالي. يجب تأكيد طابق الخروج بعد الوصول.',
+    'פותח את הבניין הבא. יש לאשר את קומת היציאה לאחר ההגעה.'
+  );
+
+  window.location.replace(
+    `./navigation-demo.html?building=${
+      encodeURIComponent(departure.destinationBuilding)
+    }`
+  );
+
+  return true;
+}
+
+function restorePendingSharedElevatorRide(){
+  const saved = sessionStorage.getItem(
+    SHARED_ELEVATOR_STORAGE_KEY
+  );
+
+  if(!saved) return false;
+
+  try{
+    const ride = JSON.parse(saved);
+
+    if(
+      ride.destinationBuilding !== BUILDING ||
+      !['sensor', 'wheelchair'].includes(ride.mode) ||
+      ride.nextStage !== sessionStorage.getItem('journeyStage') ||
+      ride.destinationContext !==
+        sessionStorage.getItem('indoorContext') ||
+      ride.intermediateContext !==
+        sessionStorage.getItem('intermediateIndoorTransfer')
+    ){
+      clearPendingSharedElevatorRide();
+      return false;
+    }
+
+    setNavigationMode(ride.mode);
+
+    const start = routeNodes[0];
+
+    if(!start || start.type !== 'elevator'){
+      clearPendingSharedElevatorRide();
+      return false;
+    }
+
+    // Find the end of the uninterrupted elevator ride
+    // in the receiving building's calculated route.
+    const continuation = findSensorElevatorRide(0, 1);
+    const endIndex = continuation?.endIndex ?? 0;
+    const exitNode = routeNodes[endIndex];
+
+    if(
+      ride.exitNodeId &&
+      ride.exitNodeId !== exitNode.id
+    ){
+      clearPendingSharedElevatorRide();
+      return false;
+    }
+
+    savePendingSharedElevatorRide({
+      ...ride,
+      exitNodeId: exitNode.id,
+      exitFloor: exitNode.floor
+    });
+
+    progressIndex = 0;
+    progressT = 0;
+    activeFloor = start.floor;
+    navigationActive = true;
+
+    sensorElevatorRide = {
+      route: routeNodes,
+      startIndex: 0,
+      endIndex,
+      direction: 1,
+      entered: true,
+      shared: true
+    };
+
+    followCamera = true;
+    followNode(start);
+    floorButtons();
+    updateProgressUI();
+    drawBaseMap();
+
+    $('startBtn').disabled = true;
+    updateDirectionControls();
+
+    return true;
+  }catch(error){
+    clearPendingSharedElevatorRide();
+
+    console.warn(
+      'Could not restore the shared elevator ride:',
+      error
+    );
+
+    return false;
+  }
+}
+
+function showPendingSharedElevatorRide(){
+  const ride = pendingSharedElevatorRide;
+
+  if(
+    !ride ||
+    !navigationActive ||
+    !sensorElevatorRide?.shared ||
+    sensorElevatorRide.route !== routeNodes
+  ){
+    return false;
+  }
+
+  const wheelchairMode = navMode === 'wheelchair';
+
+  $('instruction').textContent = localizedInstruction(
+    `Stay in the elevator until Floor ${floorLabel(ride.exitFloor)}`,
+    `ابقَ في المصعد حتى ${localizedFloor(ride.exitFloor)}`,
+    `הישאר במעלית עד ${localizedFloor(ride.exitFloor)}`
+  );
+
+  $('subInstruction').textContent = localizedInstruction(
+    'Your current floor is not confirmed. Tap only after exiting on the indicated floor.',
+    'لم يتم تأكيد طابقك الحالي. اضغط فقط بعد الخروج في الطابق المحدد.',
+    'הקומה הנוכחית שלך אינה מאושרת. לחץ רק לאחר היציאה בקומה המצוינת.'
+  );
+
+  const buttonText = localizedInstruction(
+    `✓ I exited on Floor ${floorLabel(ride.exitFloor)}`,
+    `✓ خرجت في ${localizedFloor(ride.exitFloor)}`,
+    `✓ יצאתי ב${localizedFloor(ride.exitFloor)}`
+  );
+
+  $('directionCard').hidden = true;
+  $('wheelchairCard').hidden = !wheelchairMode;
+  $('wheelchairMapControls').hidden = !wheelchairMode;
+  $('wheelchairBackBtn').disabled = true;
+  $('wheelchairNextBtn').disabled = false;
+  $('wheelchairNextBtn').textContent = buttonText;
+
+  $('sensorConfirmBtn').hidden = wheelchairMode;
+  $('sensorConfirmBtn').textContent = buttonText;
+
+  $('startBtn').disabled = true;
+  $('eta').textContent = localizedInstruction(
+    'Awaiting exit confirmation',
+    'بانتظار تأكيد الخروج',
+    'ממתין לאישור יציאה'
+  );
+
+  $('status').textContent = $('subInstruction').textContent;
+  $('wheelchairStatus').textContent =
+    $('subInstruction').textContent;
+
+  return true;
+}
+
+async function confirmSharedElevatorExit(){
+  const pending = pendingSharedElevatorRide;
+  const ride = sensorElevatorRide;
+
+  if(
+    !pending ||
+    !navigationActive ||
+    !ride?.shared ||
+    ride.route !== routeNodes ||
+    pending.mode !== navMode
+  ){
+    return;
+  }
+
+  const target = routeNodes[ride.endIndex];
+
+  if(!target || target.id !== pending.exitNodeId){
+    return;
+  }
+
+  clearPendingSharedElevatorRide();
+  stopNavigationMotion();
+
+  progressIndex = ride.endIndex;
+  progressT = 0;
+  lastTravelDirection = 1;
+  activeFloor = target.floor;
+
+  followCamera = true;
+  followNode(target);
+  floorButtons();
+  updateTurnInstruction();
+  updateProgressUI();
+  drawBaseMap();
+
+  if(progressIndex === routeNodes.length - 1){
+    completeNavigation();
+    return;
+  }
+
+  $('startBtn').disabled = false;
+  await startNavigation();
+}
+
+function showSharedElevatorEntry(){
+  if(!navigationActive || !sharedElevatorDeparture()){
+    return false;
+  }
+
+  const wheelchairMode = navMode === 'wheelchair';
+
+  $('instruction').textContent = localizedInstruction(
+    'Enter the shared elevator',
+    'ادخل المصعد المشترك',
+    'היכנס למעלית המשותפת'
+  );
+
+  $('subInstruction').textContent = localizedInstruction(
+    'Confirm only after entering. You will confirm your exit floor in the next building.',
+    'أكّد فقط بعد دخول المصعد. ستؤكد طابق الخروج في المبنى التالي.',
+    'אשר רק לאחר הכניסה למעלית. תאשר את קומת היציאה בבניין הבא.'
+  );
+
+  const text = localizedInstruction(
+    '✓ I entered the elevator',
+    '✓ دخلت المصعد',
+    '✓ נכנסתי למעלית'
+  );
+
+  $('directionCard').hidden = true;
+  $('wheelchairNextBtn').disabled = false;
+  $('wheelchairNextBtn').textContent = text;
+  $('sensorConfirmBtn').hidden = wheelchairMode;
+  $('sensorConfirmBtn').textContent = text;
+  $('status').textContent = $('subInstruction').textContent;
+
+  return true;
+}
+
+function isSharedElevatorTransferEnd(){
+  const lastNode = routeNodes.at(-1);
+
+  if(!lastNode || lastNode.type !== 'elevator'){
+    return false;
+  }
+
+  try{
+    const stage = sessionStorage.getItem('journeyStage');
+
+    if(stage === 'origin'){
+      const transfer = JSON.parse(
+        sessionStorage.getItem('sharedIndoorTransfer') || 'null'
+      );
+
+      return Boolean(
+        transfer &&
+        transfer.originBuilding === BUILDING &&
+        transfer.method === 'elevator'
+      );
+    }
+
+    if(stage === 'intermediate'){
+      const transfer = JSON.parse(
+        sessionStorage.getItem('intermediateIndoorTransfer') || 'null'
+      );
+
+      return transfer?.destinationBuilding === 'madriga';
+    }
+  }catch(error){
+    console.warn('Could not read shared elevator transfer:', error);
+  }
+
+  return false;
+}
+
 function updateDirectionControls(){
+    if(showPendingSharedElevatorRide()) return;
   $('directionCard').hidden=navMode !== 'sensor' || navigationActive;
   $('calibrateBtn').disabled=navMode !== 'sensor' || !sensorsEnabled || routeNodes.length<2 || navigationActive;
   if(navMode!=='sensor' || !navigationActive || !sensorElevatorRide){
@@ -2759,6 +3211,7 @@ function updateDirectionControls(){
       ? localizedInstruction('Choose a route first.','اختر المسار أولًا.','בחר תחילה מסלול.')
       : localizedInstruction('Press Start navigation, then confirm each point only after reaching it.','اضغط ابدأ الملاحة، ثم أكّد كل نقطة فقط بعد وصولك إليها.','לחץ התחל ניווט, ולאחר מכן אשר כל נקודה רק אחרי שהגעת אליה.');
   }
+    showSharedElevatorEntry();
 }
 
 function requireDirectionCalibration(){
@@ -3119,6 +3572,7 @@ function syncNavigationModeUI(){
 function setNavigationMode(mode){
   if(!['auto','sensor','wheelchair'].includes(mode)) return;
   if(navMode === mode) return;
+  clearPendingSharedElevatorRide();
   stopNavigationMotion();
   navMode=mode;
   const wheelchairMode=mode==='wheelchair';
@@ -3174,6 +3628,12 @@ function setNavigationMode(mode){
     );
     return;
   }
+  if(routeNodes.length){
+    $('eta').textContent = '--';
+    updateTurnInstruction();
+    updateProgressUI();
+  }
+
   if(GRAPH) drawBaseMap();
 }
 
@@ -3184,6 +3644,17 @@ $('calibrateBtn').onclick=startNavigation;
 $('wheelchairBackBtn').onclick=()=>moveWheelchairToCheckpoint(-1);
 $('wheelchairNextBtn').onclick=()=>moveWheelchairToCheckpoint(1);
 $('sensorConfirmBtn').onclick=async()=>{
+    if(pendingSharedElevatorRide){
+    await confirmSharedElevatorExit();
+    return;
+  }
+  if(
+    navMode === 'sensor' &&
+    navigationActive &&
+    beginSharedElevatorRide()
+  ){
+    return;
+  }
   const ride=sensorElevatorRide;
   if(navMode!=='sensor' || !navigationActive || !ride || ride.route!==routeNodes) return;
 

@@ -155,6 +155,11 @@ function indoorHarness(graph, accessible = true, profile = 'general') {
     function followNode(){} function currentHeading(){return 0}
     function floorButtons(){} function drawBaseMap(){} function updateProgressUI(){}
     function updateDirectionControls(){} function stopNavigationMotion(){navigationActive=false}
+        let pendingSharedElevatorRide = null;
+
+    function clearPendingSharedElevatorRide(){
+      pendingSharedElevatorRide = null;
+    }
     let routePath=['old'];
     let routeNodes=[{id:'old-stairs',type:'stairs',floor:'floor1',x:0,y:0},{id:'old-room',type:'room',floor:'floor2',x:1,y:1}];
     let progressIndex=1,progressT=.5,navigationActive=true,sensorFloorBoundary=true,followCamera=false,headingDeg=0;
