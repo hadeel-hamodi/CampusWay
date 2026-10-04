@@ -161,7 +161,8 @@
       </section>
 
       <!-- Already inside a building: go straight to indoor navigation -->
-      <section class="panel indoor-entry">
+      <!-- Hidden for now: routes are planned through the main search. -->
+      <section class="panel indoor-entry" style="display:none">
         <button class="indoor-entry-btn" id="indoorEntryToggle" type="button" aria-expanded="false" aria-controls="indoorBuildingList">
           <span class="indoor-entry-icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-5h4v5"/><path d="M9 10h.01M15 10h.01M12 10h.01"/></svg>
@@ -1022,7 +1023,7 @@ const fitCampusControl = new FitCampusControl().addTo(map);
 
 // Show building names once the map is zoomed in enough to read them.
 function updateBuildingLabelVisibility(){
-  map.getContainer().classList.toggle('show-labels', map.getZoom() >= 17.5);
+  map.getContainer().classList.toggle('show-labels', map.getZoom() >= 19);
 }
 map.on('zoomend', updateBuildingLabelVisibility);
 
@@ -1239,12 +1240,17 @@ CAMPUS_DATA.buildings.forEach(b=>{
       ${t.navigateHere}
     </button>
 
-    ${INDOOR_NAVIGATION_BUILDINGS[b.name] ? `
-    <button
-      class="building-popup-btn secondary"
-      onclick="map.closePopup();openIndoorNavigation('${INDOOR_NAVIGATION_BUILDINGS[b.name]}')">
-      🏢 ${t.indoorNavTitle}
-    </button>` : ''}
+    ${
+      /*
+      INDOOR_NAVIGATION_BUILDINGS[b.name] ? `
+        <button
+          class="building-popup-btn secondary"
+          onclick="map.closePopup();openIndoorNavigation('${INDOOR_NAVIGATION_BUILDINGS[b.name]}')">
+          🏢 ${t.indoorNavTitle}
+        </button>` : ''
+      */
+      ''
+    }
 
     <button
       class="building-popup-btn secondary"

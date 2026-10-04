@@ -237,8 +237,7 @@
       }
     }));
 
-    const hasSaved = typeof favourites !== 'undefined' && favourites.length > 0;
-    selectPlacesTab(hasSaved ? 'saved' : 'buildings');
+    selectPlacesTab('saved');
   }
 
   // ── Search suggestions: ARIA + keyboard ───────────────────────────────
