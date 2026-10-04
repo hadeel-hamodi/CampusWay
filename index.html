@@ -1022,7 +1022,7 @@ const fitCampusControl = new FitCampusControl().addTo(map);
 
 // Show building names once the map is zoomed in enough to read them.
 function updateBuildingLabelVisibility(){
-  map.getContainer().classList.toggle('show-labels', map.getZoom() >= 17);
+  map.getContainer().classList.toggle('show-labels', map.getZoom() >= 17.5);
 }
 map.on('zoomend', updateBuildingLabelVisibility);
 

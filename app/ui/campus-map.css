@@ -659,3 +659,25 @@ body.hc .toast-close{color:#000;}
   .brand-text{display:none;}
   .toolbar-btn.emergency-btn{padding:8px 12px;}
 }
+
+@media (max-width: 600px){
+  #emergencyBtn{
+    width:48px;
+    min-width:48px;
+    height:48px;
+    padding:0;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  #emergencyBtn #lbl-emergency{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip-path:inset(50%);
+    white-space:nowrap;
+  }
+}
