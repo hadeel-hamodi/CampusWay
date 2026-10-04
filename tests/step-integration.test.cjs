@@ -75,6 +75,7 @@ window.clearTimeout = clearTimeoutMock;
       function nodeById(id){return testNodes.find(n=>n.id===id);} async function loadGraph(){}
       function floorLabel(f){return f;} function localizedFloor(f){return f;} function localizedNodeLabel(f){return f;}
       function mapPoint(n){return {x:n.x*132.6,y:n.y*101.2};}`);
+    run(between(nav, 'function cid(n){', 'function esc('));
     run(between(nav,'function currentInterpolated(){','function drawUserMarker(){'));
     // Actual route, signed movement, instructions, sensor and lifecycle code; only drawing/loading are stubbed.
     run(between(nav,'function route(){',"$('fromFloor').onchange="));
@@ -575,4 +576,222 @@ test('switching away from wheelchair mode hides controls and stale presses canno
 
 test('diagnostic reset clears totals without registering listeners again',async()=>{
   const h=harness(true);await h.run('enableSensors()');const before=h.listeners.size;h.element('resetBtn').onclick();assert.equal(Number(h.element('steps').textContent),0);assert.equal(h.listeners.size,before);assert.equal(h.run('sensorsEnabled'),true);
+});
+
+function sharedRideHarness(mode = 'wheelchair'){
+  const h = harness();
+
+  h.setRoute([
+    {
+      id:'lift-start', label:'Elevator',
+      type:'elevator', connectorId:'shared-lift',
+      floor:'floor500', x:0, y:1
+    },
+    {
+      id:'lift-middle', label:'Elevator',
+      type:'elevator', connectorId:'shared-lift',
+      floor:'floor600', x:0, y:1
+    },
+    {
+      id:'lift-exit', label:'Elevator',
+      type:'elevator', connectorId:'shared-lift',
+      floor:'floor700', x:0, y:1
+    },
+    {
+      id:'room', label:'Test room',
+      type:'room', floor:'floor700', x:0, y:0
+    }
+  ]);
+
+  h.element('accessibleRoute').checked = true;
+
+  h.run(`
+    BUILDING = 'rabin';
+
+    sessionStorage.setItem('journeyStage', 'destination');
+    sessionStorage.setItem(
+      'indoorContext',
+      JSON.stringify({destinationNodeId:'room'})
+    );
+
+    savePendingSharedElevatorRide({
+      originBuilding:'madriga',
+      destinationBuilding:'rabin',
+      nextStage:'destination',
+      mode:${JSON.stringify(mode)},
+      entered:true,
+      destinationContext:sessionStorage.getItem('indoorContext'),
+      intermediateContext:null
+    });
+
+    // Simulate losing in-memory state during a page reload.
+    pendingSharedElevatorRide = null;
+  `);
+
+  return h;
+}
+
+test('shared ride restores after reload and derives its exit from the route', ()=>{
+  for(const mode of ['wheelchair', 'sensor']){
+    const h = sharedRideHarness(mode);
+
+    assert.equal(h.run('restorePendingSharedElevatorRide()'), true);
+
+    assert.equal(h.run('navMode'), mode);
+    assert.equal(h.run('navigationActive'), true);
+    assert.equal(h.run('progressIndex'), 0);
+    assert.equal(h.run('activeFloor'), 'floor500');
+
+    assert.equal(
+      h.run('pendingSharedElevatorRide.exitNodeId'),
+      'lift-exit'
+    );
+    assert.equal(
+      h.run('pendingSharedElevatorRide.exitFloor'),
+      'floor700'
+    );
+    assert.equal(h.run('sensorElevatorRide.endIndex'), 2);
+
+    assert.equal(h.element('startBtn').disabled, true);
+    assert.match(h.element('instruction').textContent, /floor700/);
+
+    const button = mode === 'wheelchair'
+      ? h.element('wheelchairNextBtn')
+      : h.element('sensorConfirmBtn');
+
+    assert.equal(button.hidden, false);
+    assert.match(button.textContent, /I exited.*floor700/);
+
+    assert.equal(h.timers.size, 0);
+    assert.equal(h.frames.size, 0);
+  }
+});
+
+test('shared ride rejects stale saved state', ()=>{
+  const mismatches = [
+    {destinationBuilding:'main'},
+    {mode:'auto'},
+    {nextStage:'origin'},
+    {destinationContext:'different destination'},
+    {intermediateContext:'different transfer'}
+  ];
+
+  for(const mismatch of mismatches){
+    const h = sharedRideHarness();
+
+    h.run(`
+      const savedRide = JSON.parse(
+        sessionStorage.getItem(SHARED_ELEVATOR_STORAGE_KEY)
+      );
+
+      Object.assign(savedRide, ${JSON.stringify(mismatch)});
+
+      sessionStorage.setItem(
+        SHARED_ELEVATOR_STORAGE_KEY,
+        JSON.stringify(savedRide)
+      );
+    `);
+
+    assert.equal(h.run('restorePendingSharedElevatorRide()'), false);
+    assert.equal(h.run('pendingSharedElevatorRide'), null);
+    assert.equal(
+      h.run('sessionStorage.getItem(SHARED_ELEVATOR_STORAGE_KEY)'),
+      null
+    );
+    assert.equal(h.run('navigationActive'), false);
+  }
+});
+
+test('shared ride rejects a non-elevator route start', ()=>{
+  const h = sharedRideHarness();
+
+  h.run(`
+    routeNodes[0].type = 'corridor';
+  `);
+
+  assert.equal(h.run('restorePendingSharedElevatorRide()'), false);
+  assert.equal(h.run('pendingSharedElevatorRide'), null);
+  assert.equal(
+    h.run('sessionStorage.getItem(SHARED_ELEVATOR_STORAGE_KEY)'),
+    null
+  );
+  assert.equal(h.run('navigationActive'), false);
+});
+
+test('shared ride clears when the route or mode changes', ()=>{
+  for(const action of ['route', 'mode']){
+    const h = sharedRideHarness();
+
+    assert.equal(
+      h.run('restorePendingSharedElevatorRide()'),
+      true
+    );
+
+    if(action === 'mode'){
+      h.run("setNavigationMode('auto')");
+    }else{
+      h.element('fromFloor').value = 'floor500';
+      h.element('toFloor').value = 'floor700';
+      h.element('from').value = 'lift-start';
+      h.element('to').value = 'room';
+
+      h.run('route()');
+    }
+
+    assert.equal(h.run('pendingSharedElevatorRide'), null);
+    assert.equal(h.run('sensorElevatorRide'), null);
+    assert.equal(h.run('navigationActive'), false);
+
+    assert.equal(
+      h.run('sessionStorage.getItem(SHARED_ELEVATOR_STORAGE_KEY)'),
+      null
+    );
+
+    assert.equal(h.element('sensorConfirmBtn').hidden, true);
+    assert.equal(h.element('startBtn').disabled, false);
+    assert.doesNotMatch(
+      h.element('instruction').textContent,
+      /Stay in the elevator/
+    );
+    assert.notEqual(
+      h.element('eta').textContent,
+      'Awaiting exit confirmation'
+    );
+
+    assert.equal(h.timers.size, 0);
+    assert.equal(h.frames.size, 0);
+  }
+});
+
+test('shared ride exit confirmation resumes at the exact route elevator', async ()=>{
+  const h = sharedRideHarness('wheelchair');
+
+  assert.equal(h.run('restorePendingSharedElevatorRide()'), true);
+
+  await h.run('confirmSharedElevatorExit()');
+
+  assert.equal(h.run('progressIndex'), 2);
+  assert.equal(h.run('progressT'), 0);
+  assert.equal(h.run('routeNodes[progressIndex].id'), 'lift-exit');
+  assert.equal(h.run('activeFloor'), 'floor700');
+
+  assert.equal(h.run('pendingSharedElevatorRide'), null);
+  assert.equal(h.run('sensorElevatorRide'), null);
+  assert.equal(
+    h.run('sessionStorage.getItem(SHARED_ELEVATOR_STORAGE_KEY)'),
+    null
+  );
+
+  assert.equal(h.run('navMode'), 'wheelchair');
+  assert.equal(h.run('navigationActive'), true);
+  assert.equal(h.element('sensorConfirmBtn').hidden, true);
+  assert.equal(h.element('wheelchairNextBtn').disabled, false);
+
+  assert.doesNotMatch(
+    h.element('instruction').textContent,
+    /Stay in the elevator/
+  );
+
+  assert.equal(h.timers.size, 0);
+  assert.equal(h.frames.size, 0);
 });

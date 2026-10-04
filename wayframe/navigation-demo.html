@@ -1943,7 +1943,14 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
   $('startBtn').disabled=false;
   updateDirectionControls();
   $('status').textContent=localizedInstruction('Route ready.','المسار جاهز.','המסלול מוכן.');
-  describeRoute(routeMeters, verticalSeconds);floorButtons();drawBaseMap();updateProgressUI();
+    describeRoute(routeMeters, verticalSeconds);
+
+  $('eta').textContent = '--';
+  updateTurnInstruction();
+
+  floorButtons();
+  drawBaseMap();
+  updateProgressUI();
 }
 
 function spatialDistanceText(distance){
