@@ -202,32 +202,39 @@ test('stored indoor contexts rebuild the outdoor leg during a first-version upgr
   assert.equal(h.element('continueIndoorBtn').style.display, 'none');
 });
 
-test('saved language is restored before a resumed journey is shown', () => {
-  const session = storage({campuswayLanguage: 'ar'});
-  let domReady = null;
-  const calls = [];
+test('persistent preferences prefer local storage and mirror new values to the session', () => {
+  const local = storage({
+    campuswayLanguage: 'ar',
+    accessibilityProfile: 'mobility'
+  });
+  const session = storage({
+    campuswayLanguage: 'en',
+    accessibilityProfile: 'general'
+  });
   const context = vm.createContext({
-    sessionStorage: session.api,
-    window: {
-      addEventListener(name, callback) {
-        if(name === 'DOMContentLoaded') domReady = callback;
-      }
-    },
-    pickLang(language, direction) {
-      calls.push([language, direction]);
-    }
+    localStorage: local.api,
+    sessionStorage: session.api
   });
 
-  const languageCode = between(
+  const preferenceCode = between(
     index,
-    'function restoreSavedLanguage()',
-    'function localizedBuildingName(building)'
+    'const PROFILE_IDS',
+    'let audioOn'
   );
+  vm.runInContext(preferenceCode, context);
 
-  vm.runInContext(languageCode, context);
-  assert.equal(typeof domReady, 'function');
-  domReady();
-  assert.deepEqual(calls, [['ar', 'rtl']]);
+  assert.equal(
+    vm.runInContext("readStoredPreference('campuswayLanguage')", context),
+    'ar'
+  );
+  assert.equal(vm.runInContext('currentProfile', context), 'mobility');
+
+  vm.runInContext(
+    "writeStoredPreference('campuswayLanguage','he')",
+    context
+  );
+  assert.equal(local.values.get('campuswayLanguage'), 'he');
+  assert.equal(session.values.get('campuswayLanguage'), 'he');
 });
 
 test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {

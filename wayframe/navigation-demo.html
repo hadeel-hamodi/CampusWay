@@ -391,9 +391,35 @@ const INDOOR_T_EXTRA = {
 };
 Object.entries(INDOOR_T_EXTRA).forEach(([language, strings]) => Object.assign(INDOOR_T[language], strings));
 
+function indoorStoredPreference(key, isValid = value => value !== null){
+  let value = null;
+  try{
+    const persistent = localStorage.getItem(key);
+    if(isValid(persistent)) value = persistent;
+  }catch(error){
+    // Persistent storage may be blocked.
+  }
+  if(value === null){
+    try{
+      const currentSession = sessionStorage.getItem(key);
+      if(isValid(currentSession)) value = currentSession;
+    }catch(error){
+      // Fall back to the default below.
+    }
+  }
+  if(value !== null){
+    try{
+      sessionStorage.setItem(key, value);
+    }catch(error){
+      // Mirroring is optional when storage is blocked.
+    }
+  }
+  return value;
+}
+
 function indoorLanguage(){
   for(const key of ['campuswayLanguage','language','lang']){
-    const value=sessionStorage.getItem(key);
+    const value=indoorStoredPreference(key, candidate => Boolean(candidate && INDOOR_T[candidate]));
     if(value && INDOOR_T[value]) return value;
   }
   return 'en';
@@ -1285,8 +1311,12 @@ for(const c of (f.connections||[])){
 }
 
 function selectedRoutingProfile(){
-  const profile=sessionStorage.getItem('accessibilityProfile');
-  return ['general','mobility','visual','spatial','mental'].includes(profile)
+  const profiles=['general','mobility','visual','spatial','mental'];
+  const profile=indoorStoredPreference(
+    'accessibilityProfile',
+    candidate => profiles.includes(candidate)
+  );
+  return profiles.includes(profile)
     ? profile
     : 'general';
 }
@@ -5027,7 +5057,10 @@ function setupIndoorExtras(){
 
 // Use accessibility profile selected in the main CampusWay app.
 const savedAccessibilityProfile =
-  sessionStorage.getItem('accessibilityProfile');
+  indoorStoredPreference(
+    'accessibilityProfile',
+    candidate => ['general','mobility','visual','spatial','mental'].includes(candidate)
+  );
 
 if(savedAccessibilityProfile === 'mobility'){
   accessibilityLockedByProfile = true;

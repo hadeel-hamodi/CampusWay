@@ -25,24 +25,44 @@
 </head>
 <body>
 
-<!-- ── LANGUAGE PICKER (first visit) ── -->
+<!-- ── FIRST-USE SETUP: language, then navigation profile ── -->
 <div id="langScreen" role="dialog" aria-modal="true" aria-labelledby="langTitle">
-  <div class="lang-card">
-    <img class="lang-logo" src="app/vendor/images/cw2.png" alt="">
-    <h1 class="lang-title" id="langTitle">CampusWay</h1>
-    <p class="lang-sub">University of Haifa · Accessible campus navigation</p>
-    <p class="lang-prompt">Choose your language · <span lang="he" dir="rtl">בחרו שפה</span> · <span lang="ar" dir="rtl">اختر لغتك</span></p>
-    <div class="lang-options">
-      <button class="lang-btn" type="button" lang="en" onclick="pickLang('en','ltr')">
-        <span class="flag">EN</span>English
-      </button>
-      <button class="lang-btn" type="button" lang="he" onclick="pickLang('he','rtl')">
-        <span class="flag">HE</span>עברית
-      </button>
-      <button class="lang-btn" type="button" lang="ar" onclick="pickLang('ar','rtl')">
-        <span class="flag">AR</span>العربية
-      </button>
+  <div class="onboarding-card">
+    <div class="onboarding-brand" aria-hidden="true">
+      <img class="lang-logo" src="app/vendor/images/cw2.png" alt="">
+      <span>CampusWay</span>
     </div>
+
+    <section id="languageStep" class="onboarding-step">
+      <p class="onboarding-progress" id="onboardingLanguageProgress">Step 1 of 2</p>
+      <h1 class="lang-title" id="langTitle">Choose your language</h1>
+      <p class="lang-sub">University of Haifa · Accessible campus navigation</p>
+      <p class="lang-prompt"><span lang="he" dir="rtl">בחרו שפה</span> · <span lang="ar" dir="rtl">اختر لغتك</span></p>
+      <div class="lang-options" role="group" aria-labelledby="langTitle">
+        <button class="lang-btn" type="button" lang="en" onclick="pickLang('en','ltr')">
+          <span class="flag">EN</span>English
+        </button>
+        <button class="lang-btn" type="button" lang="he" onclick="pickLang('he','rtl')">
+          <span class="flag">HE</span>עברית
+        </button>
+        <button class="lang-btn" type="button" lang="ar" onclick="pickLang('ar','rtl')">
+          <span class="flag">AR</span>العربية
+        </button>
+      </div>
+    </section>
+
+    <section id="profileStep" class="onboarding-step" hidden>
+      <p class="onboarding-progress" id="onboardingProfileProgress">Step 2 of 2</p>
+      <h1 class="onboarding-title" id="onboardingProfileTitle">Choose your navigation profile</h1>
+      <p class="onboarding-copy" id="onboardingProfileHint">CampusWay will adapt routes and guidance to your needs.</p>
+      <div class="profile-choice-list" id="onboardingProfileList" role="radiogroup" aria-labelledby="onboardingProfileTitle"></div>
+      <p class="onboarding-later" id="onboardingChangeLater">You can change this later in Settings.</p>
+      <p class="form-error" id="onboardingProfileError" role="alert" hidden>Choose a profile to continue.</p>
+      <div class="onboarding-actions">
+        <button class="btn btn-ghost" id="onboardingBackBtn" type="button" onclick="showOnboardingStep('language')">Back</button>
+        <button class="btn btn-primary" id="onboardingContinueBtn" type="button" onclick="completeOnboarding()" disabled>Continue</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -75,21 +95,17 @@
         <span class="btn-label" id="lbl-audio">Audio Guide</span>
       </button>
 
-      <div class="lang-menu">
-        <button class="toolbar-btn" id="langSwitchBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu">🌐 Language</button>
-        <div class="menu" id="langMenu" role="menu" hidden>
-          <button class="menu-item" type="button" role="menuitemradio" data-lang="en" data-dir="ltr" lang="en">English <span class="menu-check" aria-hidden="true">✓</span></button>
-          <button class="menu-item" type="button" role="menuitemradio" data-lang="he" data-dir="rtl" lang="he">עברית <span class="menu-check" aria-hidden="true">✓</span></button>
-          <button class="menu-item" type="button" role="menuitemradio" data-lang="ar" data-dir="rtl" lang="ar">العربية <span class="menu-check" aria-hidden="true">✓</span></button>
-        </div>
-      </div>
+      <button class="toolbar-btn" id="settingsBtn" type="button" onclick="openSettings()" aria-haspopup="dialog" aria-controls="settingsDialog">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3V9.6h.1A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.13.37.34.7.6 1 .3.3.7.48 1.1.5h.1v4h-.1a1.7 1.7 0 0 0-1.7.5z"/></svg>
+        <span class="btn-label" id="lbl-settings">Settings</span>
+      </button>
     </div>
   </header>
 
   <div class="app">
     <aside class="sidebar" aria-label="Route planner">
 
-      <!-- Route planner: From → To + accessibility profile -->
+      <!-- Route planner: From → To -->
       <section class="panel planner" aria-labelledby="lbl-plan-route">
         <div class="panel-head">
           <h2 class="panel-title" id="lbl-plan-route">Plan your route</h2>
@@ -138,12 +154,6 @@
             </div>
             <div class="suggestions" id="searchSuggestions" style="display:none;"></div>
           </div>
-        </div>
-
-        <div class="profile-field">
-          <span class="field-label" id="lbl-profile">Accessibility Profile</span>
-          <button class="profile-summary" id="profileToggle" type="button" aria-expanded="false" aria-controls="profileList" aria-describedby="lbl-profile"></button>
-          <div class="profiles" id="profileList" role="group" aria-labelledby="lbl-profile" hidden></div>
         </div>
 
         <div id="alertArea" aria-live="polite"></div>
@@ -271,6 +281,31 @@
   </div>
 </div>
 
+<!-- ── SETTINGS: persistent language and navigation profile ── -->
+<div class="settings-dialog" id="settingsDialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+  <div class="settings-card" role="document">
+    <div class="settings-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button class="settings-close" id="settingsCloseBtn" type="button" onclick="closeSettings()" aria-label="Close settings">✕</button>
+    </div>
+
+    <section class="settings-section" aria-labelledby="settingsLanguageTitle">
+      <h3 id="settingsLanguageTitle">Language</h3>
+      <div class="settings-language-options" id="settingsLanguageOptions" role="radiogroup" aria-labelledby="settingsLanguageTitle">
+        <button type="button" role="radio" data-lang="en" data-dir="ltr" onclick="changeSettingsLanguage('en','ltr')" lang="en">English <span aria-hidden="true">EN</span></button>
+        <button type="button" role="radio" data-lang="he" data-dir="rtl" onclick="changeSettingsLanguage('he','rtl')" lang="he">עברית <span aria-hidden="true">HE</span></button>
+        <button type="button" role="radio" data-lang="ar" data-dir="rtl" onclick="changeSettingsLanguage('ar','rtl')" lang="ar">العربية <span aria-hidden="true">AR</span></button>
+      </div>
+    </section>
+
+    <section class="settings-section" aria-labelledby="settingsProfileTitle">
+      <h3 id="settingsProfileTitle">Navigation profile</h3>
+      <p id="settingsProfileHint">Your profile changes how routes are calculated.</p>
+      <div class="profile-choice-list profile-choice-list--settings" id="settingsProfileList" role="radiogroup" aria-labelledby="settingsProfileTitle"></div>
+    </section>
+  </div>
+</div>
+
 <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
 <script>
@@ -337,6 +372,15 @@ const T = {
     foodModeHint:'Food places are highlighted on the map. Select one to get directions.',
     shopModeHint:'Shops are highlighted on the map. Select one to get directions.',
     languageLabel:'Language', profileLabel:'Accessibility profile',
+    settings:'Settings', settingsTitle:'Settings', closeSettings:'Close settings',
+    settingsLanguage:'Language', settingsProfile:'Navigation profile',
+    profileRouteHint:'Your profile changes how routes are calculated.',
+    onboardingStepLanguage:'Step 1 of 2', onboardingLanguageTitle:'Choose your language',
+    onboardingStepProfile:'Step 2 of 2', onboardingProfileTitle:'Choose your navigation profile',
+    onboardingProfileHint:'CampusWay will adapt routes and guidance to your needs.',
+    changeLaterHint:'You can change this later in Settings.', back:'Back', continueLabel:'Continue',
+    chooseProfileRequired:'Choose a profile to continue.',
+    startVoiceSearch:'Search starting point by voice',
     indoorNavTitle:'Indoor navigation', indoorNavHint:'Already inside a building? Find a room, floor or elevator.',
     chooseBuilding:'Which building are you in?',
     startNotMapped:'This starting point is not mapped yet. Choose a listed room or start from the building.',
@@ -401,6 +445,15 @@ const T = {
     foodModeHint:'מקומות האוכל מסומנים במפה. בחר אחד כדי לקבל הוראות הגעה.',
     shopModeHint:'החנויות מסומנות במפה. בחר אחת כדי לקבל הוראות הגעה.',
     languageLabel:'שפה', profileLabel:'פרופיל נגישות',
+    settings:'הגדרות', settingsTitle:'הגדרות', closeSettings:'סגירת ההגדרות',
+    settingsLanguage:'שפה', settingsProfile:'פרופיל ניווט',
+    profileRouteHint:'הפרופיל משנה את אופן חישוב המסלול.',
+    onboardingStepLanguage:'שלב 1 מתוך 2', onboardingLanguageTitle:'בחירת שפה',
+    onboardingStepProfile:'שלב 2 מתוך 2', onboardingProfileTitle:'בחירת פרופיל ניווט',
+    onboardingProfileHint:'המסלולים וההנחיות יותאמו לצרכים שלך.',
+    changeLaterHint:'אפשר לשנות זאת מאוחר יותר בהגדרות.', back:'חזרה', continueLabel:'המשך',
+    chooseProfileRequired:'יש לבחור פרופיל כדי להמשיך.',
+    startVoiceSearch:'חיפוש קולי של נקודת המוצא',
     indoorNavTitle:'ניווט בתוך בניין', indoorNavHint:'כבר בתוך בניין? מצא חדר, קומה או מעלית.',
     chooseBuilding:'באיזה בניין אתה נמצא?',
     startNotMapped:'נקודת המוצא הזו עדיין לא מופתה. בחר חדר מהרשימה או התחל מהבניין.',
@@ -465,6 +518,15 @@ const T = {
     foodModeHint:'أماكن الطعام مميزة على الخريطة. اختر واحدًا للحصول على الاتجاهات.',
     shopModeHint:'المحلات مميزة على الخريطة. اختر واحدًا للحصول على الاتجاهات.',
     languageLabel:'اللغة', profileLabel:'ملف إمكانية الوصول',
+    settings:'الإعدادات', settingsTitle:'الإعدادات', closeSettings:'إغلاق الإعدادات',
+    settingsLanguage:'اللغة', settingsProfile:'ملف التنقّل',
+    profileRouteHint:'يغيّر الملف طريقة حساب المسار.',
+    onboardingStepLanguage:'الخطوة 1 من 2', onboardingLanguageTitle:'اختر لغتك',
+    onboardingStepProfile:'الخطوة 2 من 2', onboardingProfileTitle:'اختر ملف التنقّل المناسب',
+    onboardingProfileHint:'سيكيّف CampusWay المسارات والإرشادات حسب احتياجاتك.',
+    changeLaterHint:'يمكنك تغيير ذلك لاحقًا من الإعدادات.', back:'رجوع', continueLabel:'متابعة',
+    chooseProfileRequired:'اختر ملفًا للمتابعة.',
+    startVoiceSearch:'البحث الصوتي عن نقطة البداية',
     indoorNavTitle:'الملاحة داخل المبنى', indoorNavHint:'داخل مبنى بالفعل؟ ابحث عن غرفة أو طابق أو مصعد.',
     chooseBuilding:'في أي مبنى أنت؟',
     startNotMapped:'نقطة البداية هذه غير مربوطة بالمسارات بعد. اختر غرفة من القائمة أو ابدأ من المبنى.',
@@ -527,9 +589,84 @@ Object.assign(T.ar, {
 let lang = 'en';
 let t = T.en;
 const PROFILE_IDS = new Set(['general','mobility','visual','spatial','mental']);
-const storedProfile = sessionStorage.getItem('accessibilityProfile');
+const LANGUAGE_IDS = new Set(['en','he','ar']);
+const PREFERENCE_KEYS = {
+  language: 'campuswayLanguage',
+  profile: 'accessibilityProfile',
+  onboarding: 'campuswayOnboardingComplete'
+};
+
+function storageValue(storage, key){
+  try{
+    return storage && typeof storage.getItem === 'function'
+      ? storage.getItem(key)
+      : null;
+  }catch(error){
+    return null;
+  }
+}
+
+function storeValue(storage, key, value){
+  try{
+    if(storage && typeof storage.setItem === 'function'){
+      storage.setItem(key, value);
+    }
+  }catch(error){
+    // Preferences still work for the current page when storage is blocked.
+  }
+}
+
+function readStoredPreference(key){
+  const persistent = storageValue(
+    typeof localStorage === 'undefined' ? null : localStorage,
+    key
+  );
+  if(persistent !== null) return persistent;
+  return storageValue(
+    typeof sessionStorage === 'undefined' ? null : sessionStorage,
+    key
+  );
+}
+
+function readValidStoredPreference(key, allowedValues){
+  const persistent = storageValue(
+    typeof localStorage === 'undefined' ? null : localStorage,
+    key
+  );
+  if(allowedValues.has(persistent)) return persistent;
+
+  const currentSession = storageValue(
+    typeof sessionStorage === 'undefined' ? null : sessionStorage,
+    key
+  );
+  return allowedValues.has(currentSession) ? currentSession : null;
+}
+
+function writeStoredPreference(key, value){
+  storeValue(
+    typeof localStorage === 'undefined' ? null : localStorage,
+    key,
+    value
+  );
+  // Indoor navigation currently opens in the same tab and also reads session
+  // preferences, so keep both stores in sync.
+  storeValue(
+    typeof sessionStorage === 'undefined' ? null : sessionStorage,
+    key,
+    value
+  );
+}
+
+const storedProfile = readValidStoredPreference(
+  PREFERENCE_KEYS.profile,
+  PROFILE_IDS
+);
 let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
-sessionStorage.setItem('accessibilityProfile', currentProfile);
+let pendingOnboardingProfile = PROFILE_IDS.has(storedProfile)
+  ? storedProfile
+  : null;
+let settingsReturnFocus = null;
+let appRevealHandled = false;
 let audioOn = false;
 // Search and navigation share the canonical indoor graph files.
 let MAIN_GRAPH = null;
@@ -635,14 +772,14 @@ function notify(message){
 // ═══════════════════════════════════════════
 // LANGUAGE PICKER
 // ═══════════════════════════════════════════
-function pickLang(l, dir){
+function applyLanguagePreference(l, dir, {persist = true} = {}){
+  if(!LANGUAGE_IDS.has(l)) return false;
+
   lang = l;
   t = T[l];
-  sessionStorage.setItem('campuswayLanguage', l);
+  if(persist) writeStoredPreference(PREFERENCE_KEYS.language, l);
   document.documentElement.lang = l;
   document.documentElement.dir = dir;
-  document.getElementById('langScreen').style.display = 'none';
-  document.getElementById('appWrap').classList.add('visible');
   applyTranslations();
   buildProfiles();
   if(currentProfile !== 'general') showAlert(currentProfile);
@@ -651,43 +788,222 @@ function pickLang(l, dir){
   buildFavouriteList();
   if(window.CampusUI) window.CampusUI.refresh();
   if(typeof refreshRouteSteps === 'function') refreshRouteSteps();
-  const firstLanguageChoice = !document.body.dataset.languageChosen;
-  document.body.dataset.languageChosen = 'true';
-  setTimeout(()=>{
-    map.invalidateSize();
-    // Only reset the view on first load, not when switching language mid-route.
-    if(firstLanguageChoice){
-      map.fitBounds(CAMPUS_DATA.buildings.map(b=>[b.lat,b.lng]),{padding:[60,60],maxZoom:16});
-      // A shared link (?to=…) or the indoor emergency button (?emergency=1).
-      if(typeof openSharedLink === 'function') openSharedLink();
-    }
-  }, 100);
-}
-function showLangPicker(){
-  document.getElementById('langScreen').style.display = 'flex';
-  document.getElementById('appWrap').classList.remove('visible');
-}
-
-function restoreSavedLanguage(){
-  const savedLanguage =
-    sessionStorage.getItem('campuswayLanguage');
-
-  if(!['en', 'he', 'ar'].includes(savedLanguage)){
-    return false;
-  }
-
-  pickLang(
-    savedLanguage,
-    savedLanguage === 'en' ? 'ltr' : 'rtl'
-  );
+  renderSettingsLanguageChoices();
 
   return true;
 }
 
-window.addEventListener(
-  'DOMContentLoaded',
-  restoreSavedLanguage
-);
+function showOnboardingStep(step){
+  const screen = document.getElementById('langScreen');
+  const languageStep = document.getElementById('languageStep');
+  const profileStep = document.getElementById('profileStep');
+  const showingProfile = step === 'profile';
+
+  screen.style.display = 'flex';
+  document.getElementById('appWrap').classList.remove('visible');
+  languageStep.hidden = showingProfile;
+  profileStep.hidden = !showingProfile;
+  screen.setAttribute(
+    'aria-labelledby',
+    showingProfile ? 'onboardingProfileTitle' : 'langTitle'
+  );
+
+  if(showingProfile){
+    buildProfiles();
+    const continueButton = document.getElementById('onboardingContinueBtn');
+    continueButton.disabled = !PROFILE_IDS.has(pendingOnboardingProfile);
+    document.getElementById('onboardingProfileError').hidden = true;
+    setTimeout(() => {
+      const selected = document.querySelector(
+        '#onboardingProfileList [aria-checked="true"]'
+      );
+      (selected || document.querySelector('#onboardingProfileList button'))?.focus();
+    }, 0);
+  }else{
+    setTimeout(() => document.querySelector('#languageStep .lang-btn')?.focus(), 0);
+  }
+}
+
+function revealApp({resetView = false} = {}){
+  document.getElementById('langScreen').style.display = 'none';
+  document.getElementById('appWrap').classList.add('visible');
+  document.body.classList.remove('modal-open');
+
+  setTimeout(()=>{
+    map.invalidateSize();
+    if(resetView || !appRevealHandled){
+      map.fitBounds(CAMPUS_DATA.buildings.map(b=>[b.lat,b.lng]),{padding:[60,60],maxZoom:16});
+      // A shared link (?to=…) or the indoor emergency button (?emergency=1).
+      if(typeof openSharedLink === 'function') openSharedLink();
+    }
+    appRevealHandled = true;
+  }, 100);
+}
+
+function pickLang(l, dir){
+  if(!applyLanguagePreference(l, dir)) return;
+
+  const savedProfile = readValidStoredPreference(
+    PREFERENCE_KEYS.profile,
+    PROFILE_IDS
+  );
+  if(
+    readStoredPreference(PREFERENCE_KEYS.onboarding) === 'true' &&
+    PROFILE_IDS.has(savedProfile)
+  ){
+    currentProfile = savedProfile;
+    pendingOnboardingProfile = savedProfile;
+    setAccessibilityProfile(savedProfile, {
+      persist: true,
+      announce: false,
+      recalculate: false
+    });
+    revealApp();
+    return;
+  }
+
+  showOnboardingStep('profile');
+}
+
+function showLangPicker(){
+  showOnboardingStep('language');
+}
+
+function restoreSavedLanguage(){
+  const savedLanguage = readValidStoredPreference(
+    PREFERENCE_KEYS.language,
+    LANGUAGE_IDS
+  );
+  const savedProfile = readValidStoredPreference(
+    PREFERENCE_KEYS.profile,
+    PROFILE_IDS
+  );
+  const onboardingComplete =
+    readStoredPreference(PREFERENCE_KEYS.onboarding) === 'true';
+
+  if(PROFILE_IDS.has(savedProfile)){
+    currentProfile = savedProfile;
+    pendingOnboardingProfile = savedProfile;
+    writeStoredPreference(PREFERENCE_KEYS.profile, savedProfile);
+  }
+
+  if(!LANGUAGE_IDS.has(savedLanguage)){
+    showOnboardingStep('language');
+    return false;
+  }
+
+  applyLanguagePreference(
+    savedLanguage,
+    savedLanguage === 'en' ? 'ltr' : 'rtl',
+    {persist: true}
+  );
+
+  if(onboardingComplete && PROFILE_IDS.has(savedProfile)){
+    setAccessibilityProfile(savedProfile, {
+      persist: true,
+      announce: false,
+      recalculate: false
+    });
+    revealApp();
+  }else{
+    showOnboardingStep('profile');
+  }
+
+  return true;
+}
+
+function selectOnboardingProfile(profileId){
+  if(!PROFILE_IDS.has(profileId)) return;
+  pendingOnboardingProfile = profileId;
+  document.getElementById('onboardingContinueBtn').disabled = false;
+  document.getElementById('onboardingProfileError').hidden = true;
+  buildProfiles();
+}
+
+function completeOnboarding(){
+  if(!PROFILE_IDS.has(pendingOnboardingProfile)){
+    const error = document.getElementById('onboardingProfileError');
+    error.textContent = t.chooseProfileRequired;
+    error.hidden = false;
+    return;
+  }
+
+  setAccessibilityProfile(pendingOnboardingProfile, {
+    persist: true,
+    announce: false,
+    recalculate: false
+  });
+  writeStoredPreference(PREFERENCE_KEYS.onboarding, 'true');
+  revealApp({resetView: true});
+}
+
+function renderSettingsLanguageChoices(){
+  document.querySelectorAll('#settingsLanguageOptions [data-lang]').forEach(button => {
+    const selected = button.dataset.lang === lang;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-checked', String(selected));
+  });
+}
+
+function changeSettingsLanguage(language, direction){
+  if(!applyLanguagePreference(language, direction)) return;
+
+  if(currentOutdoorDestination){
+    const destination = currentOutdoorDestination;
+    routeTo(destination.name, destination.lat, destination.lng, {
+      keepIndoorContext: destination.keepIndoorContext
+    });
+  }
+}
+
+function openSettings(){
+  const dialog = document.getElementById('settingsDialog');
+  settingsReturnFocus = document.activeElement;
+  buildProfiles();
+  renderSettingsLanguageChoices();
+  dialog.hidden = false;
+  document.body.classList.add('modal-open');
+  document.getElementById('settingsCloseBtn').focus();
+}
+
+function closeSettings(){
+  const dialog = document.getElementById('settingsDialog');
+  if(dialog.hidden) return;
+  dialog.hidden = true;
+  document.body.classList.remove('modal-open');
+  if(settingsReturnFocus && typeof settingsReturnFocus.focus === 'function'){
+    settingsReturnFocus.focus();
+  }
+}
+
+function setupPreferenceUI(){
+  const dialog = document.getElementById('settingsDialog');
+  dialog.addEventListener('click', event => {
+    if(event.target === dialog) closeSettings();
+  });
+  dialog.addEventListener('keydown', event => {
+    if(event.key === 'Escape'){
+      event.preventDefault();
+      closeSettings();
+      return;
+    }
+    if(event.key !== 'Tab') return;
+    const focusable = [...dialog.querySelectorAll('button:not([disabled])')];
+    if(!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if(event.shiftKey && document.activeElement === first){
+      event.preventDefault();
+      last.focus();
+    }else if(!event.shiftKey && document.activeElement === last){
+      event.preventDefault();
+      first.focus();
+    }
+  });
+  restoreSavedLanguage();
+}
+
+window.addEventListener('DOMContentLoaded', setupPreferenceUI);
 
 function localizedBuildingName(building){
   if(!building) return '';
@@ -773,6 +1089,11 @@ function updateRestSpaceServiceButton(){
 }
 
 function applyTranslations(){
+  const setText = (id, value) => {
+    const element = document.getElementById(id);
+    if(element) element.textContent = value;
+  };
+
   document.getElementById('lbl-destination').textContent = t.destination;
   document.getElementById('searchInput').placeholder = t.searchPlaceholder;
   document.getElementById('lbl-startfrom').textContent = t.startfrom;
@@ -785,11 +1106,23 @@ function applyTranslations(){
   document.getElementById('lbl-share-route').textContent = t.shareLabel;
   document.getElementById('lbl-read-aloud').textContent =
     typeof readingSteps !== 'undefined' && readingSteps ? t.stopReading : t.readAloud;
-  document.getElementById('lbl-profile').textContent = t.profile;
   document.getElementById('lbl-buildings').querySelector('span:first-child').textContent = t.buildings;
   document.getElementById('lbl-favourites').textContent = '⭐ ' + t.favourites;
   document.getElementById('favEmpty').textContent = t.noFavourites;
-  document.getElementById('langSwitchBtn').textContent = t.langSwitch;
+  setText('lbl-settings', t.settings);
+  setText('settingsTitle', t.settingsTitle);
+  setText('settingsLanguageTitle', t.settingsLanguage);
+  setText('settingsProfileTitle', t.settingsProfile);
+  setText('settingsProfileHint', t.profileRouteHint);
+  setText('onboardingLanguageProgress', t.onboardingStepLanguage);
+  setText('langTitle', t.onboardingLanguageTitle);
+  setText('onboardingProfileProgress', t.onboardingStepProfile);
+  setText('onboardingProfileTitle', t.onboardingProfileTitle);
+  setText('onboardingProfileHint', t.onboardingProfileHint);
+  setText('onboardingChangeLater', t.changeLaterHint);
+  setText('onboardingBackBtn', t.back);
+  setText('onboardingContinueBtn', t.continueLabel);
+  setText('onboardingProfileError', t.chooseProfileRequired);
   document.getElementById('lbl-services').textContent = t.servicesNearMe;
   document.getElementById('lbl-service-restrooms').textContent = t.serviceRestrooms;
   document.getElementById('lbl-service-food').textContent = t.serviceFood;
@@ -808,11 +1141,25 @@ function applyTranslations(){
   document.getElementById('lbl-indoor-nav').textContent = t.indoorNavTitle;
   document.getElementById('lbl-indoor-nav-hint').textContent = t.indoorNavHint;
   document.getElementById('lbl-choose-building').textContent = t.chooseBuilding;
-  [['gpsBtn', t.useMyLocation], ['micBtn', t.voiceSearch]].forEach(([id, label]) => {
+  [
+    ['gpsBtn', t.useMyLocation],
+    ['startMicBtn', t.startVoiceSearch],
+    ['micBtn', t.voiceSearch]
+  ].forEach(([id, label]) => {
     const button = document.getElementById(id);
     button.title = label;
     button.setAttribute('aria-label', label);
   });
+  const settingsButton = document.getElementById('settingsBtn');
+  if(settingsButton){
+    settingsButton.title = t.settings;
+    settingsButton.setAttribute('aria-label', t.settings);
+  }
+  const settingsCloseButton = document.getElementById('settingsCloseBtn');
+  if(settingsCloseButton){
+    settingsCloseButton.title = t.closeSettings;
+    settingsCloseButton.setAttribute('aria-label', t.closeSettings);
+  }
   const closeButton = document.querySelector('.route-close');
   if(closeButton){
     closeButton.title = t.clearRoute;
@@ -947,46 +1294,101 @@ const ICONS = {
 const ICON_KEYS = ['user','wheelchair','eye','route','brain'];
 
 function buildProfiles(){
-  const el = document.getElementById('profileList');
-  el.innerHTML = '';
-  t.profiles.forEach((p,i)=>{
-  if(p.id === currentProfile) return;
-    const btn = document.createElement('button');
-    btn.className = 'profile-btn'+(p.id===currentProfile?' active':'');
-    btn.dataset.id = p.id;
-    btn.innerHTML = `<div class="profile-icon">${ICONS[ICON_KEYS[i]]}</div>
-      <div class="profile-text"><strong>${p.label}</strong><small>${p.sub}</small></div>`;
-    btn.onclick=()=>{
-      document.querySelectorAll('.profile-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      const previousProfile = currentProfile;
-
-      currentProfile = p.id;
-      sessionStorage.setItem('accessibilityProfile', currentProfile);
-
-      if(currentProfile === 'visual' && !audioOn){
-        setAudioEnabled(true);
-      }else if(previousProfile === 'visual' && currentProfile !== 'visual'){
-        setAudioEnabled(false);
-      }updateRestSpaceServiceButton();
-      showAlert(p.id);
-      speak(p.label + '. ' + p.sub);
-      if(currentOutdoorDestination){
-        const destination = currentOutdoorDestination;
-        routeTo(destination.name, destination.lat, destination.lng, {
-          keepIndoorContext: destination.keepIndoorContext
-        });
-      }
-      buildProfiles();
-            if(currentProfile === 'mental'){
-        void showRestSpacePreview();
-      }else{
-        clearRestSpacePreview();
-      }
-    };
-    el.appendChild(btn);
-  });
+  renderProfileChoices(
+    'onboardingProfileList',
+    pendingOnboardingProfile,
+    selectOnboardingProfile
+  );
+  renderProfileChoices(
+    'settingsProfileList',
+    currentProfile,
+    profileId => setAccessibilityProfile(profileId)
+  );
   updateRestSpaceServiceButton();
+}
+
+function renderProfileChoices(containerId, selectedProfile, onSelect){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+
+  container.innerHTML = '';
+  t.profiles.forEach((profile, index) => {
+    const btn = document.createElement('button');
+    const selected = profile.id === selectedProfile;
+    btn.type = 'button';
+    btn.className = `profile-choice${selected ? ' selected' : ''}`;
+    btn.dataset.id = profile.id;
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-checked', String(selected));
+    btn.tabIndex = selected || (!PROFILE_IDS.has(selectedProfile) && index === 0)
+      ? 0
+      : -1;
+    btn.innerHTML = `
+      <span class="profile-icon" aria-hidden="true">${ICONS[ICON_KEYS[index]]}</span>
+      <span class="profile-text"><strong>${profile.label}</strong><small>${profile.sub}</small></span>
+      <span class="profile-choice-check" aria-hidden="true">✓</span>`;
+    btn.onclick = () => {
+      onSelect(profile.id);
+      setTimeout(() => {
+        container.querySelector(`[data-id="${profile.id}"]`)?.focus();
+      }, 0);
+    };
+    btn.addEventListener('keydown', event => {
+      if(!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(event.key)){
+        return;
+      }
+      event.preventDefault();
+      const buttons = [...container.querySelectorAll('button')];
+      const currentIndex = buttons.indexOf(event.currentTarget);
+      const forward = event.key === 'ArrowDown' || event.key === 'ArrowRight';
+      const nextIndex = (
+        currentIndex + (forward ? 1 : -1) + buttons.length
+      ) % buttons.length;
+      buttons[nextIndex].click();
+    });
+    container.appendChild(btn);
+  });
+}
+
+function setAccessibilityProfile(
+  profileId,
+  {persist = true, announce = true, recalculate = true} = {}
+){
+  if(!PROFILE_IDS.has(profileId)) return false;
+
+  const previousProfile = currentProfile;
+  const changed = previousProfile !== profileId;
+  currentProfile = profileId;
+  if(persist) writeStoredPreference(PREFERENCE_KEYS.profile, profileId);
+
+  if(currentProfile === 'visual' && !audioOn){
+    setAudioEnabled(true);
+  }else if(previousProfile === 'visual' && currentProfile !== 'visual'){
+    setAudioEnabled(false);
+  }
+
+  updateRestSpaceServiceButton();
+  showAlert(profileId);
+  const profile = t.profiles.find(item => item.id === profileId);
+  if(announce && profile) speak(`${profile.label}. ${profile.sub}`);
+
+  buildProfiles();
+  if(window.CampusUI) window.CampusUI.refresh();
+
+  if(currentProfile === 'mental'){
+    void showRestSpacePreview();
+  }else{
+    clearRestSpacePreview();
+  }
+
+  if(recalculate && changed && currentOutdoorDestination){
+    const destination = currentOutdoorDestination;
+    routeTo(destination.name, destination.lat, destination.lng, {
+      keepIndoorContext: destination.keepIndoorContext
+    });
+  }
+
+  return true;
 }
 
 function showAlert(profileId){
