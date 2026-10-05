@@ -17,7 +17,7 @@ function between(source, start, end) {
   return source.slice(a, b);
 }
 
-test('saved Mobility profile stays selected when profile buttons are rebuilt', () => {
+test('saved Mobility profile stays selected and is omitted from change choices', () => {
   const storage = new Map([['accessibilityProfile', 'mobility']]);
   const profileList = { children: [], _html: '', appendChild(button) { this.children.push(button); } };
   Object.defineProperty(profileList, 'innerHTML', {
@@ -58,11 +58,21 @@ test('saved Mobility profile stays selected when profile buttons are rebuilt', (
   vm.runInContext(`${state}\n${profiles}`, context);
   vm.runInContext('buildProfiles()', context);
   assert.equal(vm.runInContext('currentProfile', context), 'mobility');
-  assert.match(profileList.children.find(button => button.dataset.id === 'mobility').className, /active/);
+  assert.equal(
+  profileList.children.some(button => button.dataset.id === 'mobility'),
+  false
+);
+assert.equal(profileList.children.length, 4);
+assert.equal(vm.runInContext('currentProfile', context), 'mobility');
   assert.doesNotMatch(profileList.children.find(button => button.dataset.id === 'general').className, /active/);
 
   vm.runInContext("t.profiles=t.profiles.map(profile=>({...profile,label:'AR '+profile.label})); buildProfiles()", context);
-  assert.match(profileList.children.find(button => button.dataset.id === 'mobility').className, /active/);
+  assert.equal(
+  profileList.children.some(button => button.dataset.id === 'mobility'),
+  false
+);
+assert.equal(profileList.children.length, 4);
+assert.equal(vm.runInContext('currentProfile', context), 'mobility');
 });
 
 test('outdoor Mobility route excludes OSM steps while a general route may use them', async () => {
@@ -336,7 +346,9 @@ test('changing the start retries a saved destination even when no route line was
     setTimeout(callback){scheduled=callback;},
     routeTo(...args){calls.push(args);},
     clearIndoorStartJourney(){},
-    customStart:null, selectedStartLocation:null,
+    customStart:null,
+    currentProfile:'mental',
+    selectedStartLocation:null,
     gpsMarker:null, routeLine:null,
     startSuggestions:{style:{}},
     currentOutdoorDestination:{name:'Main Building',lat:3,lng:4,keepIndoorContext:true}

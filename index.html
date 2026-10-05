@@ -98,13 +98,32 @@
         <div class="planner-fields">
           <div class="field start-row">
             <label class="field-label" for="startInput" id="lbl-startfrom">From</label>
-            <div class="input-wrap start-box">
-              <span class="field-dot field-dot--start" aria-hidden="true"></span>
-              <input id="startInput" type="text" autocomplete="off" spellcheck="false">
-              <button class="icon-btn gps-btn" id="gpsBtn" type="button" onclick="toggleGPS()" title="Use my location" aria-label="Use my location">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
-              </button>
-            </div>
+           <div class="input-wrap start-box">
+            <span class="field-dot field-dot--start" aria-hidden="true"></span>
+            <input id="startInput" type="text" autocomplete="off" spellcheck="false">
+
+            <button class="icon-btn gps-btn" id="gpsBtn" type="button"
+              onclick="toggleGPS()" title="Use my location" aria-label="Use my location">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                <circle cx="12" cy="12" r="8"/>
+              </svg>
+            </button>
+
+            <button class="icon-btn mic-btn" id="startMicBtn" type="button"
+              onclick="toggleMic('start')"
+              title="Search by voice" aria-label="Search by voice">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+          </div>
             <div class="suggestions" id="startSuggestions" style="display:none;"></div>
           </div>
 
@@ -721,6 +740,36 @@ function updateRestSpaceServiceButton(){
     ? t.serviceRestSpaces
     : t.serviceLandmarks;
   button.title = label.textContent;
+
+  const grid = button.parentElement;
+  const order = mentalProfile
+    ? [
+        'landmarkServiceBtn',
+        'serviceRestroomBtn',
+        'serviceFoodBtn',
+        'serviceShopBtn',
+        'serviceClinicBtn',
+        'serviceGymBtn',
+        'serviceLibraryBtn',
+        'serviceShelterBtn'
+      ]
+    : [
+        'serviceRestroomBtn',
+        'serviceFoodBtn',
+        'serviceShopBtn',
+        'serviceClinicBtn',
+        'serviceGymBtn',
+        'serviceLibraryBtn',
+        'landmarkServiceBtn',
+        'serviceShelterBtn'
+      ];
+
+  for(const id of order){
+    const serviceButton = document.getElementById(id);
+    if(serviceButton && serviceButton.parentElement === grid){
+      grid.appendChild(serviceButton);
+    }
+  }
 }
 
 function applyTranslations(){
@@ -901,6 +950,7 @@ function buildProfiles(){
   const el = document.getElementById('profileList');
   el.innerHTML = '';
   t.profiles.forEach((p,i)=>{
+  if(p.id === currentProfile) return;
     const btn = document.createElement('button');
     btn.className = 'profile-btn'+(p.id===currentProfile?' active':'');
     btn.dataset.id = p.id;
@@ -926,6 +976,12 @@ function buildProfiles(){
         routeTo(destination.name, destination.lat, destination.lng, {
           keepIndoorContext: destination.keepIndoorContext
         });
+      }
+      buildProfiles();
+            if(currentProfile === 'mental'){
+        void showRestSpacePreview();
+      }else{
+        clearRestSpacePreview();
       }
     };
     el.appendChild(btn);
@@ -1785,7 +1841,495 @@ function collectIndoorShelterServices(){
   return services;
 }
 
+function restSpaceJourneyStart(){
+  const start = getStart();
+  const buildingKeys = {
+    'Terrace Building': 'madriga',
+    'Main Building': 'main',
+    'Rabin Building': 'rabin',
+    'Student House': 'student',
+    'Multi-Purpose Building': 'multi-purpose',
+    'Education and Science': 'education'
+  };
+
+  const buildingKey =
+    customStart?.buildingKey ||
+    buildingKeys[customStart?.label] ||
+    null;
+
+  const accessible = currentProfile === 'mobility';
+
+  const entrances = buildingKey
+    ? (BUILDING_ENTRANCES[buildingKey] || []).filter(
+        entrance =>
+          !entrance.onlyForService &&
+          (!accessible ||
+            (!entrance.requiresStairs && !entrance.avoidForMobility))
+      )
+    : [];
+
+  const primaryEntrance =
+    entrances.find(entrance => entrance.primary) || entrances[0];
+
+  return {
+    lat: start.lat,
+    lng: start.lng,
+    buildingKey,
+    nodeId: customStart?.nodeId || primaryEntrance?.nodeId || null,
+    entrances,
+    accessible
+  };
+}
+
+async function restSpaceIndoorJourneySeconds(match, start){
+  const destinationKey = match.buildingKey;
+  const destinationId = match.node.id;
+
+  if(!start.buildingKey || !start.nodeId) return null;
+
+  const indoorSeconds = (buildingKey, from, to) =>
+    getIndoorLegEtaSeconds(
+      buildingKey,
+      from,
+      to,
+      start.accessible
+    );
+
+  // A rest space in the starting building needs no outdoor leg.
+  if(start.buildingKey === destinationKey){
+    return indoorSeconds(
+      destinationKey,
+      start.nodeId,
+      destinationId
+    );
+  }
+
+  // Direct shared connection: Rabin ↔ Madriga.
+  const connection =
+    SHARED_INDOOR_TRANSFERS[
+      `${start.buildingKey}:${destinationKey}`
+    ];
+
+  if(connection){
+    const transfer = await chooseSharedIndoorTransfer(
+      start.buildingKey,
+      destinationKey,
+      {
+        startNodeId: start.nodeId,
+        destinationNodeId: destinationId
+      }
+    );
+
+    if(!transfer) return null;
+
+    const before = await indoorSeconds(
+      start.buildingKey,
+      start.nodeId,
+      transfer.originNodeId
+    );
+
+    const after = await indoorSeconds(
+      destinationKey,
+      transfer.destinationNodeId,
+      destinationId
+    );
+
+    if(before === null || after === null) return null;
+
+    return before +
+      (transfer.method === 'elevator' ? 40 : 30) +
+      after;
+  }
+
+  // Main ↔ Madriga continues across the bridge and through Rabin.
+  const forward =
+    start.buildingKey === 'main' &&
+    destinationKey === 'madriga';
+
+  const reverse =
+    start.buildingKey === 'madriga' &&
+    destinationKey === 'main';
+
+  if(!forward && !reverse) return null;
+
+  const legs = forward
+    ? [
+        ['main', start.nodeId, 'floor600_n86'],
+        ['rabin', 'floor7_n108', 'floor5_n104'],
+        ['madriga', 'floor4_n43', destinationId]
+      ]
+    : [
+        ['madriga', start.nodeId, 'floor4_n43'],
+        ['rabin', 'floor5_n104', 'floor7_n108'],
+        ['main', 'floor600_n86', destinationId]
+      ];
+
+  let total = 40;
+
+  for(const [buildingKey, from, to] of legs){
+    const seconds = await indoorSeconds(buildingKey, from, to);
+    if(seconds === null) return null;
+    total += seconds;
+  }
+
+  total += getOutdoorEtaSeconds(
+    [
+      [32.761944, 35.019778],
+      [32.761753, 35.019978],
+      [32.761728, 35.020010]
+    ],
+    start.accessible
+  );
+
+  return total;
+}
+
+async function restSpaceJourneySeconds(match, start){
+  const destinationKey = match.buildingKey;
+
+  const usesIndoorConnection =
+    start.buildingKey === destinationKey ||
+    Boolean(
+      SHARED_INDOOR_TRANSFERS[
+        `${start.buildingKey}:${destinationKey}`
+      ]
+    ) ||
+    (start.buildingKey === 'main' && destinationKey === 'madriga') ||
+    (start.buildingKey === 'madriga' && destinationKey === 'main');
+
+  if(usesIndoorConnection){
+    return restSpaceIndoorJourneySeconds(match, start);
+  }
+
+  const usableEntrance = entrance =>
+    !entrance.onlyForService &&
+    (!start.accessible ||
+      (!entrance.requiresStairs && !entrance.avoidForMobility));
+
+  const destinationEntrances =
+    (BUILDING_ENTRANCES[destinationKey] || [])
+      .filter(usableEntrance);
+
+  const origins = [];
+
+  if(start.buildingKey){
+    if(!start.nodeId) return null;
+
+    for(const entrance of start.entrances){
+      const seconds = await getIndoorLegEtaSeconds(
+        start.buildingKey,
+        start.nodeId,
+        entrance.nodeId,
+        start.accessible
+      );
+
+      if(seconds !== null){
+        origins.push({...entrance, seconds});
+      }
+    }
+
+    // Madriga may reach an outdoor destination through Rabin.
+    if(start.buildingKey === 'madriga'){
+      const connection = SHARED_INDOOR_TRANSFERS['madriga:rabin'];
+      const transfers = start.accessible
+        ? [connection.mobility]
+        : [connection.standard, connection.mobility];
+
+      for(const transfer of transfers){
+        const before = await getIndoorLegEtaSeconds(
+          'madriga',
+          start.nodeId,
+          transfer.originNodeId,
+          start.accessible
+        );
+
+        if(before === null) continue;
+
+        const arrivesByElevator =
+          start.nodeId === transfer.originNodeId
+            ? transfer.method === 'elevator'
+            : await indoorLegUsesElevator(
+                'madriga',
+                start.nodeId,
+                transfer.originNodeId,
+                start.accessible
+              );
+
+        if(arrivesByElevator && transfer.method === 'stairs') continue;
+
+        const crossing = transfer.method === 'elevator'
+          ? (arrivesByElevator ? 10 : 40)
+          : 30;
+
+        for(const exit of (BUILDING_ENTRANCES.rabin || [])
+          .filter(usableEntrance)){
+          const after = await getIndoorLegEtaSeconds(
+            'rabin',
+            transfer.destinationNodeId,
+            exit.nodeId,
+            start.accessible
+          );
+
+          if(after !== null){
+            origins.push({
+              ...exit,
+              seconds: before + crossing + after
+            });
+          }
+        }
+      }
+    }
+  }else{
+    origins.push({
+      lat: start.lat,
+      lng: start.lng,
+      seconds: 0
+    });
+  }
+
+  let bestSeconds = Infinity;
+
+  for(const entrance of destinationEntrances){
+    const destinationSeconds = await getIndoorLegEtaSeconds(
+      destinationKey,
+      entrance.nodeId,
+      match.node.id,
+      start.accessible
+    );
+
+    if(destinationSeconds === null) continue;
+
+    for(const origin of origins){
+      try{
+        const outdoorRoute = await CampusOutdoorRouting.route(
+          origin.lat,
+          origin.lng,
+          entrance.lat,
+          entrance.lng,
+          {avoidSteps: start.accessible}
+        );
+
+        if(!outdoorRoute?.coordinates ||
+          outdoorRoute.coordinates.length < 2){
+          continue;
+        }
+
+        const seconds =
+          origin.seconds +
+          getOutdoorEtaSeconds(
+            outdoorRoute.coordinates,
+            start.accessible
+          ) +
+          destinationSeconds;
+
+        if(Number.isFinite(seconds)){
+          bestSeconds = Math.min(bestSeconds, seconds);
+        }
+      }catch(error){
+        console.warn('Could not compare rest-space route:', error);
+      }
+    }
+  }
+
+  return Number.isFinite(bestSeconds) ? bestSeconds : null;
+}
+
+async function rankNearbyRestSpaces(isCurrent = () => true){
+  await indoorSearchGraphsReady;
+
+  if(!isCurrent()) return null;
+
+  const start = restSpaceJourneyStart();
+  const profile = currentProfile;
+  const matches = collectNearbyIndoorServices('rest-space');
+  const ranked = [];
+
+  const startIsUnchanged = () => {
+    const now = restSpaceJourneyStart();
+
+    return isCurrent() &&
+      currentProfile === profile &&
+      now.buildingKey === start.buildingKey &&
+      now.nodeId === start.nodeId &&
+      now.lat === start.lat &&
+      now.lng === start.lng &&
+      now.accessible === start.accessible;
+  };
+
+  for(const match of matches){
+    if(!startIsUnchanged()) return null;
+
+    try{
+      const seconds = await restSpaceJourneySeconds(match, start);
+
+      if(!startIsUnchanged()) return null;
+
+      if(Number.isFinite(seconds) && seconds >= 0){
+        ranked.push({...match, seconds});
+      }
+    }catch(error){
+      console.warn('Could not rank rest space:', error);
+    }
+  }
+
+  if(!startIsUnchanged()) return null;
+
+  ranked.sort((a, b) =>
+    a.seconds - b.seconds ||
+    a.buildingKey.localeCompare(b.buildingKey) ||
+    String(a.node.id).localeCompare(String(b.node.id))
+  );
+
+  return ranked.slice(0, 3);
+}
+
+let restSpacePreviewRequestId = 0;
+let restSpacePreviewMarkers = [];
+
+function clearRestSpacePreview(){
+  restSpacePreviewRequestId++;
+
+  document.getElementById('landmarkServiceBtn')
+  ?.classList.remove('service-active');
+
+const status = document.getElementById('serviceStatus');
+if(status) status.textContent = '';
+
+  for(const marker of restSpacePreviewMarkers){
+    map.removeLayer(marker);
+  }
+
+  restSpacePreviewMarkers = [];
+}
+
+async function showRestSpacePreview(){
+  clearRestSpacePreview();
+
+  if(currentProfile !== 'mental') return;
+
+  document.getElementById('landmarkServiceBtn')
+  ?.classList.add('service-active');
+
+  const requestId = restSpacePreviewRequestId;
+  const isCurrent = () =>
+    requestId === restSpacePreviewRequestId &&
+    currentProfile === 'mental';
+
+  const text = (en, he, ar) =>
+    lang === 'he' ? he : lang === 'ar' ? ar : en;
+
+  const status = document.getElementById('serviceStatus');
+
+  if(status){
+    status.textContent = text(
+      'Finding nearby rest spaces…',
+      'מחפש מקומות מנוחה קרובים…',
+      'جارٍ البحث عن أماكن استراحة قريبة…'
+    );
+  }
+
+  const places = await rankNearbyRestSpaces(isCurrent);
+
+  if(!isCurrent() || places === null) return;
+
+  if(!places.length){
+    if(status) status.textContent = t.noRestSpace;
+    return;
+  }
+
+  if(status) status.textContent = '';
+
+  const groups = new Map();
+
+  for(const place of places){
+    if(!groups.has(place.buildingKey)){
+      groups.set(place.buildingKey, []);
+    }
+
+    groups.get(place.buildingKey).push(place);
+  }
+
+  for(const group of groups.values()){
+    const popup = document.createElement('div');
+    popup.style.minWidth = '200px';
+    popup.dir = lang === 'en' ? 'ltr' : 'rtl';
+
+    for(const place of group){
+      const row = document.createElement('div');
+      row.style.marginBottom = '12px';
+
+      const floor = String(place.floor)
+        .replace(/^floor/, '')
+        .replace(/^minus/, '-');
+
+      const minutes = Math.max(1, Math.ceil(place.seconds / 60));
+      const description = document.createElement('p');
+
+      description.textContent = text(
+        `${place.displayLabel} · Floor ${floor} · about ${minutes} min`,
+        `${place.displayLabel} · קומה ${floor} · כ-${minutes} דקות`,
+        `${place.displayLabel} · الطابق ${floor} · حوالي ${minutes} دقائق`
+      );
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-primary';
+      button.style.minHeight = '44px';
+      button.style.width = '100%';
+      button.textContent = text(
+        'Route here',
+        'נווט לכאן',
+        'انتقل إلى هنا'
+      );
+
+      button.onclick = () => {
+        if(!isCurrent()) return;
+
+        map.closePopup();
+        routeToIndoorService(place);
+      };
+
+      row.append(description, button);
+      popup.appendChild(row);
+    }
+
+    const marker = L.marker(
+      [group[0].building.lat, group[0].building.lng],
+      {
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #047857;border-radius:50%;font-size:24px;box-sizing:border-box">🌿</div>',
+          iconSize: [44, 44],
+          iconAnchor: [22, 22]
+        }),
+        title: t.serviceRestSpaces,
+        zIndexOffset: 500
+      }
+    );
+
+    marker.bindPopup(popup);
+    marker.addTo(map);
+    restSpacePreviewMarkers.push(marker);
+  }
+}
+
 function findNearbyIndoorService(type){
+  const matches = collectNearbyIndoorServices(type);
+
+  if(!matches.length){
+    notify(
+      type === 'rest-space'
+        ? t.noRestSpace
+        : `No ${type} has been mapped yet.`
+    );
+    return;
+  }
+
+  matches.sort((a, b) => a.distance - b.distance);
+  routeToIndoorService(matches[0]);
+}
+
+function collectNearbyIndoorServices(type){
 
   const start = getStart();
 
@@ -1837,8 +2381,15 @@ function findNearbyIndoorService(type){
     let reachableNodeIds = null;
 
     if(type === 'rest-space'){
-      const routeGraph = buildIndoorEtaGraph(item.graph, false);
-      const configuredEntrances = BUILDING_ENTRANCES[item.buildingKey] || [];
+    const accessible = currentProfile === 'mobility';
+    const routeGraph = buildIndoorEtaGraph(item.graph, accessible);
+
+    const configuredEntrances =
+      (BUILDING_ENTRANCES[item.buildingKey] || []).filter(
+        entrance =>
+          !accessible ||
+          (!entrance.requiresStairs && !entrance.avoidForMobility)
+      );
       const startNodeIds = (
         customStart?.buildingKey === item.buildingKey &&
         customStart?.nodeId
@@ -1893,21 +2444,9 @@ function findNearbyIndoorService(type){
     }
   }
 
-  if(!matches.length){
-    notify(
-      type === 'rest-space'
-        ? t.noRestSpace
-        : `No ${type} has been mapped yet.`
-    );
-    return;
-  }
-
-  matches.sort((a,b) => a.distance - b.distance);
-
-  const nearest = matches[0];
-
-  routeToIndoorService(nearest);
+  return matches;
 }
+
 
 function routeToIndoorService(match){
 
@@ -1921,6 +2460,7 @@ function routeToIndoorService(match){
     JSON.stringify({
       entranceId: null,
       startNodeId: null,
+      destinationNodeId: match.node.id,
       destinationLabel: restSpace ? displayLabel : label,
       destinationDisplayLabel: displayLabel,
       destinationType: restSpace ? 'rest-space' : match.node.type,
@@ -1961,6 +2501,7 @@ function routeToIndoorService(match){
 }
 
 let nearbyServiceRequestId = 0;
+
 function exitFoodShopMode(){
 
   foodMode = false;
@@ -2012,6 +2553,16 @@ function setActiveServiceButton(type){
 
 async function findNearbyService(type){
 
+   if(type === 'rest-space' && currentProfile === 'mental'){
+  const button = document.getElementById('landmarkServiceBtn');
+
+  if(button?.classList.contains('service-active')){
+    clearRestSpacePreview();
+  }else{
+    await showRestSpacePreview();
+  }
+  return;
+}
   const requestId = ++nearbyServiceRequestId;
 
   if([
@@ -2532,7 +3083,11 @@ function sharedIndoorTransfer(
   return connection.standard;
 }
 
-async function chooseSharedIndoorTransfer(originBuilding, destinationBuilding){
+async function chooseSharedIndoorTransfer(
+  originBuilding,
+  destinationBuilding,
+  endpoints = null
+){
   const connection =
     SHARED_INDOOR_TRANSFERS[`${originBuilding}:${destinationBuilding}`];
 
@@ -2550,10 +3105,15 @@ async function chooseSharedIndoorTransfer(originBuilding, destinationBuilding){
     );
   }catch(error){}
 
-  const startId = customStart?.nodeId;
-  const destinationIds = context.destinationNodeId
-    ? [context.destinationNodeId]
-    : (context.destinationNodeIds || []);
+  const startId = endpoints
+    ? endpoints.startNodeId
+    : customStart?.nodeId;
+
+  const destinationIds = endpoints
+    ? [endpoints.destinationNodeId].filter(Boolean)
+    : context.destinationNodeId
+      ? [context.destinationNodeId]
+      : (context.destinationNodeIds || []);
 
   // Keep existing building-only behavior when exact endpoints are unavailable.
   if(!startId || !destinationIds.length){
@@ -6938,6 +7498,7 @@ function doSearch(q){
 // Voice input using Web Speech Recognition
 let recognition = null;
 let micActive = false;
+let activeMicButtonId = 'micBtn';
 
 let voiceMeterStream = null;
 let voiceMeterContext = null;
@@ -6972,7 +7533,7 @@ function stopVoiceMeter() {
     voiceMeterContext = null;
   }
 
-  const icon = document.querySelector('#micBtn svg');
+ const icon = document.querySelector(`#${activeMicButtonId} svg`);
 
 if (icon) {
   icon.style.transform = '';
@@ -6982,7 +7543,7 @@ async function startVoiceMeter() {
   stopVoiceMeter();
 
   const request = voiceMeterRequest;
-  const icon = document.querySelector('#micBtn svg');
+  const icon = document.querySelector(`#${activeMicButtonId} svg`);
 
   const AudioContextClass =
     window.AudioContext || window.webkitAudioContext;
@@ -7061,8 +7622,7 @@ async function startVoiceMeter() {
     console.warn('Microphone animation unavailable:', error);
   }
 }
-
-function toggleMic() {
+function toggleMic(target = 'destination') {
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -7071,70 +7631,81 @@ function toggleMic() {
     return;
   }
 
+  // Stop the current recording before starting another.
   if (micActive) {
     recognition.abort();
-    micActive = false;
-    stopVoiceMeter();
-
-    document.getElementById('micBtn').classList.remove('listening');
-    searchInput.placeholder = t.searchPlaceholder;
     return;
   }
 
-  recognition = new SpeechRecognition();
-  recognition.lang =
+  activeMicButtonId =
+    target === 'start' ? 'startMicBtn' : 'micBtn';
+
+  const button = document.getElementById(activeMicButtonId);
+  const input = target === 'start' ? startInput : searchInput;
+  const originalPlaceholder = input.placeholder;
+  const session = new SpeechRecognition();
+
+  recognition = session;
+  session.lang =
     lang === 'he' ? 'he-IL' :
     lang === 'ar' ? 'ar-SA' : 'en-US';
 
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
+  session.interimResults = false;
+  session.maxAlternatives = 1;
   micActive = true;
 
-  recognition.onstart = () => {
-    document.getElementById('micBtn').classList.add('listening');
-    searchInput.placeholder = t.voiceListening;
+  const cleanup = () => {
+    if (recognition !== session) return;
+
+    micActive = false;
+    stopVoiceMeter();
+    button.classList.remove('listening');
+    input.placeholder = originalPlaceholder;
+    recognition = null;
   };
 
-  recognition.onresult = event => {
+  session.onstart = () => {
+    if (recognition !== session) return;
+
+    button.classList.add('listening');
+    input.placeholder = t.voiceListening;
+  };
+
+  session.onresult = event => {
+    if (recognition !== session) return;
+
     const transcript = event.results[0][0].transcript
       .replace(/(\d)[,٬](?=\d)/g, '$1')
       .trim();
 
-    searchInput.value = transcript;
-    runReadyDestinationSearch(transcript);
+    input.value = transcript;
+
+    if (target === 'start') {
+      // Clear the old starting point and show matching suggestions.
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+      runReadyStartSearch(transcript);
+    } else {
+      runReadyDestinationSearch(transcript);
+    }
   };
 
-  recognition.onerror = event => {
+  session.onerror = event => {
     console.error('Voice recognition error:', event.error);
-
-    stopVoiceMeter();
+    cleanup();
 
     if (event.error !== 'aborted') {
       notify(t.voiceError);
     }
   };
 
-  recognition.onend = () => {
-    micActive = false;
-    stopVoiceMeter();
+  session.onend = cleanup;
 
-    document.getElementById('micBtn').classList.remove('listening');
-    searchInput.placeholder = t.searchPlaceholder;
-  };
-
-  // Start both from the user's tap.
   startVoiceMeter();
 
   try {
-    recognition.start();
+    session.start();
   } catch (error) {
-    micActive = false;
-    stopVoiceMeter();
-
-    document.getElementById('micBtn').classList.remove('listening');
-    searchInput.placeholder = t.searchPlaceholder;
-
+    cleanup();
     notify(t.voiceError);
   }
 }

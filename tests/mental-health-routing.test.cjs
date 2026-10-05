@@ -24,6 +24,7 @@ test('Mental Health service finds a connected Student House landmark', () => {
   let selected = null;
   const context = vm.createContext({
     STUDENT_GRAPH:graph,
+    currentProfile:'mental',
     CAMPUS_DATA:{buildings:[{name:'Student House',lat:32.76,lng:35.02}]},
     BUILDING_ENTRANCES:{student:[{nodeId:'entrance'}]},
     CampusRoutePlanner,
@@ -63,6 +64,7 @@ test('mapped Student House landmarks are available as real rest-space candidates
   const context = vm.createContext({
     CampusRoutePlanner,
     STUDENT_GRAPH:studentGraph,
+    currentProfile:'mental',
     customStart:null,
     t:{suggestedRestSpace:'Suggested rest space',noRestSpace:'No rest space'},
     getStart(){return {lat:32.76179,lng:35.02131};},
@@ -148,25 +150,82 @@ test('same-building rest-space title is not presented as a room', () => {
   assert.equal(context.result, 'Suggested rest space');
 });
 
-test('Mental profile changes the landmarks shortcut into Rest Spaces', () => {
-  const elements = {
-    landmarkServiceBtn:{title:''},
-    landmarkServiceIcon:{textContent:''},
-    'lbl-service-landmarks':{textContent:''}
+test('Mental profile puts Rest Spaces first and other profiles restore the original order', () => {
+  const originalOrder = [
+    'serviceRestroomBtn',
+    'serviceFoodBtn',
+    'serviceShopBtn',
+    'serviceClinicBtn',
+    'serviceGymBtn',
+    'serviceLibraryBtn',
+    'landmarkServiceBtn',
+    'serviceShelterBtn'
+  ];
+
+  const grid = {
+    children: [],
+    appendChild(button){
+      this.children = this.children.filter(item => item !== button);
+      this.children.push(button);
+      button.parentElement = this;
+    }
   };
+
+  const elements = {
+    landmarkServiceIcon: {textContent:''},
+    'lbl-service-landmarks': {textContent:''}
+  };
+
+  for(const id of originalOrder){
+    const button = {id, title:'', parentElement:grid};
+    elements[id] = button;
+    grid.children.push(button);
+  }
+
   const context = vm.createContext({
     currentProfile:'mental',
-    t:{serviceRestSpaces:'Rest Spaces',serviceLandmarks:'Landmarks'},
-    document:{getElementById(id){return elements[id];}}
+    t:{
+      serviceRestSpaces:'Rest Spaces',
+      serviceLandmarks:'Landmarks'
+    },
+    document:{
+      getElementById(id){return elements[id];}
+    }
   });
+
   vm.runInContext(
-    between(index, 'function updateRestSpaceServiceButton(){', 'function applyTranslations(){'),
+    between(
+      index,
+      'function updateRestSpaceServiceButton(){',
+      'function applyTranslations(){'
+    ),
     context
   );
+
   vm.runInContext('updateRestSpaceServiceButton()', context);
+
   assert.equal(elements.landmarkServiceIcon.textContent, '🌿');
   assert.equal(elements['lbl-service-landmarks'].textContent, 'Rest Spaces');
-  vm.runInContext("currentProfile='general';updateRestSpaceServiceButton()", context);
+  assert.deepEqual(grid.children.map(button => button.id), [
+    'landmarkServiceBtn',
+    'serviceRestroomBtn',
+    'serviceFoodBtn',
+    'serviceShopBtn',
+    'serviceClinicBtn',
+    'serviceGymBtn',
+    'serviceLibraryBtn',
+    'serviceShelterBtn'
+  ]);
+
+  vm.runInContext(
+    "currentProfile='general';updateRestSpaceServiceButton()",
+    context
+  );
+
   assert.equal(elements.landmarkServiceIcon.textContent, '📍');
   assert.equal(elements['lbl-service-landmarks'].textContent, 'Landmarks');
+  assert.deepEqual(
+    grid.children.map(button => button.id),
+    originalOrder
+  );
 });

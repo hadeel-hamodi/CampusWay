@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v40-ui-integrated';
+const CACHE_NAME = 'campusway-v41';
 
 const APP_FILES = [
 './',
