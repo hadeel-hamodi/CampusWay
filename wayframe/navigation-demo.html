@@ -417,6 +417,38 @@ function indoorStoredPreference(key, isValid = value => value !== null){
   return value;
 }
 
+const SHARED_CONTRAST_KEY='campusway.highContrastEnabled';
+const SHARED_TEXT_SIZE_KEY='campusway.textSize';
+
+function applyIndoorAppearancePreferences(){
+  const storedContrast=indoorStoredPreference(
+    SHARED_CONTRAST_KEY,
+    value=>value==='true'||value==='false'
+  );
+  const accessibilityProfile=indoorStoredPreference(
+    'accessibilityProfile',
+    value=>['general','mobility','visual','spatial','mental'].includes(value)
+  );
+  const textSize=indoorStoredPreference(
+    SHARED_TEXT_SIZE_KEY,
+    value=>value==='normal'||value==='large'
+  ) || 'normal';
+  const highContrast=storedContrast===null
+    ? accessibilityProfile==='visual'
+    : storedContrast==='true';
+  const contrastChanged=Boolean(document.body?.classList) &&
+    document.body.classList.contains('hc')!==highContrast;
+
+  document.body?.classList?.toggle('hc',highContrast);
+  if(document.documentElement?.dataset){
+    document.documentElement.dataset.textSize=textSize;
+  }
+
+  return {contrastChanged,highContrast,textSize};
+}
+
+applyIndoorAppearancePreferences();
+
 function indoorLanguage(){
   for(const key of ['campuswayLanguage','language','lang']){
     const value=indoorStoredPreference(key, candidate => Boolean(candidate && INDOOR_T[candidate]));
@@ -1626,8 +1658,9 @@ async function loadFloorPlan(building, floorId){
   return floorPlanMarkupCache.get(cacheKey);
 }
 
-// Softer drawing: architectural black lines become calm blue-greys.
-// Injected into each floor-plan SVG before it is turned into an image.
+// Restyle the standalone floor-plan SVG before it becomes an image. Embedded
+// images cannot inherit the page's CSS variables, so high contrast needs its
+// own palette inside the generated SVG document.
 const FLOOR_PLAN_STYLE=`<style>
 path,line,polyline,polygon,rect,circle,ellipse{stroke:#8593A7}
 [stroke="#000000"],[stroke="#000"],[stroke="black"]{stroke:#6A798F}
@@ -1637,8 +1670,20 @@ path,line,polyline,polygon,rect,circle,ellipse{stroke:#8593A7}
 text,tspan{fill:#8592A4}
 </style>`;
 
+const FLOOR_PLAN_HC_STYLE=`<style>
+path,line,polyline,polygon,rect,circle,ellipse{stroke:#FFFFFF!important}
+[fill]:not([fill="none"]){fill:#161616!important}
+[stroke="#ffff00"],[stroke="#dddd00"],[stroke="#00ffff"],[stroke="#00ff00"]{stroke:#FFD400!important}
+text,tspan{fill:#FFFFFF!important;stroke:none!important}
+</style>`;
+
+function floorPlanContrastMode(){
+  return document.body.classList.contains('hc') ? 'hc' : 'default';
+}
+
 function floorPlanImage(building, floorId){
-  const cacheKey=`${building}:${floorId}`;
+  const contrastMode=floorPlanContrastMode();
+  const cacheKey=`${building}:${floorId}:${contrastMode}`;
   if(!floorPlanImageCache.has(cacheKey)){
     floorPlanImageCache.set(cacheKey, loadFloorPlan(building, floorId).then(plan=>{
       if(!plan) return null;
@@ -1648,7 +1693,8 @@ function floorPlanImage(building, floorId){
         console.error('[Indoor floor plan] Not an SVG document', {building, floorId, url:plan.sourceUrl});
         return null;
       }
-      const styled=plan.markup.slice(0, close+1)+FLOOR_PLAN_STYLE+plan.markup.slice(close+1);
+      const style=contrastMode==='hc' ? FLOOR_PLAN_HC_STYLE : FLOOR_PLAN_STYLE;
+      const styled=plan.markup.slice(0, close+1)+style+plan.markup.slice(close+1);
       return URL.createObjectURL(new Blob([styled], {type:'image/svg+xml'}));
     }).catch(error=>{
       console.error('[Indoor floor plan] Unexpected renderer error', {building, floorId, error});
@@ -1660,7 +1706,7 @@ function floorPlanImage(building, floorId){
 
 // Swap the floor plan only when the building or floor changes (cross-fade).
 function mountFloorPlan(building, floorId){
-  const key=`${building}:${floorId}`;
+  const key=`${building}:${floorId}:${floorPlanContrastMode()}`;
   if(mountedPlanKey===key) return;
   mountedPlanKey=key;
 
@@ -1701,7 +1747,7 @@ function mountFloorPlan(building, floorId){
 const preloadedFloorPlans=new Map();
 function preloadRouteFloorPlans(){
   for(const floorId of new Set(routeNodes.map(node=>node.floor))){
-    const key=`${BUILDING}:${floorId}`;
+    const key=`${BUILDING}:${floorId}:${floorPlanContrastMode()}`;
     if(preloadedFloorPlans.has(key)) continue;
     preloadedFloorPlans.set(key, null);
     floorPlanImage(BUILDING, floorId).then(url=>{
@@ -5093,6 +5139,13 @@ syncNavigationModeUI();
 updateDirectionControls();
 setupIndoorExtras();
 loadGraph();
+
+window.addEventListener('pageshow',()=>{
+  const {contrastChanged}=applyIndoorAppearancePreferences();
+  if(!contrastChanged || !GRAPH) return;
+  mountedPlanKey=null;
+  drawBaseMap();
+});
 
 // When a route is ready, bring the summary and the Start button into view.
 new MutationObserver(()=>{

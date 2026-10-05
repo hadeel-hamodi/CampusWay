@@ -283,4 +283,74 @@ test('returning from indoor navigation refreshes shared display preferences', ()
     index,
     /window\.addEventListener\(\s*'pageshow',\s*restoreDisplayPreferences\s*\)/
   );
+  assert.match(
+    index,
+    /window\.addEventListener\(\s*'pageshow',\s*restoreTextSizePreference\s*\)/
+  );
+});
+
+test('text size choice updates the page, radio state, and shared preference', () => {
+  const writes = [];
+  const makeChoice = size => ({
+    dataset:{textSize:size},
+    attributes:{},
+    selected:false,
+    classList:{
+      toggle(name, enabled){
+        if(name === 'selected') this.owner.selected = enabled;
+      },
+      owner:null
+    },
+    setAttribute(name, value){ this.attributes[name] = value; }
+  });
+  const choices = [makeChoice('normal'), makeChoice('large')];
+  choices.forEach(choice => { choice.classList.owner = choice; });
+  const document = {
+    documentElement:{dataset:{}},
+    querySelectorAll(selector){
+      return selector === '#settingsTextSizeOptions [data-text-size]'
+        ? choices
+        : [];
+    }
+  };
+  let savedSize = 'large';
+  const context = vm.createContext({
+    TEXT_SIZE_IDS:new Set(['normal','large']),
+    PREFERENCE_KEYS:{textSize:'campusway.textSize'},
+    currentTextSize:'normal',
+    document,
+    writeStoredPreference(key, value){ writes.push([key, value]); },
+    readValidStoredPreference(){ return savedSize; },
+    renderDisplayPreferences(){
+      choices.forEach(button => {
+        const selected = button.dataset.textSize === context.currentTextSize;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-checked', String(selected));
+      });
+    }
+  });
+  const source = between(
+    index,
+    'function setTextSize(',
+    'function changeSettingsLanguage('
+  );
+  vm.runInContext(source, context);
+
+  vm.runInContext("setTextSize('large')", context);
+  assert.equal(document.documentElement.dataset.textSize, 'large');
+  assert.deepEqual(writes, [['campusway.textSize','large']]);
+  assert.equal(choices[0].attributes['aria-checked'], 'false');
+  assert.equal(choices[1].attributes['aria-checked'], 'true');
+  assert.equal(choices[1].selected, true);
+
+  writes.length = 0;
+  vm.runInContext('restoreTextSizePreference()', context);
+  assert.equal(document.documentElement.dataset.textSize, 'large');
+  assert.deepEqual(writes, []);
+
+  savedSize = 'invalid';
+  vm.runInContext('restoreTextSizePreference()', context);
+  assert.equal(document.documentElement.dataset.textSize, 'normal');
+  assert.equal(choices[0].selected, true);
+  assert.equal(choices[1].selected, false);
 });

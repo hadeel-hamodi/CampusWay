@@ -7,6 +7,8 @@ const { test } = require('node:test');
 const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const navigation = fs.readFileSync(path.join(root, 'wayframe', 'navigation-demo.html'), 'utf8');
+const sharedCss = fs.readFileSync(path.join(root, 'app', 'ui', 'campusway.css'), 'utf8');
+const indoorCss = fs.readFileSync(path.join(root, 'app', 'ui', 'indoor-nav.css'), 'utf8');
 const outdoor = fs.readFileSync(path.join(root, 'app', 'prototype', 'outdoor-routing.js'), 'utf8');
 const routePlanner = require('../wayframe/route-planner.js');
 
@@ -40,6 +42,85 @@ test('display and audio controls live in Settings and share audio with indoor na
   assert.match(settings, /id="audioBtn"[^>]+role="switch"/);
   assert.match(navigation, /SHARED_AUDIO_KEY='campusway\.audioEnabled'/);
   assert.match(navigation, /sharedVoice!==null[\s\S]+savedVoice!==null[\s\S]+selectedRoutingProfile\(\)==='visual'/);
+});
+
+test('Settings offers a persistent normal or large text size choice', () => {
+  const settings = between(index, '<div class="settings-dialog"', '<div class="toast-region"');
+
+  assert.match(settings, /id="settingsTextSizeOptions"[^>]+role="radiogroup"/);
+  assert.match(settings, /role="radio"[^>]+data-text-size="normal"/);
+  assert.match(settings, /role="radio"[^>]+data-text-size="large"/);
+  assert.match(index, /textSize:\s*'campusway\.textSize'/);
+  assert.match(index, /document\.documentElement\.dataset\.textSize\s*=\s*nextSize/);
+});
+
+function indoorAppearance(localEntries = [], sessionEntries = []) {
+  const persistent = new Map(localEntries);
+  const session = new Map(sessionEntries);
+  const classes = new Set();
+  const context = vm.createContext({
+    localStorage:{
+      getItem(key){ return persistent.get(key) ?? null; }
+    },
+    sessionStorage:{
+      getItem(key){ return session.get(key) ?? null; },
+      setItem(key, value){ session.set(key, value); }
+    },
+    document:{
+      body:{classList:{
+        contains(name){ return classes.has(name); },
+        toggle(name, enabled){
+          if(enabled) classes.add(name);
+          else classes.delete(name);
+        }
+      }},
+      documentElement:{dataset:{}}
+    }
+  });
+  vm.runInContext(between(
+    navigation,
+    'function indoorStoredPreference(',
+    'function indoorLanguage()'
+  ), context);
+  return {context, classes, session};
+}
+
+test('indoor navigation restores shared appearance and prefers persistent values', () => {
+  const restored = indoorAppearance(
+    [
+      ['campusway.highContrastEnabled','true'],
+      ['campusway.textSize','large'],
+      ['accessibilityProfile','general']
+    ],
+    [
+      ['campusway.highContrastEnabled','false'],
+      ['campusway.textSize','normal']
+    ]
+  );
+  assert.equal(restored.classes.has('hc'), true);
+  assert.equal(restored.context.document.documentElement.dataset.textSize, 'large');
+  assert.equal(restored.session.get('campusway.highContrastEnabled'), 'true');
+
+  const normal = indoorAppearance([
+    ['campusway.highContrastEnabled','false'],
+    ['campusway.textSize','normal']
+  ]);
+  assert.equal(normal.classes.has('hc'), false);
+  assert.equal(normal.context.document.documentElement.dataset.textSize, 'normal');
+
+  const visualDefault = indoorAppearance([
+    ['accessibilityProfile','visual']
+  ]);
+  assert.equal(visualDefault.classes.has('hc'), true);
+});
+
+test('shared and indoor styles cover large text and high-contrast navigation', () => {
+  assert.match(sharedCss, /html\[data-text-size="large"\]\{font-size:112\.5%;\}/);
+  assert.match(sharedCss, /body\.hc\{[\s\S]+--primary:#FFD400/);
+  assert.match(indoorCss, /body\.hc \.route-core\{stroke:#FFD400;\}/);
+  assert.match(indoorCss, /body\.hc #mapViewport,[\s\S]+background:#000/);
+  assert.match(indoorCss, /body\.hc #startBtn:not\(:disabled\)[\s\S]+color:#000/);
+  assert.doesNotMatch(indoorCss, /font-size:\s*[0-9.]+px/);
 });
 
 test('saved places remain in the sidebar without the redundant buildings list', () => {

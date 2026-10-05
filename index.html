@@ -304,6 +304,17 @@
           <span class="settings-switch-track" aria-hidden="true"><span></span></span>
         </button>
       </div>
+
+      <div class="settings-text-size">
+        <div class="settings-text-size-copy">
+          <strong id="settingsTextSizeTitle">Text size</strong>
+          <small id="settingsTextSizeHint">Increase text throughout CampusWay.</small>
+        </div>
+        <div class="settings-text-size-options" id="settingsTextSizeOptions" role="radiogroup" aria-labelledby="settingsTextSizeTitle">
+          <button type="button" role="radio" data-text-size="normal" aria-checked="true" onclick="changeTextSize('normal')" id="textSizeNormal">Normal</button>
+          <button type="button" role="radio" data-text-size="large" aria-checked="false" onclick="changeTextSize('large')" id="textSizeLarge">Large</button>
+        </div>
+      </div>
     </section>
 
     <section class="settings-section" aria-labelledby="settingsProfileTitle">
@@ -383,6 +394,8 @@ const T = {
     settingsLanguage:'Language', settingsProfile:'Navigation profile',
     settingsDisplay:'Display & Audio', settingsDisplayHint:'Choose how CampusWay looks and reads navigation updates.',
     settingsContrastHint:'Uses stronger colors and clearer borders.', settingsAudioHint:'Reads navigation updates aloud.',
+    settingsTextSize:'Text size', settingsTextSizeHint:'Increase text throughout CampusWay.',
+    textSizeNormal:'Normal', textSizeLarge:'Large',
     profileRouteHint:'Your profile changes how routes are calculated.',
     onboardingStepLanguage:'Step 1 of 2', onboardingLanguageTitle:'Choose your language',
     onboardingStepProfile:'Step 2 of 2', onboardingProfileTitle:'Choose your navigation profile',
@@ -457,6 +470,8 @@ const T = {
     settingsLanguage:'שפה', settingsProfile:'פרופיל ניווט',
     settingsDisplay:'תצוגה ושמע', settingsDisplayHint:'בחר כיצד CampusWay יוצג ויקריא עדכוני ניווט.',
     settingsContrastHint:'משתמש בצבעים חזקים ובגבולות ברורים יותר.', settingsAudioHint:'מקריא בקול עדכוני ניווט.',
+    settingsTextSize:'גודל טקסט', settingsTextSizeHint:'הגדלת הטקסט בכל חלקי CampusWay.',
+    textSizeNormal:'רגיל', textSizeLarge:'גדול',
     profileRouteHint:'הפרופיל משנה את אופן חישוב המסלול.',
     onboardingStepLanguage:'שלב 1 מתוך 2', onboardingLanguageTitle:'בחירת שפה',
     onboardingStepProfile:'שלב 2 מתוך 2', onboardingProfileTitle:'בחירת פרופיל ניווט',
@@ -531,6 +546,8 @@ const T = {
     settingsLanguage:'اللغة', settingsProfile:'ملف التنقّل',
     settingsDisplay:'العرض والصوت', settingsDisplayHint:'اختر طريقة عرض CampusWay وقراءة تحديثات الملاحة.',
     settingsContrastHint:'يستخدم ألوانًا أقوى وحدودًا أوضح.', settingsAudioHint:'يقرأ تحديثات الملاحة بصوت عالٍ.',
+    settingsTextSize:'حجم الخط', settingsTextSizeHint:'تكبير النص في جميع أجزاء CampusWay.',
+    textSizeNormal:'عادي', textSizeLarge:'كبير',
     profileRouteHint:'يغيّر الملف طريقة حساب المسار.',
     onboardingStepLanguage:'الخطوة 1 من 2', onboardingLanguageTitle:'اختر لغتك',
     onboardingStepProfile:'الخطوة 2 من 2', onboardingProfileTitle:'اختر ملف التنقّل المناسب',
@@ -601,12 +618,14 @@ let lang = 'en';
 let t = T.en;
 const PROFILE_IDS = new Set(['general','mobility','visual','spatial','mental']);
 const LANGUAGE_IDS = new Set(['en','he','ar']);
+const TEXT_SIZE_IDS = new Set(['normal','large']);
 const PREFERENCE_KEYS = {
   language: 'campuswayLanguage',
   profile: 'accessibilityProfile',
   onboarding: 'campuswayOnboardingComplete',
   audio: 'campusway.audioEnabled',
-  contrast: 'campusway.highContrastEnabled'
+  contrast: 'campusway.highContrastEnabled',
+  textSize: 'campusway.textSize'
 };
 
 function storageValue(storage, key){
@@ -682,6 +701,7 @@ let settingsReturnFocus = null;
 let appRevealHandled = false;
 let audioOn = false;
 let highContrastOn = false;
+let currentTextSize = 'normal';
 // Search and navigation share the canonical indoor graph files.
 let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
@@ -972,6 +992,11 @@ function renderDisplayPreferences(){
     contrastButton.classList.toggle('active', highContrastOn);
     contrastButton.setAttribute('aria-checked', String(highContrastOn));
   }
+  document.querySelectorAll('#settingsTextSizeOptions [data-text-size]').forEach(button => {
+    const selected = button.dataset.textSize === currentTextSize;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-checked', String(selected));
+  });
 }
 
 function restoreDisplayPreferences(){
@@ -987,6 +1012,26 @@ function restoreDisplayPreferences(){
     storedContrast === null ? useVisualDefaults : storedContrast === 'true',
     {persist: storedContrast === null && useVisualDefaults, announce: false}
   );
+}
+
+function setTextSize(size, {persist = true} = {}){
+  const nextSize = TEXT_SIZE_IDS.has(size) ? size : 'normal';
+  currentTextSize = nextSize;
+  document.documentElement.dataset.textSize = nextSize;
+  if(persist) writeStoredPreference(PREFERENCE_KEYS.textSize, nextSize);
+  renderDisplayPreferences();
+}
+
+function restoreTextSizePreference(){
+  const storedSize = readValidStoredPreference(
+    PREFERENCE_KEYS.textSize,
+    TEXT_SIZE_IDS
+  );
+  setTextSize(storedSize || 'normal', {persist: false});
+}
+
+function changeTextSize(size){
+  setTextSize(size);
 }
 
 function changeSettingsLanguage(language, direction){
@@ -1047,6 +1092,7 @@ function setupPreferenceUI(){
     }
   });
   restoreDisplayPreferences();
+  restoreTextSizePreference();
   restoreSavedLanguage();
 }
 
@@ -1161,6 +1207,10 @@ function applyTranslations(){
   setText('settingsDisplayHint', t.settingsDisplayHint);
   setText('settingsContrastHint', t.settingsContrastHint);
   setText('settingsAudioHint', t.settingsAudioHint);
+  setText('settingsTextSizeTitle', t.settingsTextSize);
+  setText('settingsTextSizeHint', t.settingsTextSizeHint);
+  setText('textSizeNormal', t.textSizeNormal);
+  setText('textSizeLarge', t.textSizeLarge);
   setText('settingsProfileTitle', t.settingsProfile);
   setText('settingsProfileHint', t.profileRouteHint);
   setText('onboardingLanguageProgress', t.onboardingStepLanguage);
@@ -1984,7 +2034,7 @@ const clinicMarkers = [];
 
 CAMPUS_DATA.points.clinic.forEach(c=>{
   const icon = L.divIcon({className:'',
-    html:`<div style="width:18px;height:18px;border-radius:50%;background:#EF4444;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;">+</div>`,
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:#EF4444;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6875rem;font-weight:900;">+</div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
 const marker = L.marker([c.lat,c.lng],{icon})
   .addTo(map)
@@ -2072,7 +2122,7 @@ function verticalIcon(v){
     CampusStatus.isElevatorOut('campus', v.statusId);
   const bg = broken ? '#EF4444' : isElevator ? '#8B5CF6' : '#64748B';
   return L.divIcon({className:'',
-    html:`<div style="width:18px;height:18px;border-radius:4px;background:${bg};border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:900;">${broken ? '✕' : isElevator ? '▲' : '≡'}</div>`,
+    html:`<div style="width:18px;height:18px;border-radius:4px;background:${bg};border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.625rem;font-weight:900;">${broken ? '✕' : isElevator ? '▲' : '≡'}</div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
 }
 const verticalMarkers = [];
@@ -2095,8 +2145,8 @@ function refreshVerticalMarkers(){
 function buildLegend(){
   const isHC = document.body.classList.contains('hc');
   const dot = (bg, shape, symbol, hcSymbol) => isHC
-    ? `<span style="width:14px;height:14px;border-radius:${shape};background:#FFD400;display:inline-flex;align-items:center;justify-content:center;color:#000;font-size:10px;font-weight:900;">${hcSymbol}</span>`
-    : `<span style="width:12px;height:12px;border-radius:${shape};background:${bg};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;">${symbol}</span>`;
+    ? `<span style="width:14px;height:14px;border-radius:${shape};background:#FFD400;display:inline-flex;align-items:center;justify-content:center;color:#000;font-size:.625rem;font-weight:900;">${hcSymbol}</span>`
+    : `<span style="width:12px;height:12px;border-radius:${shape};background:${bg};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:.5625rem;font-weight:900;">${symbol}</span>`;
 
   document.getElementById('mapLegend').innerHTML = `
     <div class="legend-row">${dot('#0D1B3E','4px','','■')} ${t.legendBuilding}</div>
@@ -2740,7 +2790,7 @@ async function showRestSpacePreview(){
       {
         icon: L.divIcon({
           className: '',
-          html: '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #047857;border-radius:50%;font-size:24px;box-sizing:border-box">🌿</div>',
+          html: '<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #047857;border-radius:50%;font-size:1.5rem;box-sizing:border-box">🌿</div>',
           iconSize: [44, 44],
           iconAnchor: [22, 22]
         }),
@@ -3332,7 +3382,7 @@ shopMarkers.forEach(marker => {
           display:flex;
           align-items:center;
           justify-content:center;
-          font-size:15px;
+          font-size:.9375rem;
         ">🍽️</div>
       `,
       iconSize:[28,28],
@@ -3447,7 +3497,7 @@ function showShopPlaces(){
           display:flex;
           align-items:center;
           justify-content:center;
-          font-size:15px;
+          font-size:.9375rem;
         ">🛍️</div>
       `,
       iconSize:[28,28],
@@ -6319,7 +6369,7 @@ function placeHoursHtml(name){
   const text = CampusStatus.hoursText(name, lang);
   if(!text) return '';
   const open = CampusStatus.hours(name)?.open;
-  return `<div class="${open ? 'hours-open' : 'hours-closed'}" style="margin-top:4px;font-size:12px;">🕒 ${text}</div>`;
+  return `<div class="${open ? 'hours-open' : 'hours-closed'}" style="margin-top:4px;font-size:.75rem;">🕒 ${text}</div>`;
 }
 
 const REPORT_BUILDING_NAMES = {
@@ -7105,7 +7155,7 @@ function showStartSuggestions(filter, matches = getStartMatches(filter)){
       )"
     >
       <span>${localizedBuildingName(building)}</span>
-      <span style="color:var(--mid);font-size:11px;">
+      <span style="color:var(--mid);font-size:.6875rem;">
         ${lang === 'en' ? building.name_he : building.name}
       </span>
     </div>
@@ -7122,7 +7172,7 @@ function showStartSuggestions(filter, matches = getStartMatches(filter)){
       )"
     >
       <span>${indoorSearchName(match.node)}</span>
-      <span style="color:var(--mid);font-size:11px;">
+      <span style="color:var(--mid);font-size:.6875rem;">
         ${localizedBuildingNameByEnglishName(match.buildingName)}
         · ${match.floor.replace('floorminus1','-1').replace('floor','')}
       </span>
@@ -7603,7 +7653,7 @@ function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
   const serviceHTML = serviceMatches.map(type => `
     <div class="suggestion-item suggestion-service" onclick="runSearchService('${type}')">
       <span>${SEARCH_SERVICE_ICONS[type] || ''} ${searchServiceLabel(type)}</span>
-      <span style="color:var(--mid);font-size:11px;">${t.searchNearMe}</span>
+      <span style="color:var(--mid);font-size:.6875rem;">${t.searchNearMe}</span>
     </div>
   `).join('');
 
@@ -7617,7 +7667,7 @@ function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
       )"
     >
       <span>${localizedBuildingName(building)}</span>
-      <span style="color:var(--mid);font-size:11px;">
+      <span style="color:var(--mid);font-size:.6875rem;">
         ${lang === 'en' ? building.name_he : building.name}
       </span>
     </div>
@@ -7648,7 +7698,7 @@ function showSearchSuggestions(filter, matches = getDestinationMatches(filter)){
       ${indoorSearchName(match.node)}
       </span>
 
-      <span style="color:var(--mid);font-size:11px;">
+      <span style="color:var(--mid);font-size:.6875rem;">
         ${localizedBuildingNameByEnglishName(match.buildingName)}
         · ${match.floor.replace('floorminus1','-1').replace('floor','')}
       </span>
@@ -7675,7 +7725,7 @@ placeMatches.forEach(place => {
   name.textContent = localizedPlaceName(place);
 
   const detail = document.createElement('span');
-  detail.style.cssText = 'color:var(--mid);font-size:11px;';
+  detail.style.cssText = 'color:var(--mid);font-size:.6875rem;';
 
   const building = place.indoor
     ? CAMPUS_DATA.buildings.find(
@@ -8200,7 +8250,7 @@ function favouriteButton(place) {
         background: transparent;
         border: 0;
         color: var(--amber);
-        font-size: 22px;
+        font-size:1.375rem;
         min-width: 44px;
         min-height: 44px;
         cursor: pointer;
@@ -8787,6 +8837,11 @@ window.addEventListener(
   restoreDisplayPreferences
 );
 
+window.addEventListener(
+  'pageshow',
+  restoreTextSizePreference
+);
+
 window.addEventListener('pagehide', () => {
   const transitionScreen =
     document.getElementById('indoorTransition');
@@ -8825,7 +8880,7 @@ window.addEventListener('pagehide', () => {
   <div
     style="
       color:white;
-      font-size:18px;
+      font-size:1.125rem;
       font-weight:700;
     "
   >
@@ -8835,7 +8890,7 @@ window.addEventListener('pagehide', () => {
   <div
     style="
       color:#9FC6DD;
-      font-size:13px;
+      font-size:.8125rem;
     "
   >
     <span id="lbl-switching-indoor">Switching to indoor mode...</span>
