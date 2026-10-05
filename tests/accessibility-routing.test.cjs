@@ -31,6 +31,24 @@ test('profile choice moved from the route planner into onboarding and Settings',
   assert.doesNotMatch(index, /id="langSwitchBtn"/);
 });
 
+test('display and audio controls live in Settings and share audio with indoor navigation', () => {
+  const topbar = between(index, '<header class="topbar"', '</header>');
+  const settings = between(index, '<div class="settings-dialog"', '<div class="toast-region"');
+
+  assert.doesNotMatch(topbar, /id="contrastBtn"|id="audioBtn"/);
+  assert.match(settings, /id="contrastBtn"[^>]+role="switch"/);
+  assert.match(settings, /id="audioBtn"[^>]+role="switch"/);
+  assert.match(navigation, /SHARED_AUDIO_KEY='campusway\.audioEnabled'/);
+  assert.match(navigation, /sharedVoice!==null[\s\S]+savedVoice!==null[\s\S]+selectedRoutingProfile\(\)==='visual'/);
+});
+
+test('saved places remain in the sidebar without the redundant buildings list', () => {
+  assert.match(index, /id="favouriteList"/);
+  assert.match(index, /id="lbl-favourites"/);
+  assert.doesNotMatch(index, /id="buildingList"|id="lbl-buildings"|id="tabFavourites"/);
+  assert.doesNotMatch(index, /function buildBuildingList\(|function toggleBuildingList\(/);
+});
+
 test('outdoor Mobility route excludes OSM steps while a general route may use them', async () => {
   const data = { elements: [
     {type:'node', id:1, lat:32.7600, lon:35.0200},

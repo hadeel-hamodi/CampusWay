@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v42-profile-settings';
+const CACHE_NAME = 'campusway-v44-settings-saved-places';
 
 const APP_FILES = [
 './',

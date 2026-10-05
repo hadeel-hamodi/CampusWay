@@ -4825,6 +4825,7 @@ function setupLocationSearch(side){
 let indoorVoiceOn=false;
 let lastSpokenGuidance='';
 const INDOOR_VOICE_KEY='campuswayIndoorVoice';
+const SHARED_AUDIO_KEY='campusway.audioEnabled';
 
 function speakIndoor(text, force=false){
   if((!indoorVoiceOn && !force) || !text || !('speechSynthesis' in window)) return;
@@ -4843,7 +4844,11 @@ function setIndoorVoice(on, announce=true){
   indoorVoiceOn=on;
   $('voiceGuideBtn').setAttribute('aria-pressed',String(on));
   $('voiceGuideBtn').classList.toggle('active',on);
-  try{ localStorage.setItem(INDOOR_VOICE_KEY,on?'on':'off'); }catch(error){ /* storage blocked */ }
+  try{
+    localStorage.setItem(INDOOR_VOICE_KEY,on?'on':'off');
+    localStorage.setItem(SHARED_AUDIO_KEY,String(on));
+  }catch(error){ /* storage blocked */ }
+  try{ sessionStorage.setItem(SHARED_AUDIO_KEY,String(on)); }catch(error){ /* storage blocked */ }
   if(on && announce){
     lastSpokenGuidance='';
     speakIndoor(routeNodes.length ? currentGuidanceText() : it('voiceOn'));
@@ -5013,9 +5018,18 @@ function setupIndoorExtras(){
   $('lbl-indoor-emergency').textContent=it('emergency');
   $('indoorShareBtn').disabled=false;
 
+  const sharedVoice=indoorStoredPreference(
+    SHARED_AUDIO_KEY,
+    value=>value==='true'||value==='false'
+  );
   let savedVoice=null;
   try{ savedVoice=localStorage.getItem(INDOOR_VOICE_KEY); }catch(error){ savedVoice=null; }
-  setIndoorVoice(savedVoice ? savedVoice==='on' : selectedRoutingProfile()==='visual', false);
+  const initialVoice=sharedVoice!==null
+    ? sharedVoice==='true'
+    : savedVoice!==null
+      ? savedVoice==='on'
+      : selectedRoutingProfile()==='visual';
+  setIndoorVoice(initialVoice, false);
 
   $('voiceGuideBtn').addEventListener('click',()=>setIndoorVoice(!indoorVoiceOn));
   $('indoorShareBtn').addEventListener('click',shareIndoorDestination);

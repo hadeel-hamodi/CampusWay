@@ -77,22 +77,10 @@
       </div>
     </div>
 
-    <div class="topbar-actions" role="group" aria-labelledby="lbl-display">
-      <span class="sr-only" id="lbl-display">Display &amp; Audio</span>
-
+    <div class="topbar-actions">
       <button class="toolbar-btn emergency-btn" id="emergencyBtn" type="button" onclick="startEmergencyShelterRoute()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 2 3 6v6c0 5 3.8 9.3 9 10 5.2-.7 9-5 9-10V6z"/><path d="M12 8v5M12 16.5v.5"/></svg>
         <span id="lbl-emergency">Nearest shelter</span>
-      </button>
-
-      <button class="toolbar-btn" id="contrastBtn" type="button" onclick="toggleContrast()" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"/></svg>
-        <span class="btn-label" id="lbl-contrast">High Contrast</span>
-      </button>
-
-      <button class="toolbar-btn" id="audioBtn" type="button" onclick="toggleAudio()" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-        <span class="btn-label" id="lbl-audio">Audio Guide</span>
       </button>
 
       <button class="toolbar-btn" id="settingsBtn" type="button" onclick="openSettings()" aria-haspopup="dialog" aria-controls="settingsDialog">
@@ -250,20 +238,12 @@
         <p class="service-status" id="serviceStatus" role="status" aria-live="polite"></p>
       </section>
 
-      <!-- Saved places / all buildings -->
-      <section class="panel places" aria-label="Places">
-        <div class="tabs" role="tablist">
-          <button class="tab" type="button" role="tab" id="tabFavourites" aria-selected="true" aria-controls="favouriteList">
-            <span id="lbl-favourites">⭐ Favourites</span>
-          </button>
-          <button class="tab" type="button" role="tab" id="lbl-buildings" aria-selected="false" aria-controls="buildingList">
-            <span>Buildings</span><span id="buildingArrow" hidden></span>
-          </button>
-        </div>
-        <div class="building-list" id="favouriteList" role="tabpanel" aria-labelledby="tabFavourites">
+      <!-- Saved places -->
+      <section class="panel places" aria-labelledby="lbl-favourites">
+        <h2 class="panel-title" id="lbl-favourites">⭐ Favourites</h2>
+        <div class="building-list" id="favouriteList">
           <div class="empty-state" id="favEmpty">No saved places yet. Click "Save" on any building.</div>
         </div>
-        <div class="building-list" id="buildingList" role="tabpanel" aria-labelledby="lbl-buildings" style="display:none;"></div>
       </section>
     </aside>
 
@@ -298,6 +278,34 @@
       </div>
     </section>
 
+    <section class="settings-section" aria-labelledby="settingsDisplayTitle">
+      <h3 id="settingsDisplayTitle">Display &amp; Audio</h3>
+      <p id="settingsDisplayHint">Choose how CampusWay looks and reads navigation updates.</p>
+      <div class="settings-toggle-list">
+        <button class="settings-toggle" id="contrastBtn" type="button" role="switch" aria-checked="false" onclick="toggleContrast()">
+          <span class="settings-toggle-icon" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"/></svg>
+          </span>
+          <span class="settings-toggle-copy">
+            <strong id="lbl-contrast">High Contrast</strong>
+            <small id="settingsContrastHint">Uses stronger colors and clearer borders.</small>
+          </span>
+          <span class="settings-switch-track" aria-hidden="true"><span></span></span>
+        </button>
+
+        <button class="settings-toggle" id="audioBtn" type="button" role="switch" aria-checked="false" onclick="toggleAudio()">
+          <span class="settings-toggle-icon" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          </span>
+          <span class="settings-toggle-copy">
+            <strong id="lbl-audio">Audio Guide</strong>
+            <small id="settingsAudioHint">Reads navigation updates aloud.</small>
+          </span>
+          <span class="settings-switch-track" aria-hidden="true"><span></span></span>
+        </button>
+      </div>
+    </section>
+
     <section class="settings-section" aria-labelledby="settingsProfileTitle">
       <h3 id="settingsProfileTitle">Navigation profile</h3>
       <p id="settingsProfileHint">Your profile changes how routes are calculated.</p>
@@ -322,7 +330,6 @@ const T = {
     contrast:'High Contrast',
     audio:'Audio Guide',
     profile:'Accessibility Profile',
-    buildings:'Buildings',
     liveAlert:'Good to know',
     navigateHere:'Navigate here',
     routeFrom:'From',
@@ -340,7 +347,7 @@ const T = {
     profiles:[
       {id:'general', label:'General User',    sub:'Standard fastest route'},
       {id:'mobility',label:'Mobility',         sub:'Wheelchair / crutches — avoids stairs'},
-      {id:'visual', label:'Visual Impairment', sub:'Spoken navigation guidance'},
+      {id:'visual', label:'Visual Impairment', sub:'High contrast and spoken navigation guidance'},
       {id:'spatial', label:'Spatial / Navigation',sub:'Fewer turns, simpler directions'},
       {id:'mental',  label:'Mental Health Support',sub:'Finds suggested places for a break'},
     ],
@@ -374,6 +381,8 @@ const T = {
     languageLabel:'Language', profileLabel:'Accessibility profile',
     settings:'Settings', settingsTitle:'Settings', closeSettings:'Close settings',
     settingsLanguage:'Language', settingsProfile:'Navigation profile',
+    settingsDisplay:'Display & Audio', settingsDisplayHint:'Choose how CampusWay looks and reads navigation updates.',
+    settingsContrastHint:'Uses stronger colors and clearer borders.', settingsAudioHint:'Reads navigation updates aloud.',
     profileRouteHint:'Your profile changes how routes are calculated.',
     onboardingStepLanguage:'Step 1 of 2', onboardingLanguageTitle:'Choose your language',
     onboardingStepProfile:'Step 2 of 2', onboardingProfileTitle:'Choose your navigation profile',
@@ -395,7 +404,6 @@ const T = {
     contrast:'ניגודיות גבוהה',
     audio:'מדריך קולי',
     profile:'פרופיל נגישות',
-    buildings:'בניינים',
     liveAlert:'כדאי לדעת',
     navigateHere:'נווט לכאן',
     routeFrom:'מ',
@@ -413,7 +421,7 @@ const T = {
     profiles:[
       {id:'general', label:'משתמש כללי',       sub:'המסלול המהיר ביותר'},
       {id:'mobility',label:'ניידות',              sub:'כיסא גלגלים / קביים — ללא מדרגות'},
-      {id:'visual',  label:'לקות ראייה',          sub: 'הנחיות ניווט קוליות'},
+      {id:'visual',  label:'לקות ראייה',          sub: 'ניגודיות גבוהה והנחיות ניווט קוליות'},
       {id:'spatial', label:'ניווט מרחבי',          sub:'פחות פניות, הוראות פשוטות'},
       {id:'mental',  label:'תמיכה נפשית',          sub:'מציע מקומות להפסקה'},
     ],
@@ -447,6 +455,8 @@ const T = {
     languageLabel:'שפה', profileLabel:'פרופיל נגישות',
     settings:'הגדרות', settingsTitle:'הגדרות', closeSettings:'סגירת ההגדרות',
     settingsLanguage:'שפה', settingsProfile:'פרופיל ניווט',
+    settingsDisplay:'תצוגה ושמע', settingsDisplayHint:'בחר כיצד CampusWay יוצג ויקריא עדכוני ניווט.',
+    settingsContrastHint:'משתמש בצבעים חזקים ובגבולות ברורים יותר.', settingsAudioHint:'מקריא בקול עדכוני ניווט.',
     profileRouteHint:'הפרופיל משנה את אופן חישוב המסלול.',
     onboardingStepLanguage:'שלב 1 מתוך 2', onboardingLanguageTitle:'בחירת שפה',
     onboardingStepProfile:'שלב 2 מתוך 2', onboardingProfileTitle:'בחירת פרופיל ניווט',
@@ -468,7 +478,6 @@ const T = {
     contrast:'تباين عالٍ',
     audio:'الدليل الصوتي',
     profile:'ملف إمكانية الوصول',
-    buildings:'المباني',
     liveAlert:'معلومة مفيدة',
     navigateHere:'تنقل إلى هنا',
     routeFrom:'من',
@@ -486,7 +495,7 @@ const T = {
     profiles:[
       {id:'general', label:'مستخدم عام',          sub:'أسرع مسار'},
       {id:'mobility',label:'إعاقة حركية',           sub:'كرسي متحرك / عكازات — تجنب السلالم'},
-      {id:'visual',  label:'إعاقة بصرية',           sub: 'إرشادات التنقل الصوتية'},
+      {id:'visual',  label:'إعاقة بصرية',           sub: 'تباين عالٍ وإرشادات تنقّل صوتية'},
       {id:'spatial', label:'صعوبة في الملاحة',       sub:'منعطفات أقل، تعليمات أبسط'},
       {id:'mental',  label:'الصحة النفسية',          sub:'يقترح أماكن للاستراحة'},
     ],
@@ -520,6 +529,8 @@ const T = {
     languageLabel:'اللغة', profileLabel:'ملف إمكانية الوصول',
     settings:'الإعدادات', settingsTitle:'الإعدادات', closeSettings:'إغلاق الإعدادات',
     settingsLanguage:'اللغة', settingsProfile:'ملف التنقّل',
+    settingsDisplay:'العرض والصوت', settingsDisplayHint:'اختر طريقة عرض CampusWay وقراءة تحديثات الملاحة.',
+    settingsContrastHint:'يستخدم ألوانًا أقوى وحدودًا أوضح.', settingsAudioHint:'يقرأ تحديثات الملاحة بصوت عالٍ.',
     profileRouteHint:'يغيّر الملف طريقة حساب المسار.',
     onboardingStepLanguage:'الخطوة 1 من 2', onboardingLanguageTitle:'اختر لغتك',
     onboardingStepProfile:'الخطوة 2 من 2', onboardingProfileTitle:'اختر ملف التنقّل المناسب',
@@ -593,7 +604,9 @@ const LANGUAGE_IDS = new Set(['en','he','ar']);
 const PREFERENCE_KEYS = {
   language: 'campuswayLanguage',
   profile: 'accessibilityProfile',
-  onboarding: 'campuswayOnboardingComplete'
+  onboarding: 'campuswayOnboardingComplete',
+  audio: 'campusway.audioEnabled',
+  contrast: 'campusway.highContrastEnabled'
 };
 
 function storageValue(storage, key){
@@ -668,6 +681,7 @@ let pendingOnboardingProfile = PROFILE_IDS.has(storedProfile)
 let settingsReturnFocus = null;
 let appRevealHandled = false;
 let audioOn = false;
+let highContrastOn = false;
 // Search and navigation share the canonical indoor graph files.
 let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
@@ -784,7 +798,6 @@ function applyLanguagePreference(l, dir, {persist = true} = {}){
   buildProfiles();
   if(currentProfile !== 'general') showAlert(currentProfile);
   buildLegend();
-  buildBuildingList();
   buildFavouriteList();
   if(window.CampusUI) window.CampusUI.refresh();
   if(typeof refreshRouteSteps === 'function') refreshRouteSteps();
@@ -856,7 +869,8 @@ function pickLang(l, dir){
     setAccessibilityProfile(savedProfile, {
       persist: true,
       announce: false,
-      recalculate: false
+      recalculate: false,
+      applyRecommendedSettings: false
     });
     revealApp();
     return;
@@ -902,7 +916,8 @@ function restoreSavedLanguage(){
     setAccessibilityProfile(savedProfile, {
       persist: true,
       announce: false,
-      recalculate: false
+      recalculate: false,
+      applyRecommendedSettings: false
     });
     revealApp();
   }else{
@@ -945,6 +960,35 @@ function renderSettingsLanguageChoices(){
   });
 }
 
+function renderDisplayPreferences(){
+  const audioButton = document.getElementById('audioBtn');
+  const contrastButton = document.getElementById('contrastBtn');
+
+  if(audioButton){
+    audioButton.classList.toggle('active', audioOn);
+    audioButton.setAttribute('aria-checked', String(audioOn));
+  }
+  if(contrastButton){
+    contrastButton.classList.toggle('active', highContrastOn);
+    contrastButton.setAttribute('aria-checked', String(highContrastOn));
+  }
+}
+
+function restoreDisplayPreferences(){
+  const storedAudio = readStoredPreference(PREFERENCE_KEYS.audio);
+  const storedContrast = readStoredPreference(PREFERENCE_KEYS.contrast);
+  const useVisualDefaults = currentProfile === 'visual';
+
+  setAudioEnabled(
+    storedAudio === null ? useVisualDefaults : storedAudio === 'true',
+    {persist: storedAudio === null && useVisualDefaults, announce: false}
+  );
+  setContrastEnabled(
+    storedContrast === null ? useVisualDefaults : storedContrast === 'true',
+    {persist: storedContrast === null && useVisualDefaults, announce: false}
+  );
+}
+
 function changeSettingsLanguage(language, direction){
   if(!applyLanguagePreference(language, direction)) return;
 
@@ -961,7 +1005,9 @@ function openSettings(){
   settingsReturnFocus = document.activeElement;
   buildProfiles();
   renderSettingsLanguageChoices();
+  renderDisplayPreferences();
   dialog.hidden = false;
+  dialog.querySelector('.settings-card').scrollTop = 0;
   document.body.classList.add('modal-open');
   document.getElementById('settingsCloseBtn').focus();
 }
@@ -1000,6 +1046,7 @@ function setupPreferenceUI(){
       first.focus();
     }
   });
+  restoreDisplayPreferences();
   restoreSavedLanguage();
 }
 
@@ -1098,7 +1145,6 @@ function applyTranslations(){
   document.getElementById('searchInput').placeholder = t.searchPlaceholder;
   document.getElementById('lbl-startfrom').textContent = t.startfrom;
   document.getElementById('startInput').placeholder = t.startPlaceholder;
-  document.getElementById('lbl-display').textContent = t.display;
   document.getElementById('lbl-contrast').textContent = t.contrast;
   document.getElementById('lbl-audio').textContent = t.audio;
   document.getElementById('lbl-emergency').textContent = t.emergencyShelter;
@@ -1106,12 +1152,15 @@ function applyTranslations(){
   document.getElementById('lbl-share-route').textContent = t.shareLabel;
   document.getElementById('lbl-read-aloud').textContent =
     typeof readingSteps !== 'undefined' && readingSteps ? t.stopReading : t.readAloud;
-  document.getElementById('lbl-buildings').querySelector('span:first-child').textContent = t.buildings;
   document.getElementById('lbl-favourites').textContent = '⭐ ' + t.favourites;
   document.getElementById('favEmpty').textContent = t.noFavourites;
   setText('lbl-settings', t.settings);
   setText('settingsTitle', t.settingsTitle);
   setText('settingsLanguageTitle', t.settingsLanguage);
+  setText('settingsDisplayTitle', t.settingsDisplay);
+  setText('settingsDisplayHint', t.settingsDisplayHint);
+  setText('settingsContrastHint', t.settingsContrastHint);
+  setText('settingsAudioHint', t.settingsAudioHint);
   setText('settingsProfileTitle', t.settingsProfile);
   setText('settingsProfileHint', t.profileRouteHint);
   setText('onboardingLanguageProgress', t.onboardingStepLanguage);
@@ -1210,31 +1259,20 @@ if('speechSynthesis' in window){
   window.speechSynthesis.onvoiceschanged = ()=>{};
 }
 
-function setAudioEnabled(enabled){
+function setAudioEnabled(enabled, {persist = true, announce = true} = {}){
   audioOn = Boolean(enabled);
 
-  try{
-    localStorage.setItem(
-      'campusway.audioEnabled',
-      String(audioOn)
-    );
-  }catch(error){
-    // Storage is optional.
+  if(persist){
+    writeStoredPreference(PREFERENCE_KEYS.audio, String(audioOn));
   }
-
-  const audioButton = document.getElementById('audioBtn');
   const voiceArea = document.getElementById('voiceArea');
-
-if(audioButton){
-  audioButton.classList.toggle('active', audioOn);
-  audioButton.setAttribute('aria-pressed', String(audioOn));
-}
+  renderDisplayPreferences();
 
   if(voiceArea){
     voiceArea.classList.toggle('show', audioOn);
   }
 
-  if(audioOn){
+  if(audioOn && announce){
     speak(t.audioOn);
   }else if('speechSynthesis' in window){
     window.speechSynthesis.cancel();
@@ -1247,10 +1285,19 @@ function toggleAudio(){
 // ═══════════════════════════════════════════
 // HIGH CONTRAST
 // ═══════════════════════════════════════════
-function toggleContrast(){
-  const on = document.body.classList.toggle('hc');
-  document.getElementById('contrastBtn').classList.toggle('active', on);
-  document.getElementById('contrastBtn').setAttribute('aria-pressed', String(on));
+function setContrastEnabled(enabled, {persist = true, announce = true} = {}){
+  const on = Boolean(enabled);
+  const changed = highContrastOn !== on || document.body.classList.contains('hc') !== on;
+  highContrastOn = on;
+  document.body.classList.toggle('hc', on);
+
+  if(persist){
+    writeStoredPreference(PREFERENCE_KEYS.contrast, String(on));
+  }
+  renderDisplayPreferences();
+
+  if(!changed) return;
+
   if(typeof map !== 'undefined'){
     map.getContainer().style.background = on ? '#000' : '#EAF3ED';
     terrainCircles.forEach(c=>c.setStyle({fillColor: on?'#1A1A1A':'#D9EBDD', fillOpacity: on?0.5:0.6}));
@@ -1263,7 +1310,7 @@ function toggleContrast(){
       div.dataset.origText = div.innerHTML;
       div.style.background = '#FFD400';
       div.style.color = '#000';
-      const orig = div.dataset.origBg;
+      const orig = div.dataset.origBg || '';
       if(orig.includes('0891B2') || orig.includes('rgb(8, 145, 178)')) div.innerHTML = '🚻';
       else if(orig.includes('9CA3AF') || orig.includes('rgb(156, 163, 175)')) div.innerHTML = '🚪';
       else if(orig.includes('F59E0B') || orig.includes('rgb(245, 158, 11)')) div.innerHTML = '🛍️';
@@ -1278,7 +1325,11 @@ function toggleContrast(){
     }
   });
   buildLegend();
-  speak(on ? t.contrastOn : t.contrastOff);
+  if(announce) speak(on ? t.contrastOn : t.contrastOff);
+}
+
+function toggleContrast(){
+  setContrastEnabled(!highContrastOn);
 }
 
 // ═══════════════════════════════════════════
@@ -1352,7 +1403,12 @@ function renderProfileChoices(containerId, selectedProfile, onSelect){
 
 function setAccessibilityProfile(
   profileId,
-  {persist = true, announce = true, recalculate = true} = {}
+  {
+    persist = true,
+    announce = true,
+    recalculate = true,
+    applyRecommendedSettings = true
+  } = {}
 ){
   if(!PROFILE_IDS.has(profileId)) return false;
 
@@ -1361,10 +1417,9 @@ function setAccessibilityProfile(
   currentProfile = profileId;
   if(persist) writeStoredPreference(PREFERENCE_KEYS.profile, profileId);
 
-  if(currentProfile === 'visual' && !audioOn){
-    setAudioEnabled(true);
-  }else if(previousProfile === 'visual' && currentProfile !== 'visual'){
-    setAudioEnabled(false);
+  if(currentProfile === 'visual' && applyRecommendedSettings){
+    setAudioEnabled(true, {announce: false});
+    setContrastEnabled(true, {announce: false});
   }
 
   updateRestSpaceServiceButton();
@@ -2052,21 +2107,6 @@ function buildLegend(){
     <div class="legend-row">${dot('#64748B','4px','≡','≡')} ${t.legendStairs}</div>
     <div class="legend-row">${dot('#EF4444','50%','+','+')} ${t.legendClinic}</div>`;
 }
-// Buildings sidebar list
-function buildBuildingList(){
-  const el = document.getElementById('buildingList');
-  el.innerHTML='';
-  CAMPUS_DATA.buildings.forEach(b=>{
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className='building-item';
-    item.innerHTML=`<span class="bname">${localizedBuildingName(b)}</span><span class="he">${lang === "en" ? b.name_he : b.name}</span>`;
-    item.onclick=()=> pickDestination(b.name, b.lat, b.lng);
-    el.appendChild(item);
-  });
-}
-buildBuildingList();
-
 // Auto-fit map to show all buildings
 const allLatLngs = CAMPUS_DATA.buildings.map(b=>[b.lat,b.lng]);
 if(allLatLngs.length) map.fitBounds(allLatLngs, {padding:[60,60], maxZoom:16});
@@ -8139,14 +8179,6 @@ try {
   console.warn('Could not load favourites:', error);
 }
 
-function toggleBuildingList(){
-  const list = document.getElementById('buildingList');
-  const arrow = document.getElementById('buildingArrow');
-  const isOpen = list.style.display !== 'none';
-  list.style.display = isOpen ? 'none' : 'flex';
-  arrow.textContent = isOpen ? '▼' : '▲';
-}
-
 function favouriteButton(place) {
   const isSaved = favourites.some(
     item => favouriteKey(item) === favouriteKey(place)
@@ -8745,6 +8777,14 @@ if(
 window.addEventListener(
   'pageshow',
   handleCampusPageShow
+);
+
+// The indoor page can change the shared audio preference. Browsers may
+// restore this page from their back/forward cache, so refresh the switches
+// and active display state whenever the campus page becomes visible again.
+window.addEventListener(
+  'pageshow',
+  restoreDisplayPreferences
 );
 
 window.addEventListener('pagehide', () => {

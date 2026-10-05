@@ -185,3 +185,102 @@ test('changing profile in Settings preserves the destination and recalculates on
     {keepIndoorContext:true}
   ]);
 });
+
+test('choosing Visual enables its recommended display settings without disabling them later', () => {
+  const displayCalls = [];
+  const context = vm.createContext({
+    PROFILE_IDS:new Set(['general','mobility','visual','spatial','mental']),
+    PREFERENCE_KEYS:{profile:'accessibilityProfile'},
+    currentProfile:'general',
+    currentOutdoorDestination:null,
+    t:{profiles:[
+      {id:'visual',label:'Visual',sub:'Accessible display'},
+      {id:'general',label:'General',sub:'Fastest route'}
+    ]},
+    writeStoredPreference(){},
+    setAudioEnabled(value, options){ displayCalls.push(['audio',value,options]); },
+    setContrastEnabled(value, options){ displayCalls.push(['contrast',value,options]); },
+    updateRestSpaceServiceButton(){},
+    showAlert(){},
+    speak(){},
+    buildProfiles(){},
+    window:{CampusUI:null},
+    showRestSpacePreview(){},
+    clearRestSpacePreview(){},
+    routeTo(){}
+  });
+  const source = between(
+    index,
+    'function setAccessibilityProfile(',
+    'function showAlert('
+  );
+  vm.runInContext(source, context);
+
+  vm.runInContext("setAccessibilityProfile('visual')", context);
+  vm.runInContext("setAccessibilityProfile('general')", context);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(displayCalls)), [
+    ['audio',true,{announce:false}],
+    ['contrast',true,{announce:false}]
+  ]);
+});
+
+test('saved manual display choices override the Visual defaults on reload', () => {
+  const calls = [];
+  const stored = new Map([
+    ['campusway.audioEnabled','false'],
+    ['campusway.highContrastEnabled','false']
+  ]);
+  const context = vm.createContext({
+    PREFERENCE_KEYS:{
+      audio:'campusway.audioEnabled',
+      contrast:'campusway.highContrastEnabled'
+    },
+    currentProfile:'visual',
+    readStoredPreference(key){ return stored.get(key) ?? null; },
+    setAudioEnabled(value, options){ calls.push(['audio',value,options]); },
+    setContrastEnabled(value, options){ calls.push(['contrast',value,options]); }
+  });
+  const source = between(
+    index,
+    'function restoreDisplayPreferences(){',
+    'function changeSettingsLanguage('
+  );
+  vm.runInContext(source, context);
+  vm.runInContext('restoreDisplayPreferences()', context);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ['audio',false,{persist:false,announce:false}],
+    ['contrast',false,{persist:false,announce:false}]
+  ]);
+});
+
+test('an existing Visual profile receives display defaults once when no choices were saved', () => {
+  const calls = [];
+  const context = vm.createContext({
+    PREFERENCE_KEYS:{audio:'audio',contrast:'contrast'},
+    currentProfile:'visual',
+    readStoredPreference(){ return null; },
+    setAudioEnabled(value, options){ calls.push(['audio',value,options]); },
+    setContrastEnabled(value, options){ calls.push(['contrast',value,options]); }
+  });
+  const source = between(
+    index,
+    'function restoreDisplayPreferences(){',
+    'function changeSettingsLanguage('
+  );
+  vm.runInContext(source, context);
+  vm.runInContext('restoreDisplayPreferences()', context);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ['audio',true,{persist:true,announce:false}],
+    ['contrast',true,{persist:true,announce:false}]
+  ]);
+});
+
+test('returning from indoor navigation refreshes shared display preferences', () => {
+  assert.match(
+    index,
+    /window\.addEventListener\(\s*'pageshow',\s*restoreDisplayPreferences\s*\)/
+  );
+});

@@ -5,7 +5,6 @@
    stay in the main page script; this file only adds:
      • toasts (non-blocking replacement for alert())
      • the collapsible map key
-     • Saved / Buildings tabs
      • keyboard navigation + ARIA for the search suggestion lists
      • a short hint while Food / Shops are highlighted on the map
      • the "Indoor navigation" entry for people already inside a building
@@ -71,42 +70,6 @@
       apply(openLegend);
       writePref('campusway.legendOpen', String(openLegend));
     });
-  }
-
-  // ── Saved / Buildings tabs ────────────────────────────────────────────
-  function selectPlacesTab(which){
-    const savedTab = $('tabFavourites');
-    const buildingsTab = $('lbl-buildings');
-    const savedPanel = $('favouriteList');
-    const buildingsPanel = $('buildingList');
-    if(!savedTab || !buildingsTab || !savedPanel || !buildingsPanel) return;
-
-    const showSaved = which === 'saved';
-    savedTab.setAttribute('aria-selected', String(showSaved));
-    buildingsTab.setAttribute('aria-selected', String(!showSaved));
-    savedTab.tabIndex = showSaved ? 0 : -1;
-    buildingsTab.tabIndex = showSaved ? -1 : 0;
-    savedPanel.style.display = showSaved ? 'flex' : 'none';
-    buildingsPanel.style.display = showSaved ? 'none' : 'flex';
-  }
-
-  function setupPlacesTabs(){
-    const savedTab = $('tabFavourites');
-    const buildingsTab = $('lbl-buildings');
-    if(!savedTab || !buildingsTab) return;
-
-    savedTab.addEventListener('click', () => selectPlacesTab('saved'));
-    buildingsTab.addEventListener('click', () => selectPlacesTab('buildings'));
-    [savedTab, buildingsTab].forEach(tab => tab.addEventListener('keydown', event => {
-      if(event.key === 'ArrowRight' || event.key === 'ArrowLeft'){
-        event.preventDefault();
-        const next = tab === savedTab ? buildingsTab : savedTab;
-        next.click();
-        next.focus();
-      }
-    }));
-
-    selectPlacesTab('saved');
   }
 
   // ── Search suggestions: ARIA + keyboard ───────────────────────────────
@@ -279,14 +242,13 @@
 
   function init(){
     setupLegend();
-    setupPlacesTabs();
     setupSuggestionList('startInput', 'startSuggestions');
     setupSuggestionList('searchInput', 'searchSuggestions');
     setupServiceStatus();
     setupIndoorEntry();
   }
 
-  window.CampusUI = {toast, refresh, selectPlacesTab};
+  window.CampusUI = {toast, refresh};
 
   // Loaded at the end of <body>, so the elements already exist.
   init();
