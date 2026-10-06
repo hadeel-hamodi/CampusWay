@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v45-appearance-settings';
+const CACHE_NAME = 'campusway-v46-fresh-app-shell';
 
 const APP_FILES = [
 './',
@@ -107,19 +107,48 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+
+  function networkFirst({ignoreSearch = false} = {}){
+    return fetch(event.request)
+      .then(response => {
+        if(response.ok && requestUrl.origin === self.location.origin){
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request, {ignoreSearch}));
+  }
+
   // Live campus status: try the network first so new outages and closures
   // show up at once; use the saved copy when offline.
-  if(new URL(event.request.url).pathname.endsWith('/app/data/campus-status.json')){
+  if(requestUrl.pathname.endsWith('/app/data/campus-status.json')){
     event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if(response.ok){
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request, {ignoreSearch: true}))
+      networkFirst({ignoreSearch: true})
+    );
+    return;
+  }
+
+  // App-shell files change between releases. Fetch them from the network
+  // first so an old cached indoor page cannot miss new preferences or styles.
+  // Their precached copies still keep the app available without a connection.
+  const needsFreshAppShell =
+    requestUrl.origin === self.location.origin &&
+    (
+      event.request.mode === 'navigate' ||
+      event.request.destination === 'document' ||
+      event.request.destination === 'style' ||
+      event.request.destination === 'script'
+    );
+
+  if(needsFreshAppShell){
+    event.respondWith(
+      networkFirst({
+        ignoreSearch:
+          event.request.mode === 'navigate' ||
+          event.request.destination === 'document'
+      })
     );
     return;
   }
