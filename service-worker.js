@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v60-journey-plan-state';
+const CACHE_NAME = 'campusway-v61-journey-plan-ui';
 
 const APP_FILES = [
 './',

@@ -114,6 +114,7 @@
       <!-- 2. Route summary, how to move, start, progress -->
       <section class="card" aria-labelledby="navTitle">
         <h2 class="card-title" id="navTitle">Navigation</h2>
+        <section class="journey-plan" id="indoorJourneyPlan" hidden aria-label="Journey plan"></section>
 
         <div id="routeCard" aria-live="polite">
           <strong>No route yet</strong>
@@ -544,7 +545,24 @@ function localizedInstruction(en, ar, he, ru){
   return indoorLang==='ar' ? ar : indoorLang==='he' ? he : indoorLang==='ru' ? ru : en;
 }
 
+function renderIndoorJourneyPlan(){
+  const container=$('indoorJourneyPlan');
+  if(!container) return;
+  let plan=null;
+  try{plan=JSON.parse(sessionStorage.getItem('journeyPlan') || 'null');}catch(error){plan=null;}
+  if(!plan?.legs || plan.legs.length<2){container.hidden=true;return;}
+  const buildingName=key=>indoorBuildingName(key);
+  const label=leg=>{
+    if(leg.kind==='indoor') return `${localizedInstruction('Inside','داخل','בתוך','Внутри')} ${buildingName(leg.building)}`;
+    if(leg.kind==='outdoor') return localizedInstruction('Walk outdoors','المشي خارج المباني','הליכה בחוץ','Маршрут снаружи');
+    return `${buildingName(leg.fromBuilding)} → ${buildingName(leg.toBuilding)}`;
+  };
+  const title=localizedInstruction('Your journey','رحلتك','המסלול שלך','Ваш маршрут');
+  container.hidden=false;
+  container.innerHTML=`<strong>${title}</strong><ol>${plan.legs.map((leg,index)=>`<li class="${index<plan.currentLeg?'done':index===plan.currentLeg?'current':''}"><span>${index<plan.currentLeg?'✓':index+1}</span>${label(leg)}</li>`).join('')}</ol>`;
+}
 function applyIndoorTranslations(){
+  renderIndoorJourneyPlan();
   const floorPlanLabel = $('lbl-show-floor-plan');
 
 if(floorPlanLabel){
@@ -3724,6 +3742,7 @@ function completeNavigation(){
     );
 
 setJourneyPlanLegByKind('outdoor');
+if(typeof renderIndoorJourneyPlan === 'function') renderIndoorJourneyPlan();
 arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
 announceArrival();
 return;
@@ -3780,6 +3799,7 @@ return;
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
 setJourneyPlanLegByKind('outdoor');
+if(typeof renderIndoorJourneyPlan === 'function') renderIndoorJourneyPlan();
 arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
 announceArrival();
 return;

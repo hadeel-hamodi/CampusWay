@@ -974,3 +974,14 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
     white-space:nowrap;
   }
 }
+
+.journey-plan{margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);}
+.journey-plan strong{display:block;margin-bottom:8px;font-size:.8125rem;color:var(--ink);}
+.journey-plan ol{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;}
+.journey-plan li{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:var(--surface);color:var(--mid);font-size:.75rem;font-weight:650;}
+.journey-plan li span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--line);font-size:.6875rem;}
+.journey-plan li.current{background:var(--primary-soft);color:var(--primary);}
+.journey-plan li.current span{background:var(--primary);color:#fff;}
+.journey-plan li.done{color:var(--success-ink);}
+.journey-plan li.done span{background:var(--mint);color:#fff;}
+@media (max-width:420px){.journey-plan{padding:8px;}.journey-plan ol{gap:4px;}.journey-plan li{font-size:.6875rem;padding:4px 6px;}}

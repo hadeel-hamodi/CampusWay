@@ -188,6 +188,7 @@
           <strong id="routeTitle">Route</strong>
           <span id="routeSub"></span>
         </div>
+        <section class="journey-plan" id="outdoorJourneyPlan" hidden aria-label="Journey plan"></section>
         <div class="status-note" id="routeStatusNote" hidden></div>
         <button id="continueIndoorBtn" class="btn btn-primary" type="button" style="display:none;" onclick="startIndoorTransition()">
           <span id="lbl-continue-indoor">Continue indoors →</span>
@@ -6927,6 +6928,7 @@ if(hasOriginIndoorJourney){
 
   saveJourneyPlan(buildJourneyPlan({includeOutdoor: Boolean(outdoorResult && !sameBuilding && !activeSharedTransfer)}));
   document.getElementById('routeCard').classList.add('show');
+  renderJourneyPlan();
   map.closePopup();
 if(currentProfile === 'visual' && visualVoiceActive){
   // The guided flow announces the result after routing finishes.
@@ -10419,6 +10421,29 @@ function setJourneyPlanLeg(legIndex){
     console.warn('Could not update the journey plan:',error);
   }
 }
+function journeyLegLabel(leg){
+  const buildingNames={
+    main:'Main Building',rabin:'Rabin Building',student:'Student House',
+    madriga:'Terrace Building','multi-purpose':'Multi-Purpose Building',education:'Education and Science'
+  };
+  const name=localizedBuildingNameByEnglishName(buildingNames[leg.building] || leg.building || '');
+  if(leg.kind==='indoor') return `${{en:'Inside',he:'בתוך',ar:'داخل',ru:'Внутри'}[lang] || 'Inside'} ${name}`;
+  if(leg.kind==='outdoor') return ({en:'Walk outdoors',he:'הליכה בחוץ',ar:'المشي خارج المباني',ru:'Маршрут снаружи'}[lang] || 'Walk outdoors');
+  const from=localizedBuildingNameByEnglishName(buildingNames[leg.fromBuilding] || leg.fromBuilding || '');
+  const to=localizedBuildingNameByEnglishName(buildingNames[leg.toBuilding] || leg.toBuilding || '');
+  return `${from} → ${to}`;
+}
+
+function renderJourneyPlan(){
+  const container=document.getElementById('outdoorJourneyPlan');
+  if(!container) return;
+  let plan=null;
+  try{plan=JSON.parse(sessionStorage.getItem(JOURNEY_PLAN_STORAGE_KEY) || 'null');}catch(error){plan=null;}
+  if(!plan?.legs || plan.legs.length<2){container.hidden=true;return;}
+  const title={en:'Your journey',he:'המסלול שלך',ar:'رحلتك',ru:'Ваш маршрут'}[lang] || 'Your journey';
+  container.hidden=false;
+  container.innerHTML=`<strong>${title}</strong><ol>${plan.legs.map((leg,index)=>`<li class="${index<plan.currentLeg?'done':index===plan.currentLeg?'current':''}"><span>${index<plan.currentLeg?'✓':index+1}</span>${journeyLegLabel(leg)}</li>`).join('')}</ol>`;
+}
 function startIndoorTransition(){
   const indoorBtn = document.getElementById('continueIndoorBtn');
   const building = indoorBtn.dataset.building;
@@ -10437,6 +10462,7 @@ function startIndoorTransition(){
   }
 
   sessionStorage.setItem('journeyStage', stage);
+  renderJourneyPlan();
   sessionStorage.setItem('indoorBuilding', building);
 
 const transitionScreen =
