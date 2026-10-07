@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v51-schedule-reminders';
+const CACHE_NAME = 'campusway-v55-journey-transitions';
 
 const APP_FILES = [
 './',
@@ -24,7 +24,6 @@ const APP_FILES = [
   './app/prototype/campus-osm.json',
   './app/prototype/madriga-graph.js',
   './app/prototype/multi-purpose-graph.js',
-  './app/prototype/indoor.js',
 
   './wayframe/navigation-demo.html',
   './wayframe/step-detector.js',

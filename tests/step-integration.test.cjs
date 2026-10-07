@@ -263,7 +263,17 @@ test('Phone Sensors exit confirmation on the origin leg hands the journey back o
   assert.equal(h.run("sessionStorage.getItem('originIndoorComplete')"),'true');
   assert.equal(h.run("sessionStorage.getItem('journeyStage')"),'destination');
   await h.advanceTime(500);
-  assert.equal(h.run('window.replacedWith'),'../index.html?resumeJourney=1');
+
+// Stay indoors until the user chooses to continue.
+assert.equal(h.run('window.replacedWith'), undefined);
+assert.equal(h.run('arrivalNextStep.kind'), 'outdoor');
+
+// Run the action used by Continue outdoors.
+await h.run('arrivalNextStep.run()');
+assert.equal(
+  h.run('window.replacedWith'),
+  '../index.html?resumeJourney=1'
+);
 });
 
 test('endpoint pause and automatic recalibration facing start allows backtracking',async()=>{

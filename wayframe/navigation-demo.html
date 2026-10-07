@@ -15,8 +15,9 @@
       id="backToCampusBtn"
       class="back-btn"
       type="button"
-      onclick="window.location.href='../index.html'"
+      onclick="cancelIndoorJourney()"
     >← Campus map</button>
+
 
     <div class="brand">
       <span class="brand-name">Campus<span>Way</span></span>
@@ -142,9 +143,6 @@
           <button id="voiceGuideBtn" class="toolBtn" type="button" aria-pressed="false">
             <span aria-hidden="true">🔊</span> <span id="lbl-voice-guide">Voice guidance</span>
           </button>
-          <button id="indoorShareBtn" class="toolBtn" type="button" disabled>
-            <span aria-hidden="true">↗</span> <span id="lbl-indoor-share">Share</span>
-          </button>
           <button id="indoorReportBtn" class="toolBtn" type="button">
             <span aria-hidden="true">⚠</span> <span id="lbl-indoor-report">Report a problem</span>
           </button>
@@ -220,11 +218,9 @@
     <button id="arrivalPrimary" class="btn btn-primary" type="button">Done</button>
     <button id="arrivalSecondary" class="btn btn-secondary" type="button">New route from here</button>
   </div>
-  <a id="arrivalCampusLink" class="arrivalLink" href="../index.html">Back to campus map</a>
 </dialog>
 
 <script src="../app/ui/qr-code.js"></script>
-<script src="../app/ui/share.js"></script>
 <script src="../app/ui/campus-status.js"></script>
 <script src="step-detector.js"></script>
 <script src="heading-tracker.js"></script>
@@ -604,7 +600,9 @@ if($('currentBuildingName')){
     if(el) el.textContent=it(key);
   };
 
-  set('#backToCampusBtn','campusMap');
+  $('backToCampusBtn').textContent=localizedInstruction(
+    'Cancel journey','إلغاء الرحلة','ביטול המסלול','Отменить маршрут'
+  );
   set('#indoorSubtitle','indoorNav');
   set('label[for="building"]','building');
   set('#routeFormTitle','yourRoute');
@@ -3714,14 +3712,8 @@ function completeNavigation(){
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
 
-$('status').textContent = localizedInstruction(
-  'Opening the outdoor route...',
-  'جارٍ فتح المسار الخارجي...',
-  'פותח את המסלול החיצוני...',
-  'Открывается внешний маршрут...'
-);
-
-setTimeout(returnToOutdoorJourney, 400);
+arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
+announceArrival();
 return;
   }
 
@@ -3775,14 +3767,8 @@ return;
       'Exit reached. Continue on the outdoor route when you are ready.','وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.','הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.',
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
-$('status').textContent = localizedInstruction(
-  'Opening the outdoor route...',
-  'جارٍ فتح المسار الخارجي...',
-  'פותח את המסלול החיצוני...',
-  'Открывается внешний маршрут...'
-);
-
-setTimeout(returnToOutdoorJourney, 400);
+arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
+announceArrival();
 return;
   }
 
@@ -4929,20 +4915,53 @@ function indoorBuildingName(key){
   return option ? option.textContent : key;
 }
 
+function clearCompletedJourneyState(){
+  [
+    'journeyStage','indoorContext','indoorStartContext',
+    'sharedIndoorTransfer','intermediateIndoorTransfer',
+    'originIndoorComplete','sharedNavigationResume',
+    'madrigaTransferEntrance','campusTransitionDirection',
+    'outdoorJourneyContext'
+  ].forEach(key=>sessionStorage.removeItem(key));
+}
+
+function cancelIndoorJourney(){
+  returnToCampusMap();
+}
+function returnToCampusMap(){
+  try{
+    clearCompletedJourneyState();
+  }catch(error){
+    console.warn('Could not clear the completed journey:',error);
+  }
+  window.location.replace('../index.html');
+}
+
 function setRouteFromArrival(){
   const destination=routeNodes.at(-1);
   if(!destination) return;
-  clearRouteState();
-  $('fromFloor').value=destination.floor;
-  fillLocationSelect(destination.floor,'from','Choose starting point...');
-  ensureNodeOption('from',destination);
-  $('from').value=destination.id;
-  $('toFloor').value=destination.floor;
-  fillLocationSelect(destination.floor,'to','Choose destination...');
-  showChosenStart();
-  $('to').focus();
-}
 
+  // A finished indoor route is a useful starting point for the next journey,
+  // but the campus page owns planning between buildings. Keep only a small,
+  // validated snapshot and let that page rebuild its normal route state.
+  const buildingKey=BUILDING;
+  const start={
+    version:1,
+    buildingKey,
+    nodeId:destination.id,
+    label:destination.label || '',
+    displayLabel:destination._displayLabel || destination.label || ''
+  };
+
+  try{
+    sessionStorage.setItem('newRouteStartContext',JSON.stringify(start));
+    clearCompletedJourneyState();
+  }catch(error){
+    console.warn('Could not save the next-route starting point:',error);
+  }
+
+  window.location.replace('../index.html?newRouteFromHere=1');
+}
 function showArrivalDialog(next){
   const dialog=$('arrivalDialog');
   if(!dialog || typeof dialog.showModal!=='function') return;
@@ -4953,20 +4972,17 @@ function showArrivalDialog(next){
     : '';
   const primary=$('arrivalPrimary');
   const secondary=$('arrivalSecondary');
-  const campusLink=$('arrivalCampusLink');
   const close=()=>{ if(dialog.open) dialog.close(); };
 
   dialog.dataset.kind=next ? next.kind : 'arrived';
-  campusLink.textContent=localizedInstruction('Back to campus map','العودة إلى خريطة الحرم','חזרה למפת הקמפוס','Вернуться к карте кампуса');
 
   if(!next){
     $('arrivalTitle').textContent=localizedInstruction('You have arrived!','لقد وصلت!','הגעת ליעד!','Вы прибыли!');
     $('arrivalText').textContent=place;
     primary.textContent=localizedInstruction('Done','تم','סיום','Готово');
     secondary.textContent=localizedInstruction('New route from here','مسار جديد من هنا','מסלול חדש מכאן','Новый маршрут отсюда');
-    primary.onclick=close;
+    primary.onclick=()=>{ close(); returnToCampusMap(); };
     secondary.onclick=()=>{ close(); setRouteFromArrival(); };
-    campusLink.hidden=false;
   }else{
     const target=next.kind==='outdoor'
       ? outdoorJourneyTargetName()
@@ -4980,10 +4996,9 @@ function showArrivalDialog(next){
     primary.textContent=next.kind==='outdoor'
       ? localizedInstruction('Continue outdoors →','تابع في الخارج ←','המשך בחוץ ←','Продолжить снаружи →')
       : localizedInstruction('Continue →','تابع ←','המשך ←','Продолжить →');
-    secondary.textContent=localizedInstruction('Stay here','ابقَ هنا','הישאר כאן','Остаться здесь');
+    secondary.textContent=localizedInstruction('Cancel journey','إلغاء الرحلة','ביטול המסלול','Отменить маршрут');
     primary.onclick=()=>{ close(); next.run(); };
-    secondary.onclick=close;
-    campusLink.hidden=true;
+    secondary.onclick=()=>{ close(); returnToCampusMap(); };
   }
 
   if(dialog.open) dialog.close();
@@ -5303,27 +5318,6 @@ function openIndoorReport(){
   });
 }
 
-// ── Share the destination (opens the full campus journey for others) ──
-function shareIndoorDestination(){
-  const raw=$('to').value;
-  if(!raw || typeof CampusShare==='undefined'){
-    indoorToast(it('chooseDestinationFirst'));
-    return;
-  }
-  const nodeId=resolveSelection(raw);
-  const label=selectionLabel(raw);
-  const node=nodeById(nodeId);
-  const placeName=node?.type==='room'
-    ? localizedInstruction(`Room ${String(node.label).trim()}`,`غرفة ${String(node.label).trim()}`,`חדר ${String(node.label).trim()}`,`Комната ${String(node.label).trim()}`)
-    : label;
-  const title=`${placeName} — ${indoorBuildingDisplayName()}`;
-  const url=new URL('../index.html',window.location.href);
-  url.search='';
-  url.hash='';
-  url.searchParams.set('to',`room:${BUILDING}:${nodeId}`);
-  CampusShare.open({lang:indoorLang,title,url:url.toString(),text:title,onToast:indoorToast});
-}
-
 // Opening a direct indoor link: ?building=main&to=<node>&from=<node>
 let sharedIndoorLinkApplied=false;
 function applySharedIndoorLink(){
@@ -5377,10 +5371,8 @@ function setupIndoorExtras(){
   setupLocationSearch('to');
 
   $('lbl-voice-guide').textContent=it('voiceGuide');
-  $('lbl-indoor-share').textContent=it('share');
   $('lbl-indoor-report').textContent=it('report');
   $('lbl-indoor-emergency').textContent=it('emergency');
-  $('indoorShareBtn').disabled=false;
 
   const sharedVoice=indoorStoredPreference(
     SHARED_AUDIO_KEY,
@@ -5396,7 +5388,6 @@ function setupIndoorExtras(){
   setIndoorVoice(initialVoice, false);
 
   $('voiceGuideBtn').addEventListener('click',()=>setIndoorVoice(!indoorVoiceOn));
-  $('indoorShareBtn').addEventListener('click',shareIndoorDestination);
   $('indoorReportBtn').addEventListener('click',openIndoorReport);
   $('indoorEmergencyBtn').addEventListener('click',routeToIndoorShelter);
   $('to').addEventListener('change',()=>document.body.classList.remove('emergency-route'));

@@ -138,7 +138,6 @@ CampusWay/
 │   │   ├── route-instructions.js Outdoor turn-by-turn directions (EN/HE/AR)
 │   │   ├── madriga-graph.js      Terrace indoor graph as a JS global (used by search)
 │   │   ├── multi-purpose-graph.js Multi-Purpose indoor graph as a JS global (used by search)
-│   │   └── indoor.js             Early Terrace-only indoor router (prototype; not called)
 │   ├── ui/
 │   │   ├── campusway.css         Design tokens (colours, radii, shadows, fonts)
 │   │   ├── campus-map.css        Campus map layout and components

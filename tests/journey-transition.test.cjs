@@ -11,6 +11,10 @@ const navigation = fs.readFileSync(
   path.join(root, 'wayframe', 'navigation-demo.html'),
   'utf8'
 ).replace(/\r\n/g, '\n');
+const indoorCss = fs.readFileSync(
+  path.join(root, 'app', 'ui', 'indoor-nav.css'),
+  'utf8'
+).replace(/\r\n/g, '\n');
 
 function between(source, start, end) {
   const a = source.indexOf(start);
@@ -256,9 +260,11 @@ test('indoor screen keeps current guidance visible and highlights the sidebar st
   assert.doesNotMatch(banner[0], /\bhidden\b/);
   assert.doesNotMatch(banner[0], /aria-hidden="true"/);
   assert.match(navigation, /function syncIndoorStepListPosition\(\)/);
+  assert.doesNotMatch(navigation, /indoorShareBtn/);
+  assert.doesNotMatch(navigation, /shareIndoorDestination/);
 });
 
-test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {
+test('finishing the origin indoor leg waits for the user to continue outdoors', () => {
   const session = storage({
     journeyStage: 'origin',
     outdoorJourneyContext: '{}'
@@ -326,14 +332,13 @@ test('finishing the origin indoor leg automatically opens the saved outdoor jour
 
   assert.equal(session.values.get('originIndoorComplete'), 'true');
   assert.equal(session.values.get('journeyStage'), 'destination');
-    // Completion schedules the outdoor handoff without another confirmation.
-  assert.equal(timers.length, 1);
+    // The completion dialog lets the person choose when to leave the building.
+  assert.equal(timers.length, 0);
   assert.equal(replaced, null);
-  assert.match(element('status').textContent, /Opening the outdoor route/i);
-  assert.equal(vm.runInContext('arrivalNextStep', context), null);
+  assert.match(element('status').textContent, /Exit reached/i);
+  assert.equal(vm.runInContext('arrivalNextStep.kind', context), 'outdoor');
 
-  // Run the scheduled handoff.
-  timers[0].fn();
+  vm.runInContext('arrivalNextStep.run()', context);
 
   assert.equal(
     session.values.get('campusTransitionDirection'),
@@ -341,4 +346,106 @@ test('finishing the origin indoor leg automatically opens the saved outdoor jour
   );
   assert.equal(replaced, '../index.html?resumeJourney=1');
   assert.equal(backed, false);
+});
+
+test('New route from here returns to the campus planner with the arrived node', () => {
+  const session = storage({
+    journeyStage: 'destination',
+    indoorContext: '{}',
+    outdoorJourneyContext: '{}'
+  });
+  let replaced = null;
+  const context = vm.createContext({
+    sessionStorage: session.api,
+    BUILDING: 'rabin',
+    routeNodes: [{id: 'floor7_n42', floor: 'floor7', label: '7001'}],
+    window: {location: {replace(url) { replaced = url; }}},
+    console: {warn() {}}
+  });
+
+  vm.runInContext(
+    between(navigation, 'function clearCompletedJourneyState()', 'function showArrivalDialog(next)'),
+    context
+  );
+  vm.runInContext('setRouteFromArrival()', context);
+
+  assert.equal(replaced, '../index.html?newRouteFromHere=1');
+  assert.deepEqual(
+    JSON.parse(session.values.get('newRouteStartContext')),
+    {version: 1, buildingKey: 'rabin', nodeId: 'floor7_n42', label: '7001', displayLabel: '7001'}
+  );
+  assert.equal(session.values.has('indoorContext'), false);
+  assert.equal(session.values.has('outdoorJourneyContext'), false);
+});
+
+test('Done returns to the campus map and clears completed journey state', () => {
+  const session = storage({
+    journeyStage: 'destination',
+    indoorContext: '{}',
+    outdoorJourneyContext: '{}',
+    sharedNavigationResume: '{}'
+  });
+  let replaced = null;
+  const context = vm.createContext({
+    sessionStorage: session.api,
+    window: {location: {replace(url) { replaced = url; }}},
+    console: {warn() {}}
+  });
+
+  vm.runInContext(
+    between(navigation, 'function clearCompletedJourneyState()', 'function setRouteFromArrival()'),
+    context
+  );
+  vm.runInContext('returnToCampusMap()', context);
+
+  assert.equal(replaced, '../index.html');
+  assert.equal(session.values.has('journeyStage'), false);
+  assert.equal(session.values.has('indoorContext'), false);
+  assert.equal(session.values.has('outdoorJourneyContext'), false);
+  assert.equal(session.values.has('sharedNavigationResume'), false);
+});
+test('campus planner restores a new route start from the arrived indoor node', async () => {
+  const session = storage({
+    newRouteStartContext: JSON.stringify({
+      version: 1,
+      buildingKey: 'rabin',
+      nodeId: 'floor7_n42',
+      label: '7001',
+      displayLabel: 'Room 7001'
+    })
+  });
+  const calls = [];
+  let replacedUrl = null;
+  const search = {focus() { calls.push('focus'); }};
+  const context = vm.createContext({
+    sessionStorage: session.api,
+    URLSearchParams,
+    URL,
+    window: {
+      location: {
+        search: '?newRouteFromHere=1',
+        href: 'https://example.test/index.html?newRouteFromHere=1'
+      },
+      history: {replaceState(_state, _title, url) { replacedUrl = url; }}
+    },
+    document: {getElementById(id) { return id === 'searchInput' ? search : null; }},
+    INDOOR_NAVIGATION_BUILDINGS: {'Rabin Building': 'rabin'},
+    NEW_ROUTE_START_STORAGE_KEY: 'newRouteStartContext',
+    indoorSearchGraphsReady: Promise.resolve(),
+    graphForBuilding() {
+      return {floors: {floor7: {nodes: [{id: 'floor7_n42', label: '7001'}]}}};
+    },
+    pickIndoorStart(...args) { calls.push(args); },
+    Object
+  });
+
+  vm.runInContext(
+    between(index, 'async function restoreNewRouteStartFromArrival()', 'async function handleCampusPageShow()'),
+    context
+  );
+  assert.equal(await vm.runInContext('restoreNewRouteStartFromArrival()', context), true);
+  assert.deepEqual(calls[0], ['floor7_n42', '7001', 'rabin', 'Room 7001']);
+  assert.equal(calls.includes('focus'), true);
+  assert.equal(replacedUrl, '/index.html');
+  assert.equal(session.values.has('newRouteStartContext'), false);
 });

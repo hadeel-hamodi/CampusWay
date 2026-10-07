@@ -472,6 +472,7 @@ select:disabled{background-color:var(--surface-2);color:#94A3B8;cursor:not-allow
   border:1px solid var(--line);
   box-shadow:var(--shadow-lg);
 }
+.navBanner[hidden]{display:none !important;}
 .turnIcon{
   width:46px;height:46px;
   display:grid;place-items:center;
@@ -586,8 +587,6 @@ select:disabled{background-color:var(--surface-2);color:#94A3B8;cursor:not-allow
 .arrivalDialog p{margin:0 0 20px;font-size:.9375rem;color:var(--mid);line-height:1.45;}
 .arrivalActions{display:flex;flex-direction:column;gap:8px;}
 .arrivalActions .btn{width:100%;min-height:48px;font-size:1rem;}
-.arrivalLink{display:inline-block;margin-top:14px;font-size:.875rem;font-weight:600;color:var(--primary);}
-.arrivalLink[hidden]{display:none;}
 @media (prefers-reduced-motion: reduce){
   .arrivalDialog[open],.arrivalIcon::after{animation:none!important;}
   .arrivalCheck{animation:none!important;stroke-dashoffset:0;}
@@ -828,7 +827,6 @@ body.hc .arrivalIcon::after,
 body.hc .arrivalDialog[data-kind="outdoor"] .arrivalIcon::after,
 body.hc .arrivalDialog[data-kind="building"] .arrivalIcon::after{border-color:#FFD400;}
 body.hc .arrivalDialog p,
-body.hc .arrivalLink,
 body.hc .cw-dialog h3,
 body.hc .cw-dialog-sub,
 body.hc .cw-field-label,

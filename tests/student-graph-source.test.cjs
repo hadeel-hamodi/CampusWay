@@ -380,3 +380,8 @@ test('Student room search uses destinations from the canonical graph', () => {
   const removed = vm.runInContext("getStartMatches('001')", context);
   assert.equal(removed.roomMatches.length, 0);
 });
+
+test('the campus page does not load the retired Terrace-only indoor prototype', () => {
+  assert.doesNotMatch(index, /app\/prototype\/indoor\.js/);
+  assert.doesNotMatch(serviceWorker, /app\/prototype\/indoor\.js/);
+});
