@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v54-arrival-actions';
+const CACHE_NAME = 'campusway-v55-journey-transitions';
 
 const APP_FILES = [
 './',

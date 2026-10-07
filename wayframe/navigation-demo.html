@@ -15,8 +15,9 @@
       id="backToCampusBtn"
       class="back-btn"
       type="button"
-      onclick="window.location.href='../index.html'"
+      onclick="cancelIndoorJourney()"
     >← Campus map</button>
+
 
     <div class="brand">
       <span class="brand-name">Campus<span>Way</span></span>
@@ -599,7 +600,9 @@ if($('currentBuildingName')){
     if(el) el.textContent=it(key);
   };
 
-  set('#backToCampusBtn','campusMap');
+  $('backToCampusBtn').textContent=localizedInstruction(
+    'Cancel journey','إلغاء الرحلة','ביטול המסלול','Отменить маршрут'
+  );
   set('#indoorSubtitle','indoorNav');
   set('label[for="building"]','building');
   set('#routeFormTitle','yourRoute');
@@ -3709,14 +3712,8 @@ function completeNavigation(){
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
 
-$('status').textContent = localizedInstruction(
-  'Opening the outdoor route...',
-  'جارٍ فتح المسار الخارجي...',
-  'פותח את המסלול החיצוני...',
-  'Открывается внешний маршрут...'
-);
-
-setTimeout(returnToOutdoorJourney, 400);
+arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
+announceArrival();
 return;
   }
 
@@ -3770,14 +3767,8 @@ return;
       'Exit reached. Continue on the outdoor route when you are ready.','وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.','הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.',
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
-$('status').textContent = localizedInstruction(
-  'Opening the outdoor route...',
-  'جارٍ فتح المسار الخارجي...',
-  'פותח את המסלול החיצוני...',
-  'Открывается внешний маршрут...'
-);
-
-setTimeout(returnToOutdoorJourney, 400);
+arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
+announceArrival();
 return;
   }
 
@@ -4934,6 +4925,9 @@ function clearCompletedJourneyState(){
   ].forEach(key=>sessionStorage.removeItem(key));
 }
 
+function cancelIndoorJourney(){
+  returnToCampusMap();
+}
 function returnToCampusMap(){
   try{
     clearCompletedJourneyState();
@@ -5002,9 +4996,9 @@ function showArrivalDialog(next){
     primary.textContent=next.kind==='outdoor'
       ? localizedInstruction('Continue outdoors →','تابع في الخارج ←','המשך בחוץ ←','Продолжить снаружи →')
       : localizedInstruction('Continue →','تابع ←','המשך ←','Продолжить →');
-    secondary.textContent=localizedInstruction('Stay here','ابقَ هنا','הישאר כאן','Остаться здесь');
+    secondary.textContent=localizedInstruction('Cancel journey','إلغاء الرحلة','ביטול המסלול','Отменить маршрут');
     primary.onclick=()=>{ close(); next.run(); };
-    secondary.onclick=close;
+    secondary.onclick=()=>{ close(); returnToCampusMap(); };
   }
 
   if(dialog.open) dialog.close();

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -6956,7 +6956,13 @@ if(currentProfile === 'visual' && visualVoiceActive){
 function closeRoute(){
   outdoorRouteRequestId++;
   currentOutdoorDestination = null;
-  sessionStorage.removeItem(OUTDOOR_JOURNEY_STORAGE_KEY);
+  [
+    OUTDOOR_JOURNEY_STORAGE_KEY, 'journeyStage', 'indoorContext',
+    'indoorStartContext', 'sharedIndoorTransfer',
+    'intermediateIndoorTransfer', 'originIndoorComplete',
+    'sharedNavigationResume', 'madrigaTransferEntrance',
+    'campusTransitionDirection'
+  ].forEach(key => sessionStorage.removeItem(key));
   document.getElementById('routeCard').classList.remove('show', 'emergency');
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
   clearInterval(window._dashAnim);

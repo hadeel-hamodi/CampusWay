@@ -261,7 +261,7 @@ test('indoor screen keeps the route guide in the sidebar instead of duplicating 
   assert.doesNotMatch(navigation, /shareIndoorDestination/);
 });
 
-test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {
+test('finishing the origin indoor leg waits for the user to continue outdoors', () => {
   const session = storage({
     journeyStage: 'origin',
     outdoorJourneyContext: '{}'
@@ -329,14 +329,13 @@ test('finishing the origin indoor leg automatically opens the saved outdoor jour
 
   assert.equal(session.values.get('originIndoorComplete'), 'true');
   assert.equal(session.values.get('journeyStage'), 'destination');
-    // Completion schedules the outdoor handoff without another confirmation.
-  assert.equal(timers.length, 1);
+    // The completion dialog lets the person choose when to leave the building.
+  assert.equal(timers.length, 0);
   assert.equal(replaced, null);
-  assert.match(element('status').textContent, /Opening the outdoor route/i);
-  assert.equal(vm.runInContext('arrivalNextStep', context), null);
+  assert.match(element('status').textContent, /Exit reached/i);
+  assert.equal(vm.runInContext('arrivalNextStep.kind', context), 'outdoor');
 
-  // Run the scheduled handoff.
-  timers[0].fn();
+  vm.runInContext('arrivalNextStep.run()', context);
 
   assert.equal(
     session.values.get('campusTransitionDirection'),
