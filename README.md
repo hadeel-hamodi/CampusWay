@@ -132,8 +132,9 @@ CampusWay is a student project under active development. Mapping coverage, devic
 
 ## Team
 
-- Yasmin ([@ja4smin](https://github.com/ja4smin))
+- Jasmin Taya ([@ja4smin](https://github.com/ja4smin))
 - Hadeel Hamodi ([@hadeel-hamodi](https://github.com/hadeel-hamodi))
 - Naseem Muhammad
+- Shady Salem
 
 Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. Map library: [Leaflet](https://leafletjs.com/).
