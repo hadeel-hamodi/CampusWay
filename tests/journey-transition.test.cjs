@@ -240,7 +240,13 @@ test('persistent preferences prefer local storage and mirror new values to the s
 test('outdoor directions wait until an origin indoor leg has reached the exit', () => {
   assert.match(index, /const awaitingOriginIndoorExit[\s\S]*?originIndoorComplete/);
   assert.match(index, /if\(awaitingOriginIndoorExit\)\{[\s\S]*?renderRouteSteps\(null\)/);
-  assert.match(index, /Outdoor directions will appear after you reach the exit/);
+  assert.match(index, /routeSub'\)\.textContent = t\.startIndoorFirst/);
+  assert.doesNotMatch(index, /localizedInstruction\(/);
+
+  for(const language of ['en', 'he', 'ar', 'ru']){
+    const table = between(index, `  ${language}:{`, language === 'ru' ? '\n  }\n};' : '\n  },');
+    assert.match(table, /startIndoorFirst:/, `${language} includes the indoor-first route message`);
+  }
 });
 
 test('indoor screen keeps the route guide in the sidebar instead of duplicating it on the map', () => {

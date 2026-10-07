@@ -464,7 +464,7 @@ const T = {
     continueIndoors:'Continue indoors →', switchingIndoor:'Switching to indoor mode...', room:'Room',
     yourLocation:'Your location', hour:'hr', hours:'hours', noBuildingOrRoom:'No matching building or room found.',
     planRoute:'Plan your route', campusMapLabel:'Campus map', zoomIn:'Zoom in', zoomOut:'Zoom out', closePopup:'Close popup', servicesHint:'Closest to your starting point', mapKey:'Map key', changeProfile:'Change',
-    startIndoorRoute:'Start indoor route →', nearestShelter:'Nearest shelter', routeTo:'to', clearRoute:'Clear route',
+    startIndoorRoute:'Start indoor route →', startIndoorFirst:'Start the indoor route first. Outdoor directions will appear after you reach the exit.', nearestShelter:'Nearest shelter', routeTo:'to', clearRoute:'Clear route',
     headerSub:'University of Haifa · Accessible Navigation', useMyLocation:'Use my location', voiceSearch:'Search by voice',
     showCampus:'Show whole campus', outOfService:'Out of service', voiceError:'Voice search did not work. Please try again or type instead.',
     noMatchHint:'Try a building name, a room number (e.g. 5001) or a place like Library.',
@@ -540,7 +540,7 @@ const T = {
     continueIndoors:'המשך לניווט בתוך הבניין ←', switchingIndoor:'עובר למצב ניווט בתוך הבניין...', room:'חדר',
     yourLocation:'המיקום שלך', hour:'שעה', hours:'שעות', noBuildingOrRoom:'לא נמצא בניין או חדר תואם.',
     planRoute:'תכנון מסלול', campusMapLabel:'מפת הקמפוס', zoomIn:'הגדלה', zoomOut:'הקטנה', closePopup:'סגירת החלון הקופץ', servicesHint:'הקרובים ביותר לנקודת ההתחלה שלך', mapKey:'מקרא', changeProfile:'שינוי',
-    startIndoorRoute:'התחל ניווט בתוך הבניין ←', nearestShelter:'המרחב המוגן הקרוב ביותר', routeTo:'אל', clearRoute:'ניקוי מסלול',
+    startIndoorRoute:'התחל ניווט בתוך הבניין ←', startIndoorFirst:'התחל קודם במסלול הפנימי. ההנחיות בחוץ יופיעו לאחר ההגעה ליציאה.', nearestShelter:'המרחב המוגן הקרוב ביותר', routeTo:'אל', clearRoute:'ניקוי מסלול',
     headerSub:'אוניברסיטת חיפה · ניווט נגיש', useMyLocation:'השתמש במיקום שלי', voiceSearch:'חיפוש קולי',
     showCampus:'הצג את כל הקמפוס', outOfService:'לא בשירות', voiceError:'החיפוש הקולי לא הצליח. נסה שוב או הקלד.',
     noMatchHint:'נסה שם בניין, מספר חדר (למשל 5001) או מקום כמו ספרייה.',
@@ -616,7 +616,7 @@ const T = {
     continueIndoors:'تابع إلى الداخل ←', switchingIndoor:'جارٍ الانتقال إلى وضع الملاحة داخل المبنى...', room:'غرفة',
     yourLocation:'موقعك', hour:'ساعة', hours:'ساعات', noBuildingOrRoom:'لم يتم العثور على مبنى أو غرفة مطابقة.',
     planRoute:'تخطيط المسار', campusMapLabel:'خريطة الحرم الجامعي', zoomIn:'تكبير', zoomOut:'تصغير', closePopup:'إغلاق النافذة المنبثقة', servicesHint:'الأقرب إلى نقطة البداية', mapKey:'دليل الخريطة', changeProfile:'تغيير',
-    startIndoorRoute:'ابدأ الملاحة داخل المبنى ←', nearestShelter:'أقرب ملجأ', routeTo:'إلى', clearRoute:'مسح المسار',
+    startIndoorRoute:'ابدأ الملاحة داخل المبنى ←', startIndoorFirst:'ابدأ بالمسار الداخلي أولًا. ستظهر إرشادات الخارج بعد الوصول إلى المخرج.', nearestShelter:'أقرب ملجأ', routeTo:'إلى', clearRoute:'مسح المسار',
     headerSub:'جامعة حيفا · ملاحة ميسّرة', useMyLocation:'استخدم موقعي', voiceSearch:'البحث الصوتي',
     showCampus:'عرض الحرم الجامعي كاملًا', outOfService:'خارج الخدمة', voiceError:'لم ينجح البحث الصوتي. حاول مرة أخرى أو اكتب.',
     noMatchHint:'جرّب اسم مبنى أو رقم غرفة (مثل 5001) أو مكانًا مثل المكتبة.',
@@ -687,7 +687,7 @@ const T = {
     continueIndoors:'Продолжить внутри →', switchingIndoor:'Переход к навигации внутри здания…', room:'Аудитория',
     yourLocation:'Ваше местоположение', hour:'ч', hours:'ч', noBuildingOrRoom:'Подходящее здание или аудитория не найдены.',
     planRoute:'Планирование маршрута', campusMapLabel:'Карта кампуса', zoomIn:'Увеличить', zoomOut:'Уменьшить', closePopup:'Закрыть всплывающее окно', servicesHint:'Ближайшие к начальной точке', mapKey:'Обозначения', changeProfile:'Изменить',
-    startIndoorRoute:'Начать маршрут внутри →', nearestShelter:'Ближайшее укрытие', routeTo:'до', clearRoute:'Очистить маршрут',
+    startIndoorRoute:'Начать маршрут внутри →', startIndoorFirst:'Сначала начните внутренний маршрут. Указания снаружи появятся после выхода.', nearestShelter:'Ближайшее укрытие', routeTo:'до', clearRoute:'Очистить маршрут',
     headerSub:'Хайфский университет · Доступная навигация', useMyLocation:'Использовать моё местоположение', voiceSearch:'Голосовой поиск',
     showCampus:'Показать весь кампус', outOfService:'Не работает', voiceError:'Голосовой поиск не сработал. Попробуйте снова или введите текст.',
     noMatchHint:'Попробуйте название здания, номер аудитории (например, 5001) или место, например библиотеку.',
@@ -6883,12 +6883,7 @@ const awaitingOriginIndoorExit =
 
 if(awaitingOriginIndoorExit){
   renderRouteSteps(null);
-  document.getElementById('routeSub').textContent = localizedInstruction(
-    'Start the indoor route first. Outdoor directions will appear after you reach the exit.',
-    'ابدأ بالمسار الداخلي أولًا. ستظهر إرشادات الخارج بعد الوصول إلى المخرج.',
-    'התחל קודם במסלול הפנימי. ההנחיות בחוץ יופיעו לאחר ההגעה ליציאה.',
-    'Сначала начните внутренний маршрут. Указания снаружи появятся после выхода.'
-  );
+  document.getElementById('routeSub').textContent = t.startIndoorFirst;
 }
 
 if(hasOriginIndoorJourney){
