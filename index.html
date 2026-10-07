@@ -188,6 +188,7 @@
           <strong id="routeTitle">Route</strong>
           <span id="routeSub"></span>
         </div>
+        <div class="journey-progress" id="outdoorJourneyProgress" hidden aria-label="Journey progress"></div>
         <div class="status-note" id="routeStatusNote" hidden></div>
         <button id="continueIndoorBtn" class="btn btn-primary" type="button" style="display:none;" onclick="startIndoorTransition()">
           <span id="lbl-continue-indoor">Continue indoors →</span>
@@ -6925,6 +6926,7 @@ if(hasOriginIndoorJourney){
 }
 
   document.getElementById('routeCard').classList.add('show');
+  renderOutdoorJourneyProgress();
   map.closePopup();
 if(currentProfile === 'visual' && visualVoiceActive){
   // The guided flow announces the result after routing finishes.
@@ -10364,6 +10366,29 @@ async function resumeOutdoorJourneyAfterOrigin(){
   };
 }
 
+function renderOutdoorJourneyProgress(){
+  const progress = document.getElementById('outdoorJourneyProgress');
+  if(!progress) return;
+
+  const hasIndoorStart = Boolean(sessionStorage.getItem('indoorStartContext'));
+  const hasIndoorDestination = Boolean(sessionStorage.getItem('indoorContext'));
+  const stage = sessionStorage.getItem('journeyStage');
+  const show = hasIndoorStart || hasIndoorDestination || Boolean(sessionStorage.getItem(OUTDOOR_JOURNEY_STORAGE_KEY));
+  if(!show){ progress.hidden = true; return; }
+
+  const current = stage === 'origin' || (!sessionStorage.getItem('originIndoorComplete') && hasIndoorStart)
+    ? 1 : 2;
+  const labels = {
+    en:['Inside','Outdoors','Inside'], he:['בפנים','בחוץ','בפנים'],
+    ar:['داخل المبنى','خارج المباني','داخل المبنى'], ru:['Внутри','Снаружи','Внутри']
+  }[lang] || ['Inside','Outdoors','Inside'];
+  progress.hidden = false;
+  progress.innerHTML = labels.map((label, index) => {
+    const step = index + 1;
+    const state = step < current ? 'done' : step === current ? 'current' : '';
+    return `<span class="journey-step ${state}"><b>${step < current ? '✓' : step}</b>${label}</span>`;
+  }).join('<i aria-hidden="true"></i>');
+}
 function startIndoorTransition(){
   const indoorBtn = document.getElementById('continueIndoorBtn');
   const building = indoorBtn.dataset.building;
