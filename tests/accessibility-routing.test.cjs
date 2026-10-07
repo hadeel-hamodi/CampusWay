@@ -7,6 +7,8 @@ const { test } = require('node:test');
 const root = path.join(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const navigation = fs.readFileSync(path.join(root, 'wayframe', 'navigation-demo.html'), 'utf8');
+const sharedCss = fs.readFileSync(path.join(root, 'app', 'ui', 'campusway.css'), 'utf8');
+const indoorCss = fs.readFileSync(path.join(root, 'app', 'ui', 'indoor-nav.css'), 'utf8');
 const outdoor = fs.readFileSync(path.join(root, 'app', 'prototype', 'outdoor-routing.js'), 'utf8');
 const routePlanner = require('../wayframe/route-planner.js');
 
@@ -17,62 +19,115 @@ function between(source, start, end) {
   return source.slice(a, b);
 }
 
-test('saved Mobility profile stays selected and is omitted from change choices', () => {
-  const storage = new Map([['accessibilityProfile', 'mobility']]);
-  const profileList = { children: [], _html: '', appendChild(button) { this.children.push(button); } };
-  Object.defineProperty(profileList, 'innerHTML', {
-    get() { return this._html; },
-    set(value) { this._html = value; if(value === '') this.children = []; }
-  });
-  const createButton = () => {
-    const button = { className: '', dataset: {}, innerHTML: '', onclick: null };
-    button.classList = {
-      add(name) { if(!button.className.split(/\s+/).includes(name)) button.className += ` ${name}`; },
-      remove(name) { button.className = button.className.split(/\s+/).filter(value => value && value !== name).join(' '); }
-    };
-    return button;
-  };
-  const document = {
-    getElementById(id) { assert.equal(id, 'profileList'); return profileList; },
-    createElement(type) { assert.equal(type, 'button'); return createButton(); },
-    querySelectorAll() { return profileList.children; }
-  };
-  const context = vm.createContext({
-    document,
-    sessionStorage: {
-      getItem(key) { return storage.get(key) ?? null; },
-      setItem(key, value) { storage.set(key, value); }
-    },
-    t: { profiles: [
-      {id:'general', label:'General', sub:'Fast'},
-      {id:'mobility', label:'Mobility', sub:'No stairs'},
-      {id:'visual', label:'Visual', sub:'Guide'},
-      {id:'spatial', label:'Spatial', sub:'Simple'},
-      {id:'mental', label:'Mental', sub:'Quiet'}
-    ]},
-    showAlert() {}, speak() {}, routeTo() {}, updateRestSpaceServiceButton() {},
-    currentOutdoorDestination: null
-  });
-  const state = between(index, 'const PROFILE_IDS', 'let audioOn');
-  const profiles = between(index, 'const ICONS =', 'function showAlert(');
-  vm.runInContext(`${state}\n${profiles}`, context);
-  vm.runInContext('buildProfiles()', context);
-  assert.equal(vm.runInContext('currentProfile', context), 'mobility');
-  assert.equal(
-  profileList.children.some(button => button.dataset.id === 'mobility'),
-  false
-);
-assert.equal(profileList.children.length, 4);
-assert.equal(vm.runInContext('currentProfile', context), 'mobility');
-  assert.doesNotMatch(profileList.children.find(button => button.dataset.id === 'general').className, /active/);
+test('profile choice moved from the route planner into onboarding and Settings', () => {
+  const planner = between(
+    index,
+    '<section class="panel planner"',
+    '<!-- Route result -->'
+  );
 
-  vm.runInContext("t.profiles=t.profiles.map(profile=>({...profile,label:'AR '+profile.label})); buildProfiles()", context);
-  assert.equal(
-  profileList.children.some(button => button.dataset.id === 'mobility'),
-  false
-);
-assert.equal(profileList.children.length, 4);
-assert.equal(vm.runInContext('currentProfile', context), 'mobility');
+  assert.doesNotMatch(planner, /profileToggle|profileList|profile-field/);
+  assert.match(index, /id="onboardingProfileList"/);
+  assert.match(index, /id="settingsProfileList"/);
+  assert.match(index, /id="settingsBtn"/);
+  assert.doesNotMatch(index, /id="langSwitchBtn"/);
+});
+
+test('display and audio controls live in Settings and share audio with indoor navigation', () => {
+  const topbar = between(index, '<header class="topbar"', '</header>');
+  const settings = between(index, '<div class="settings-dialog"', '<div class="toast-region"');
+
+  assert.doesNotMatch(topbar, /id="contrastBtn"|id="audioBtn"/);
+  assert.match(settings, /id="contrastBtn"[^>]+role="switch"/);
+  assert.match(settings, /id="audioBtn"[^>]+role="switch"/);
+  assert.match(navigation, /SHARED_AUDIO_KEY='campusway\.audioEnabled'/);
+  assert.match(navigation, /sharedVoice!==null[\s\S]+savedVoice!==null[\s\S]+selectedRoutingProfile\(\)==='visual'/);
+});
+
+test('Settings offers a persistent normal or large text size choice', () => {
+  const settings = between(index, '<div class="settings-dialog"', '<div class="toast-region"');
+
+  assert.match(settings, /id="settingsTextSizeOptions"[^>]+role="radiogroup"/);
+  assert.match(settings, /role="radio"[^>]+data-text-size="normal"/);
+  assert.match(settings, /role="radio"[^>]+data-text-size="large"/);
+  assert.match(index, /textSize:\s*'campusway\.textSize'/);
+  assert.match(index, /document\.documentElement\.dataset\.textSize\s*=\s*nextSize/);
+});
+
+function indoorAppearance(localEntries = [], sessionEntries = []) {
+  const persistent = new Map(localEntries);
+  const session = new Map(sessionEntries);
+  const classes = new Set();
+  const context = vm.createContext({
+    localStorage:{
+      getItem(key){ return persistent.get(key) ?? null; }
+    },
+    sessionStorage:{
+      getItem(key){ return session.get(key) ?? null; },
+      setItem(key, value){ session.set(key, value); }
+    },
+    document:{
+      body:{classList:{
+        contains(name){ return classes.has(name); },
+        toggle(name, enabled){
+          if(enabled) classes.add(name);
+          else classes.delete(name);
+        }
+      }},
+      documentElement:{dataset:{}}
+    }
+  });
+  vm.runInContext(between(
+    navigation,
+    'function indoorStoredPreference(',
+    'function indoorLanguage()'
+  ), context);
+  return {context, classes, session};
+}
+
+test('indoor navigation restores shared appearance and prefers persistent values', () => {
+  const restored = indoorAppearance(
+    [
+      ['campusway.highContrastEnabled','true'],
+      ['campusway.textSize','large'],
+      ['accessibilityProfile','general']
+    ],
+    [
+      ['campusway.highContrastEnabled','false'],
+      ['campusway.textSize','normal']
+    ]
+  );
+  assert.equal(restored.classes.has('hc'), true);
+  assert.equal(restored.context.document.documentElement.dataset.textSize, 'large');
+  assert.equal(restored.session.get('campusway.highContrastEnabled'), 'true');
+
+  const normal = indoorAppearance([
+    ['campusway.highContrastEnabled','false'],
+    ['campusway.textSize','normal']
+  ]);
+  assert.equal(normal.classes.has('hc'), false);
+  assert.equal(normal.context.document.documentElement.dataset.textSize, 'normal');
+
+  const visualDefault = indoorAppearance([
+    ['accessibilityProfile','visual']
+  ]);
+  assert.equal(visualDefault.classes.has('hc'), true);
+});
+
+test('shared and indoor styles cover large text and high-contrast navigation', () => {
+  assert.match(sharedCss, /html\[data-text-size="large"\]\{font-size:112\.5%;\}/);
+  assert.match(sharedCss, /body\.hc\{[\s\S]+--primary:#FFD400/);
+  assert.match(indoorCss, /body\.hc \.route-core\{stroke:#FFD400;\}/);
+  assert.match(indoorCss, /body\.hc #mapViewport,[\s\S]+background:#000/);
+  assert.match(indoorCss, /body\.hc #startBtn:not\(:disabled\)[\s\S]+color:#000/);
+  assert.doesNotMatch(indoorCss, /font-size:\s*[0-9.]+px/);
+});
+
+test('saved places remain in the sidebar without the redundant buildings list', () => {
+  assert.match(index, /id="favouriteList"/);
+  assert.match(index, /id="lbl-favourites"/);
+  assert.doesNotMatch(index, /id="buildingList"|id="lbl-buildings"|id="tabFavourites"/);
+  assert.doesNotMatch(index, /function buildBuildingList\(|function toggleBuildingList\(/);
 });
 
 test('outdoor Mobility route excludes OSM steps while a general route may use them', async () => {
@@ -174,6 +229,11 @@ function indoorHarness(graph, accessible = true, profile = 'general') {
     let routeNodes=[{id:'old-stairs',type:'stairs',floor:'floor1',x:0,y:0},{id:'old-room',type:'room',floor:'floor2',x:1,y:1}];
     let progressIndex=1,progressT=.5,navigationActive=true,sensorFloorBoundary=true,followCamera=false,headingDeg=0;
   `);
+  run(between(
+    navigation,
+    'function indoorStoredPreference(',
+    'function indoorLanguage()'
+  ));
   run(between(navigation, 'function buildGraph(){', 'function bestDestinationNode('));
   run(between(navigation, 'function describeRoute(', 'function updateTurnInstruction(){'));
   return {run, element};
@@ -281,6 +341,14 @@ test('Mobility arriving indoors keeps the accessible option on and locked', () =
     localizedInstruction(en){return en}
   });
   context.$ = id => context.document.getElementById(id);
+  vm.runInContext(
+    between(
+      navigation,
+      'function indoorStoredPreference(',
+      'function indoorLanguage()'
+    ),
+    context
+  );
   const initialization = between(navigation, '// Use accessibility profile selected in the main CampusWay app.', 'applyIndoorTranslations();');
   vm.runInContext(initialization, context);
   assert.equal(accessible.checked, true);
