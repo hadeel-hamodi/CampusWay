@@ -26,12 +26,20 @@ test('schedule reminders are an optional Settings-only feature with translated m
   assert.match(index, /id="scheduleReminder"[^>]+role="alertdialog"/);
   assert.match(index, /id="scheduleDestination"[^>]+role="combobox"/);
   assert.match(index, /id="scheduleDestinationSuggestions"[^>]+role="listbox"/);
+  assert.match(index, /id="scheduleTime"[^>]+aria-describedby="scheduleTimeHint"/);
+  assert.match(index, /id="scheduleTimeHint">Use 24-hour time, for example 09:30/);
   assert.match(index, /function showScheduleDestinationSuggestions\(value\)/);
   assert.match(index, /\.slice\(0, 7\)/);
   for(const label of [
     'Schedule reminders', 'תזכורות מערכת שעות', 'تذكيرات الجدول', 'Напоминания о занятиях'
   ]) assert.ok(index.includes(label), label);
   assert.match(serviceWorker, /campusway-v51-schedule-reminders/);
+});
+
+test('the outdoor route card keeps directions focused and does not duplicate a route sharing control', () => {
+  const routeCard = between(index, '<section class="route-card"', '<!-- Already inside a building:');
+  assert.doesNotMatch(routeCard, /id="shareRouteBtn"/);
+  assert.doesNotMatch(routeCard, /route-card-actions/);
 });
 
 test('saved schedule data rejects malformed entries before it is shown or scheduled', () => {

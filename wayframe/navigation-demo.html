@@ -190,7 +190,7 @@
         <button id="recenterBtn" class="recenterBtn" type="button">◎ Recenter</button>
 
         <div class="navStack">
-          <div class="navBanner">
+          <div class="navBanner" aria-hidden="true" hidden>
           <div class="turnIcon" id="turnIcon" aria-hidden="true">↑</div>
             <div class="bannerText" role="status" aria-live="polite">
               <strong id="instruction">Choose a destination</strong>
@@ -3138,6 +3138,7 @@ function upcomingRouteLabel(){
 
 function updateProgressUI(){
   if(!routeNodes.length){$('livePos').textContent=it('notStarted');$('progressBar').style.width='0%';return}
+  syncIndoorStepListPosition();
   const total=Math.max(1,routeNodes.length-1);
   const pct=navMode==='wheelchair'
     ? CampusWheelchairNavigation.progressFraction(routeNodes,{index:progressIndex,t:progressT})*100
@@ -3175,6 +3176,16 @@ function updateProgressUI(){
     const upcoming=upcomingRouteLabel();
     $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — moving toward ${upcoming}`,`${localizedFloor(cur.floor)} — متجه نحو ${localizedNodeLabel(upcoming)}`,`${localizedFloor(cur.floor)} — מתקדם לכיוון ${localizedNodeLabel(upcoming)}`,`Этаж ${floorLabel(cur.floor)} — движение к ${localizedNodeLabel(upcoming)}`);
   }
+}
+
+// The complete indoor guide stays in the sidebar. Highlight the next relevant
+// step there instead of repeating the same instruction in a second map banner.
+function syncIndoorStepListPosition(){
+  if(typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+  const items=[...document.querySelectorAll('#steps [data-step-node]')];
+  if(!items.length) return;
+  const current=items.find(item=>Number(item.dataset.stepNode)>=progressIndex) || items.at(-1);
+  items.forEach(item=>item.classList.toggle('current-step',item===current));
 }
 
 

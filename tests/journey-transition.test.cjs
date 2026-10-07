@@ -237,6 +237,17 @@ test('persistent preferences prefer local storage and mirror new values to the s
   assert.equal(session.values.get('campuswayLanguage'), 'he');
 });
 
+test('outdoor directions wait until an origin indoor leg has reached the exit', () => {
+  assert.match(index, /const awaitingOriginIndoorExit[\s\S]*?originIndoorComplete/);
+  assert.match(index, /if\(awaitingOriginIndoorExit\)\{[\s\S]*?renderRouteSteps\(null\)/);
+  assert.match(index, /Outdoor directions will appear after you reach the exit/);
+});
+
+test('indoor screen keeps the route guide in the sidebar instead of duplicating it on the map', () => {
+  assert.match(navigation, /class="navBanner" aria-hidden="true" hidden/);
+  assert.match(navigation, /function syncIndoorStepListPosition\(\)/);
+});
+
 test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {
   const session = storage({
     journeyStage: 'origin',

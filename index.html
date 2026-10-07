@@ -202,11 +202,6 @@
           </div>
           <ol class="route-steps" id="routeSteps"></ol>
         </div>
-        <div class="route-card-actions">
-          <button class="btn btn-ghost btn-sm" id="shareRouteBtn" type="button" onclick="shareCurrentRoute()">
-            <span aria-hidden="true">↗</span> <span id="lbl-share-route">Share</span>
-          </button>
-        </div>
       </section>
 
       <!-- Already inside a building: go straight to indoor navigation -->
@@ -384,7 +379,7 @@
     <form class="schedule-form" id="scheduleForm">
       <label><span id="scheduleClassLabel">Class name</span><input id="scheduleClassName" maxlength="70" required autocomplete="off"></label>
       <label><span id="scheduleDayLabel">Day</span><select id="scheduleDay" required></select></label>
-      <label><span id="scheduleTimeLabel">Time</span><input id="scheduleTime" type="time" required></label>
+      <label class="schedule-time-field"><span id="scheduleTimeLabel">Time</span><input id="scheduleTime" type="time" required aria-describedby="scheduleTimeHint"><small class="schedule-time-hint" id="scheduleTimeHint">Use 24-hour time, for example 09:30</small></label>
       <label class="schedule-destination-field"><span id="scheduleDestinationLabel">Room or building</span>
         <span class="schedule-destination-picker">
           <input id="scheduleDestination" type="text" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="scheduleDestinationSuggestions" required>
@@ -804,7 +799,7 @@ Object.assign(T.en, {
   settingsSchedule:'Schedule reminders', settingsScheduleHint:'Keep optional class reminders on this device.',
   settingsScheduleToggleHint:'Get a reminder 15 minutes before a saved class.', settingsManageSchedule:'Manage my schedule',
   scheduleTitle:'My schedule', closeSchedule:'Close schedule', scheduleDialogHint:'Add classes to receive a reminder 15 minutes before they start.',
-  scheduleClass:'Class name', scheduleDay:'Day', scheduleTime:'Time', scheduleDestination:'Room or building', scheduleAdd:'Add class',
+  scheduleClass:'Class name', scheduleDay:'Day', scheduleTime:'Time', scheduleTimeHint:'Use 24-hour time, for example 09:30', scheduleDestination:'Room or building', scheduleAdd:'Add class',
   scheduleEmpty:'No classes saved yet.', scheduleDelete:'Remove', scheduleReminder:'Class soon', scheduleStartRoute:'Start route',
   scheduleAt:'at', scheduleLocation:'Location', scheduleInvalid:'Choose a room or building from the list.',
   days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -813,7 +808,7 @@ Object.assign(T.he, {
   settingsSchedule:'תזכורות מערכת שעות', settingsScheduleHint:'שמירת תזכורות אופציונליות לשיעורים במכשיר זה.',
   settingsScheduleToggleHint:'קבלת תזכורת 15 דקות לפני שיעור שמור.', settingsManageSchedule:'ניהול מערכת השעות שלי',
   scheduleTitle:'מערכת השעות שלי', closeSchedule:'סגירת מערכת השעות', scheduleDialogHint:'הוסף שיעורים כדי לקבל תזכורת 15 דקות לפני תחילתם.',
-  scheduleClass:'שם השיעור', scheduleDay:'יום', scheduleTime:'שעה', scheduleDestination:'חדר או בניין', scheduleAdd:'הוספת שיעור',
+  scheduleClass:'שם השיעור', scheduleDay:'יום', scheduleTime:'שעה', scheduleTimeHint:'הזינו שעה בפורמט 24 שעות, למשל 09:30', scheduleDestination:'חדר או בניין', scheduleAdd:'הוספת שיעור',
   scheduleEmpty:'עדיין לא נשמרו שיעורים.', scheduleDelete:'הסרה', scheduleReminder:'שיעור בקרוב', scheduleStartRoute:'התחלת מסלול',
   scheduleAt:'בשעה', scheduleLocation:'מיקום', scheduleInvalid:'יש לבחור חדר או בניין מהרשימה.',
   days:['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת']
@@ -822,7 +817,7 @@ Object.assign(T.ar, {
   settingsSchedule:'تذكيرات الجدول', settingsScheduleHint:'احتفظ بتذكيرات المحاضرات الاختيارية على هذا الجهاز.',
   settingsScheduleToggleHint:'احصل على تذكير قبل 15 دقيقة من المحاضرة المحفوظة.', settingsManageSchedule:'إدارة جدولي',
   scheduleTitle:'جدولي', closeSchedule:'إغلاق الجدول', scheduleDialogHint:'أضف محاضرات لتحصل على تذكير قبل 15 دقيقة من بدايتها.',
-  scheduleClass:'اسم المحاضرة', scheduleDay:'اليوم', scheduleTime:'الوقت', scheduleDestination:'الغرفة أو المبنى', scheduleAdd:'إضافة محاضرة',
+  scheduleClass:'اسم المحاضرة', scheduleDay:'اليوم', scheduleTime:'الوقت', scheduleTimeHint:'اكتبي الوقت بصيغة 24 ساعة، مثلاً 09:30', scheduleDestination:'الغرفة أو المبنى', scheduleAdd:'إضافة محاضرة',
   scheduleEmpty:'لا توجد محاضرات محفوظة بعد.', scheduleDelete:'إزالة', scheduleReminder:'محاضرة قريبًا', scheduleStartRoute:'بدء المسار',
   scheduleAt:'الساعة', scheduleLocation:'الموقع', scheduleInvalid:'اختر غرفة أو مبنى من القائمة.',
   days:['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']
@@ -831,7 +826,7 @@ Object.assign(T.ru, {
   settingsSchedule:'Напоминания о занятиях', settingsScheduleHint:'Храните необязательные напоминания о занятиях на этом устройстве.',
   settingsScheduleToggleHint:'Напомнить за 15 минут до сохранённого занятия.', settingsManageSchedule:'Управление расписанием',
   scheduleTitle:'Моё расписание', closeSchedule:'Закрыть расписание', scheduleDialogHint:'Добавьте занятия, чтобы получать напоминание за 15 минут до начала.',
-  scheduleClass:'Название занятия', scheduleDay:'День', scheduleTime:'Время', scheduleDestination:'Аудитория или здание', scheduleAdd:'Добавить занятие',
+  scheduleClass:'Название занятия', scheduleDay:'День', scheduleTime:'Время', scheduleTimeHint:'Введите время в 24-часовом формате, например 09:30', scheduleDestination:'Аудитория или здание', scheduleAdd:'Добавить занятие',
   scheduleEmpty:'Занятий пока нет.', scheduleDelete:'Удалить', scheduleReminder:'Скоро занятие', scheduleStartRoute:'Начать маршрут',
   scheduleAt:'в', scheduleLocation:'Место', scheduleInvalid:'Выберите аудиторию или здание из списка.',
   days:['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота']
@@ -1840,7 +1835,7 @@ if(voiceArea){
   document.getElementById('lbl-audio').textContent = t.audio;
   document.getElementById('lbl-emergency').textContent = t.emergencyShelter;
   document.getElementById('lbl-directions').textContent = t.directions;
-  document.getElementById('lbl-share-route').textContent = t.shareLabel;
+  setText('lbl-share-route', t.shareLabel);
   setText('lbl-share-my-location', t.shareMyLocation);
   setText('share-location-hint', t.shareMyLocationHint);
   setText('lbl-share-my-location-btn', t.shareLocationButton);
@@ -1871,6 +1866,7 @@ if(voiceArea){
   setText('scheduleClassLabel', t.scheduleClass);
   setText('scheduleDayLabel', t.scheduleDay);
   setText('scheduleTimeLabel', t.scheduleTime);
+  setText('scheduleTimeHint', t.scheduleTimeHint);
   setText('scheduleDestinationLabel', t.scheduleDestination);
   const scheduleAddButton = document.getElementById('scheduleAddBtn');
   if(scheduleAddButton){
@@ -6877,6 +6873,23 @@ const hasDestinationIndoorJourney =
       destinationIndoorContext.destinationLabel
     )
   );
+
+// When the journey begins inside a building, the outdoor list belongs to the
+// later outdoor leg. Keep it hidden until the user reaches the exit so the
+// screen only presents the instructions for the current place.
+const awaitingOriginIndoorExit =
+  hasOriginIndoorJourney &&
+  sessionStorage.getItem('originIndoorComplete') !== 'true';
+
+if(awaitingOriginIndoorExit){
+  renderRouteSteps(null);
+  document.getElementById('routeSub').textContent = localizedInstruction(
+    'Start the indoor route first. Outdoor directions will appear after you reach the exit.',
+    'ابدأ بالمسار الداخلي أولًا. ستظهر إرشادات الخارج بعد الوصول إلى المخرج.',
+    'התחל קודם במסלול הפנימי. ההנחיות בחוץ יופיעו לאחר ההגעה ליציאה.',
+    'Сначала начните внутренний маршрут. Указания снаружи появятся после выхода.'
+  );
+}
 
 if(hasOriginIndoorJourney){
   indoorBtn.style.display = 'block';
