@@ -33,7 +33,7 @@ test('schedule reminders are an optional Settings-only feature with translated m
   for(const label of [
     'Schedule reminders', 'תזכורות מערכת שעות', 'تذكيرات الجدول', 'Напоминания о занятиях'
   ]) assert.ok(index.includes(label), label);
-  assert.match(serviceWorker, /campusway-v59-journey-plan/);
+  assert.match(serviceWorker, /campusway-v60-journey-plan-state/);
 });
 
 test('the outdoor route card keeps directions focused and does not duplicate a route sharing control', () => {

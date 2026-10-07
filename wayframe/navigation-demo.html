@@ -3573,6 +3573,17 @@ function handleDetectedStep(stepTime){
 }
 
 
+function setJourneyPlanLegByKind(kind){
+  try{
+    const plan=JSON.parse(sessionStorage.getItem('journeyPlan') || 'null');
+    const index=plan?.legs?.findIndex(leg=>leg.kind===kind);
+    if(index < 0) return;
+    plan.currentLeg=index;
+    sessionStorage.setItem('journeyPlan',JSON.stringify(plan));
+  }catch(error){
+    console.warn('Could not update the journey plan:',error);
+  }
+}
 function returnToOutdoorJourney(){
   sessionStorage.setItem(
     'campusTransitionDirection',
@@ -3712,6 +3723,7 @@ function completeNavigation(){
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
 
+setJourneyPlanLegByKind('outdoor');
 arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
 announceArrival();
 return;
@@ -3767,6 +3779,7 @@ return;
       'Exit reached. Continue on the outdoor route when you are ready.','وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.','הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.',
       'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
+setJourneyPlanLegByKind('outdoor');
 arrivalNextStep={kind:'outdoor',run:returnToOutdoorJourney};
 announceArrival();
 return;
@@ -4921,7 +4934,7 @@ function clearCompletedJourneyState(){
     'sharedIndoorTransfer','intermediateIndoorTransfer',
     'originIndoorComplete','sharedNavigationResume',
     'madrigaTransferEntrance','campusTransitionDirection',
-    'outdoorJourneyContext'
+    'outdoorJourneyContext','journeyPlan'
   ].forEach(key=>sessionStorage.removeItem(key));
 }
 

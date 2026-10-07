@@ -1029,6 +1029,7 @@ let keepIndoorContextForCurrentRoute = false;
 let currentOutdoorDestination = null;
 let outdoorRouteRequestId = 0;
 const OUTDOOR_JOURNEY_STORAGE_KEY = 'outdoorJourneyContext';
+const JOURNEY_PLAN_STORAGE_KEY = 'journeyPlan';
 const NEW_ROUTE_START_STORAGE_KEY = 'newRouteStartContext';
 let shopMode = false;
 let activeRouteService = null;
@@ -6924,6 +6925,7 @@ if(hasOriginIndoorJourney){
   delete indoorBtn.dataset.destinationBuilding;
 }
 
+  saveJourneyPlan(buildJourneyPlan({includeOutdoor: Boolean(outdoorResult && !sameBuilding && !activeSharedTransfer)}));
   document.getElementById('routeCard').classList.add('show');
   map.closePopup();
 if(currentProfile === 'visual' && visualVoiceActive){
@@ -6957,7 +6959,7 @@ function closeRoute(){
   outdoorRouteRequestId++;
   currentOutdoorDestination = null;
   [
-    OUTDOOR_JOURNEY_STORAGE_KEY, 'journeyStage', 'indoorContext',
+    OUTDOOR_JOURNEY_STORAGE_KEY, JOURNEY_PLAN_STORAGE_KEY, 'journeyStage', 'indoorContext',
     'indoorStartContext', 'sharedIndoorTransfer',
     'intermediateIndoorTransfer', 'originIndoorComplete',
     'sharedNavigationResume', 'madrigaTransferEntrance',
@@ -7586,6 +7588,7 @@ function clearIndoorStartJourney(){
   sessionStorage.removeItem('indoorStartContext');
   sessionStorage.removeItem('originIndoorComplete');
   sessionStorage.removeItem(OUTDOOR_JOURNEY_STORAGE_KEY);
+  sessionStorage.removeItem(JOURNEY_PLAN_STORAGE_KEY);
 
     // --------------------------------------------------
   // Clear transfer state from the previous journey
@@ -10246,7 +10249,7 @@ function storedJourneyFallback(){
   };
 }
 
-function buildJourneyPlan(){
+function buildJourneyPlan({includeOutdoor=true}={}){
   const read = key => {
     try{return JSON.parse(sessionStorage.getItem(key) || 'null');}
     catch(error){return null;}
@@ -10266,12 +10269,23 @@ function buildJourneyPlan(){
   if(intermediate?.building && intermediate?.startNodeId && intermediate?.destinationNodeId){
     legs.push({kind:'indoor', building:intermediate.building, from:intermediate.startNodeId, to:intermediate.destinationNodeId});
   }
-  legs.push({kind:'outdoor'});
+  if(includeOutdoor){ legs.push({kind:'outdoor'}); }
   if(destination?.buildingKey && destination?.startNodeId && destination?.destinationNodeId && destination.startNodeId !== destination.destinationNodeId){
     legs.push({kind:'indoor', building:destination.buildingKey, from:destination.startNodeId, to:destination.destinationNodeId});
   }
 
-  return {version:1, legs};
+  return {version:1, currentLeg:0, legs};
+}
+
+function saveJourneyPlan(plan){
+  const storageKey=typeof JOURNEY_PLAN_STORAGE_KEY === 'string'
+    ? JOURNEY_PLAN_STORAGE_KEY
+    : 'journeyPlan';
+  if(!plan?.legs || plan.legs.length < 2){
+    sessionStorage.removeItem(storageKey);
+    return;
+  }
+  sessionStorage.setItem(storageKey, JSON.stringify(plan));
 }
 function saveOutdoorJourneyForTransition(stage){
   if(stage === 'destination'){
@@ -10316,6 +10330,7 @@ function saveOutdoorJourneyForTransition(stage){
     OUTDOOR_JOURNEY_STORAGE_KEY,
     JSON.stringify(snapshot)
   );
+  saveJourneyPlan(snapshot.journeyPlan);
 
   return true;
 }
@@ -10343,6 +10358,7 @@ async function resumeOutdoorJourneyAfterOrigin(){
         OUTDOOR_JOURNEY_STORAGE_KEY,
         JSON.stringify(snapshot)
       );
+      saveJourneyPlan(snapshot.journeyPlan);
     }
   }
 
@@ -10393,6 +10409,16 @@ async function resumeOutdoorJourneyAfterOrigin(){
   };
 }
 
+function setJourneyPlanLeg(legIndex){
+  try{
+    const plan=JSON.parse(sessionStorage.getItem(JOURNEY_PLAN_STORAGE_KEY) || 'null');
+    if(!plan?.legs?.[legIndex]) return;
+    plan.currentLeg=legIndex;
+    sessionStorage.setItem(JOURNEY_PLAN_STORAGE_KEY,JSON.stringify(plan));
+  }catch(error){
+    console.warn('Could not update the journey plan:',error);
+  }
+}
 function startIndoorTransition(){
   const indoorBtn = document.getElementById('continueIndoorBtn');
   const building = indoorBtn.dataset.building;
@@ -10401,6 +10427,14 @@ function startIndoorTransition(){
   if(!building) return;
 
   saveOutdoorJourneyForTransition(stage);
+  if(stage === 'origin') setJourneyPlanLeg(0);
+  else {
+    try{
+      const plan=JSON.parse(sessionStorage.getItem(JOURNEY_PLAN_STORAGE_KEY) || 'null');
+      const lastIndoor=plan?.legs?.map((leg,index)=>leg.kind==='indoor'?index:-1).filter(index=>index>=0).at(-1);
+      if(Number.isInteger(lastIndoor)) setJourneyPlanLeg(lastIndoor);
+    }catch(error){ /* invalid plan is ignored */ }
+  }
 
   sessionStorage.setItem('journeyStage', stage);
   sessionStorage.setItem('indoorBuilding', building);

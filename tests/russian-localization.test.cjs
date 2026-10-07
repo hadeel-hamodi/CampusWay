@@ -247,5 +247,5 @@ test('indoor Russian dictionaries match English and every dynamic instruction ha
 test('four language choices fit the UI and the new release refreshes cached files', () => {
   assert.match(campusMapCss, /\.lang-options\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(campusMapCss, /\.settings-language-options\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(serviceWorker, /campusway-v59-journey-plan/);
+  assert.match(serviceWorker, /campusway-v60-journey-plan-state/);
 });
