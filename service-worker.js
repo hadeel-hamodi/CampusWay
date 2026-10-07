@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v57-dynamic-journey-steps';
+const CACHE_NAME = 'campusway-v58-route-plan-foundation';
 
 const APP_FILES = [
 './',

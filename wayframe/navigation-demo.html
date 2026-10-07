@@ -114,7 +114,6 @@
       <!-- 2. Route summary, how to move, start, progress -->
       <section class="card" aria-labelledby="navTitle">
         <h2 class="card-title" id="navTitle">Navigation</h2>
-        <div class="journey-progress" id="indoorJourneyProgress" hidden aria-label="Journey progress"></div>
 
         <div id="routeCard" aria-live="polite">
           <strong>No route yet</strong>
@@ -545,37 +544,7 @@ function localizedInstruction(en, ar, he, ru){
   return indoorLang==='ar' ? ar : indoorLang==='he' ? he : indoorLang==='ru' ? ru : en;
 }
 
-function renderIndoorJourneyProgress(){
-  const progress = $('indoorJourneyProgress');
-  if(!progress) return;
-  const stage = sessionStorage.getItem('journeyStage');
-  const hasIndoorStart = Boolean(sessionStorage.getItem('indoorStartContext'));
-  const hasIndoorDestination = Boolean(sessionStorage.getItem('indoorContext'));
-  if(!hasIndoorStart && !hasIndoorDestination){
-    progress.hidden = true;
-    return;
-  }
-
-  const labels = indoorLang==='ar' ? {inside:'داخل المبنى',outdoors:'خارج المباني'}
-    : indoorLang==='he' ? {inside:'בפנים',outdoors:'בחוץ'}
-    : indoorLang==='ru' ? {inside:'Внутри',outdoors:'Снаружи'}
-    : {inside:'Inside',outdoors:'Outdoors'};
-  const steps = [
-    ...(hasIndoorStart ? [labels.inside] : []),
-    labels.outdoors,
-    ...(hasIndoorDestination ? [labels.inside] : [])
-  ];
-  const current = stage === 'origin' || stage === 'intermediate'
-    ? 1 : hasIndoorStart ? steps.length : 2;
-  progress.hidden = false;
-  progress.innerHTML = steps.map((label,index)=>{
-    const step=index+1;
-    const state=step<current?'done':step===current?'current':'';
-    return `<span class="journey-step ${state}"><b>${step<current?'✓':step}</b>${label}</span>`;
-  }).join('<i aria-hidden="true"></i>');
-}
 function applyIndoorTranslations(){
-  renderIndoorJourneyProgress();
   const floorPlanLabel = $('lbl-show-floor-plan');
 
 if(floorPlanLabel){

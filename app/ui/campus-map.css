@@ -974,14 +974,3 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
     white-space:nowrap;
   }
 }
-
-/* A compact route timeline keeps multi-part journeys understandable on phones and desktops. */
-.journey-progress{display:flex;align-items:center;gap:6px;margin:12px 0 4px;min-width:0;color:var(--subtle);font-size:.75rem;font-weight:700;}
-.journey-progress .journey-step{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
-.journey-progress .journey-step b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--line);color:var(--mid);font-size:.7rem;}
-.journey-progress .journey-step.current{color:var(--primary);}
-.journey-progress .journey-step.current b{background:var(--primary);color:#fff;}
-.journey-progress .journey-step.done{color:var(--success-ink);}
-.journey-progress .journey-step.done b{background:var(--mint);color:#fff;}
-.journey-progress i{height:2px;min-width:12px;flex:1;background:var(--line);}
-@media (max-width:420px){.journey-progress{gap:4px;font-size:.68rem;}.journey-progress i{min-width:4px;}.journey-progress .journey-step{gap:3px;}.journey-progress .journey-step b{width:18px;height:18px;}}
