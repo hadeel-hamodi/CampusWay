@@ -1222,6 +1222,19 @@ const BUILDING_NAMES_RU = {
   'Education and Science':'Здание образования и науки'
 };
 
+const BUILDING_NAMES_AR = {
+  'Main Building':'المبنى الرئيسي',
+  'Eshkol Tower':'برج إشكول',
+  'Rabin Building':'مبنى رابين',
+  'Student House':'بيت الطالب',
+  'Terrace Building':'مبنى المدرّج (مادريغا)',
+  'Multi-Purpose Building':'مبنى متعدد الاستخدامات',
+  'Arts Building':'مركز الفنون',
+  'Bloom Building':'مبنى بلوم',
+  'Welfare and Health Building':'مبنى الصحة والرفاه',
+  'Education and Science':'مبنى التربية والعلوم'
+};
+
 const PLACE_NAMES_RU = {
   'Aroma Espresso Bar':'Кафе Aroma',
   'Pilpelet Cafe':'Кафе Pilpelet',
@@ -1243,15 +1256,18 @@ const PLACE_NAMES_RU = {
 
 function secondaryBuildingName(building){
   if(!building) return '';
+  if(lang === 'ar') return '';
   return lang === 'en' ? (building.name_he || building.name) : building.name;
 }
 
 function localizedBuildingName(building){
   if(!building) return '';
   if(lang === 'ru') return BUILDING_NAMES_RU[building.name] || building.name;
-  return (lang === 'he' || lang === 'ar')
-    ? (building.name_he || building.name)
-    : building.name;
+  if(lang === 'ar'){
+    const arabicName = BUILDING_NAMES_AR[building.name] || building.name;
+    return building.name_he ? `${arabicName} (${building.name_he})` : arabicName;
+  }
+  return lang === 'he' ? (building.name_he || building.name) : building.name;
 }
 
 function localizedBuildingNameByEnglishName(name){
@@ -1281,8 +1297,22 @@ if(place) return localizedPlaceName(place);
     return gateNames[name] || BUILDING_NAMES_RU[name] || name;
   }
 
-  // Building and gate names stay Hebrew in Arabic mode too.
-  if(lang === 'he' || lang === 'ar'){
+  if(lang === 'ar'){
+    const gateNames = {
+      'Carmel Gate (South gate)': 'بوابة الكرمل',
+      'Haifa (Denya) Gate (North gate)': 'بوابة دانية'
+    };
+
+    const arabicName = gateNames[name] || BUILDING_NAMES_AR[name] || name;
+    const hebrewName = {
+      'Carmel Gate (South gate)': 'שער כרמל',
+      'Haifa (Denya) Gate (North gate)': 'שער דניה'
+    }[name];
+
+    return hebrewName ? `${arabicName} (${hebrewName})` : arabicName;
+  }
+
+  if(lang === 'he'){
     const gateNames = {
       'Carmel Gate (South gate)': 'שער כרמל',
       'Haifa (Denya) Gate (North gate)': 'שער דניה'
