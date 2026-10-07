@@ -1029,6 +1029,7 @@ let keepIndoorContextForCurrentRoute = false;
 let currentOutdoorDestination = null;
 let outdoorRouteRequestId = 0;
 const OUTDOOR_JOURNEY_STORAGE_KEY = 'outdoorJourneyContext';
+const NEW_ROUTE_START_STORAGE_KEY = 'newRouteStartContext';
 let shopMode = false;
 let activeRouteService = null;
 let restroomMode = false;
@@ -10405,7 +10406,63 @@ function openIndoorNavigation(buildingKey){
     `wayframe/navigation-demo.html?building=${encodeURIComponent(buildingKey)}`;
 }
 
+// After finishing an indoor route, the indoor page returns here with the
+// reached node as the next journey's start.  The campus page remains the one
+// place where a person plans a new destination, including another building.
+async function restoreNewRouteStartFromArrival(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('newRouteFromHere') !== '1') return false;
+
+  let context = null;
+  try{
+    context = JSON.parse(
+      sessionStorage.getItem(NEW_ROUTE_START_STORAGE_KEY) || 'null'
+    );
+  }catch(error){
+    context = null;
+  }
+  sessionStorage.removeItem(NEW_ROUTE_START_STORAGE_KEY);
+
+  if(
+    !context ||
+    context.version !== 1 ||
+    !Object.values(INDOOR_NAVIGATION_BUILDINGS).includes(context.buildingKey) ||
+    !context.nodeId
+  ){
+    return false;
+  }
+
+  await indoorSearchGraphsReady;
+  const node = Object.values(
+    graphForBuilding(context.buildingKey)?.floors || {}
+  )
+    .flatMap(floor => floor.nodes || [])
+    .find(item => item.id === context.nodeId);
+
+  if(!node) return false;
+
+  pickIndoorStart(
+    node.id,
+    context.label || node.label,
+    context.buildingKey,
+    context.displayLabel || ''
+  );
+
+  if(window.history?.replaceState){
+    const url = new URL(window.location.href);
+    url.searchParams.delete('newRouteFromHere');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }
+  document.getElementById('searchInput').focus();
+  return true;
+}
+
 async function handleCampusPageShow(){
+  if(
+    typeof restoreNewRouteStartFromArrival === 'function' &&
+    await restoreNewRouteStartFromArrival()
+  ) return;
+
   const transitionScreen =
     document.getElementById('indoorTransition');
 

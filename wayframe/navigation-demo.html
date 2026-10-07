@@ -4928,15 +4928,33 @@ function indoorBuildingName(key){
 function setRouteFromArrival(){
   const destination=routeNodes.at(-1);
   if(!destination) return;
-  clearRouteState();
-  $('fromFloor').value=destination.floor;
-  fillLocationSelect(destination.floor,'from','Choose starting point...');
-  ensureNodeOption('from',destination);
-  $('from').value=destination.id;
-  $('toFloor').value=destination.floor;
-  fillLocationSelect(destination.floor,'to','Choose destination...');
-  showChosenStart();
-  $('to').focus();
+
+  // A finished indoor route is a useful starting point for the next journey,
+  // but the campus page owns planning between buildings.  Keep only a small,
+  // validated snapshot and let that page rebuild its normal route state.
+  const buildingKey=BUILDING;
+  const start={
+    version:1,
+    buildingKey,
+    nodeId:destination.id,
+    label:destination.label || '',
+    displayLabel:destination._displayLabel || destination.label || ''
+  };
+
+  try{
+    sessionStorage.setItem('newRouteStartContext',JSON.stringify(start));
+    [
+      'journeyStage','indoorContext','indoorStartContext',
+      'sharedIndoorTransfer','intermediateIndoorTransfer',
+      'originIndoorComplete','sharedNavigationResume',
+      'madrigaTransferEntrance','campusTransitionDirection',
+      'outdoorJourneyContext'
+    ].forEach(key=>sessionStorage.removeItem(key));
+  }catch(error){
+    console.warn('Could not save the next-route starting point:',error);
+  }
+
+  window.location.replace('../index.html?newRouteFromHere=1');
 }
 
 function showArrivalDialog(next){

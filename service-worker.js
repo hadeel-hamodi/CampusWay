@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v52-code-audit';
+const CACHE_NAME = 'campusway-v53-new-route-start';
 
 const APP_FILES = [
 './',
