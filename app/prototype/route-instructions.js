@@ -331,6 +331,20 @@
       stairs: d => `امشِ ${d}، ثم استخدم الدرج`,
       pass: (d, landmark, side) => `امشِ ${d}، مارًّا بجانب ${landmark} على ${side === 'left' ? 'يسارك' : 'يمينك'}`,
       arrive: (d, name) => name ? `امشِ ${d} حتى تصل إلى ${name}` : `امشِ ${d} حتى تصل`
+    },
+    ru: {
+      meters: n => `${n} м`,
+      compass: {north:'на север', northeast:'на северо-восток', east:'на восток', southeast:'на юго-восток', south:'на юг', southwest:'на юго-запад', west:'на запад', northwest:'на северо-запад'},
+      start: (name, dir) => name ? `Начните в точке «${name}» и двигайтесь ${dir}` : `Двигайтесь ${dir}`,
+      turns: {
+        left:'поверните налево', right:'поверните направо',
+        'slight-left':'держитесь левее', 'slight-right':'держитесь правее',
+        'sharp-left':'резко поверните налево', 'sharp-right':'резко поверните направо'
+      },
+      turn: (d, turn, landmark) => `Пройдите ${d}, затем ${turn}${landmark ? ` рядом с ориентиром «${landmark}»` : ''}`,
+      stairs: d => `Пройдите ${d}, затем воспользуйтесь лестницей`,
+      pass: (d, landmark, side) => `Пройдите ${d}; ориентир «${landmark}» будет ${side === 'left' ? 'слева' : 'справа'}`,
+      arrive: (d, name) => name ? `Пройдите ${d} до точки «${name}»` : `Пройдите ${d} до места назначения`
     }
   };
 

@@ -21,8 +21,18 @@
       qrLabel:'رمز QR لهذا الرابط', downloadQr:'تنزيل رمز QR',
       close:'إغلاق',
       scan:'امسح الرمز لفتح الاتجاهات على هاتف آخر.'
+    },
+    ru:{
+      share:'Поделиться', link:'Ссылка', copy:'Копировать ссылку', copied:'Ссылка скопирована', shareVia:'Поделиться…',
+      qrLabel:'QR-код для этой ссылки', downloadQr:'Скачать QR-код',
+      close:'Закрыть',
+      scan:'Отсканируйте, чтобы открыть маршрут на другом телефоне.'
     }
   };
+
+  function isRtlLanguage(lang){
+    return lang === 'he' || lang === 'ar';
+  }
 
   function el(tag, attributes = {}, children = []){
     const node = document.createElement(tag);
@@ -38,7 +48,7 @@
 
   function slug(value){
     return String(value || 'campusway').toLowerCase()
-      .replace(/[^a-z0-9֐-׿؀-ۿ]+/g, '-')
+      .replace(/[^a-z0-9\u0400-\u04ff֐-׿؀-ۿ]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 40) || 'campusway';
   }
@@ -76,7 +86,10 @@
     const toast = options.onToast || (() => {});
 
     document.getElementById('cwShareDialog')?.remove();
-    const dialog = el('dialog', {id:'cwShareDialog', class:'cw-dialog cw-share', 'aria-labelledby':'cwShareTitle', dir: lang === 'en' ? 'ltr' : 'rtl'});
+    const dialog = el('dialog', {
+      id:'cwShareDialog', class:'cw-dialog cw-share', 'aria-labelledby':'cwShareTitle',
+      lang, dir:isRtlLanguage(lang) ? 'rtl' : 'ltr'
+    });
     const close = () => { dialog.close(); dialog.remove(); };
 
     let svg = '';

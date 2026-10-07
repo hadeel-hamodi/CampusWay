@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v46-fresh-app-shell';
+const CACHE_NAME = 'campusway-v48-russian-localization';
 
 const APP_FILES = [
 './',
