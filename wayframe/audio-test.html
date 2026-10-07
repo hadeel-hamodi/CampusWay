@@ -26,6 +26,7 @@
   <button data-lang="en" class="on">English</button>
   <button data-lang="he">עברית</button>
   <button data-lang="ar">العربية</button>
+  <button data-lang="ru">Русский</button>
 </div>
 
 <div id="sample"></div>
@@ -69,6 +70,13 @@ const PHRASES = {
     floor: 'استخدم المصعد إلى الطابق 4.',
     warn: 'الاتجاه غير واضح. توقف وتحقق من الاتجاه الذي تواجهه.',
     arrive: 'لقد وصلت إلى وجهتك.'
+  },
+  ru: {
+    on: 'Голосовые подсказки включены.',
+    steps: ['Поверните налево и пройдите 20 метров.', 'Продолжайте прямо до лестницы.', 'Поверните направо в коридоре.'],
+    floor: 'Поднимитесь на лифте на 4-й этаж.',
+    warn: 'Направление неясно. Остановитесь и проверьте, куда вы смотрите.',
+    arrive: 'Вы прибыли в пункт назначения.'
   }
 };
 
@@ -84,8 +92,9 @@ function log(message){
 
 function showSample(){
   const box = $('sample');
-  box.dir = lang === 'en' ? 'ltr' : 'rtl';
-  box.textContent = PHRASES[lang].steps[stepIndex % 3];
+  box.dir = lang === 'he' || lang === 'ar' ? 'rtl' : 'ltr';
+  box.lang = lang;
+  box.textContent = PHRASES[lang].steps[stepIndex % PHRASES[lang].steps.length];
 }
 
 function showVoices(){
@@ -93,7 +102,7 @@ function showVoices(){
   const all = speechSynthesis.getVoices();
   const pick = prefix => all.filter(v => v.lang.toLowerCase().replace('_','-').startsWith(prefix) || (prefix === 'he' && v.lang.toLowerCase().startsWith('iw')));
   const line = (name, list) => name + ': ' + (list.length ? list.map(v => v.name + ' (' + v.lang + (v.localService ? ', on-device' : ', online') + ')').join('; ') : 'NO VOICE FOUND');
-  $('voices').textContent = line('English', pick('en')) + '\n\n' + line('Hebrew', pick('he')) + '\n\n' + line('Arabic', pick('ar'));
+  $('voices').textContent = line('English', pick('en')) + '\n\n' + line('Hebrew', pick('he')) + '\n\n' + line('Arabic', pick('ar')) + '\n\n' + line('Russian', pick('ru'));
 }
 showVoices();
 if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', showVoices);
@@ -122,12 +131,12 @@ document.querySelectorAll('[data-lang]').forEach(button => {
 $('instrBtn').onclick = () => {
   stepIndex++;
   showSample();
-  const spoken = audio.instruction(PHRASES[lang].steps[stepIndex % 3], 'step-' + stepIndex);
+  const spoken = audio.instruction(PHRASES[lang].steps[stepIndex % PHRASES[lang].steps.length], 'step-' + stepIndex);
   log('instruction spoken: ' + spoken);
 };
 $('sameBtn').onclick = () => {
   // Same key as the last step: should NOT be spoken twice.
-  const spoken = audio.instruction(PHRASES[lang].steps[stepIndex % 3], 'step-' + stepIndex);
+  const spoken = audio.instruction(PHRASES[lang].steps[stepIndex % PHRASES[lang].steps.length], 'step-' + stepIndex);
   log('same instruction spoken (expect false): ' + spoken);
 };
 $('floorBtn').onclick = () => log('floor spoken: ' + audio.announce(PHRASES[lang].floor, 'floor-4'));

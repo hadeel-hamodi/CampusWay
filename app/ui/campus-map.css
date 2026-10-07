@@ -60,7 +60,7 @@ body{overflow:hidden;}
 .lang-title,.onboarding-title{margin:8px 0 0;color:var(--ink);font-size:1.875rem;font-weight:800;letter-spacing:-.5px;}
 .lang-sub,.onboarding-copy{margin:0;color:var(--mid);font-size:.9375rem;line-height:1.5;}
 .lang-prompt{margin:12px 0 4px;color:var(--mid);font-size:.875rem;font-weight:600;}
-.lang-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;margin-top:8px;}
+.lang-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;margin-top:8px;}
 .lang-btn{
   min-height:82px;
   padding:16px 20px;
@@ -157,7 +157,7 @@ body{overflow:hidden;}
 .settings-section + .settings-section{margin-top:18px;border-top:1px solid var(--line);}
 .settings-section h3{margin:0 0 8px;font-size:1rem;}
 .settings-section p{margin:0 0 10px;color:var(--mid);font-size:.8125rem;}
-.settings-language-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.settings-language-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
 .settings-language-options button{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
   min-height:48px;padding:9px 12px;

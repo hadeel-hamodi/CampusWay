@@ -223,12 +223,31 @@
     renderIndoorBuildings();
   }
 
+  function localizeMapControls(){
+    [
+      ['.leaflet-control-zoom-in', t.zoomIn || 'Zoom in'],
+      ['.leaflet-control-zoom-out', t.zoomOut || 'Zoom out'],
+      ['.leaflet-popup-close-button', t.closePopup || 'Close popup']
+    ].forEach(([selector, label]) => {
+      document.querySelectorAll(selector).forEach(element => {
+        element.title = label;
+        element.setAttribute('aria-label', label);
+      });
+    });
+  }
+
   // ── Language-dependent refresh (called from pickLang) ─────────────────
   function refresh(){
     if(typeof buildingMarkers !== 'undefined'){
       Object.values(buildingMarkers).forEach(marker => {
         if(marker.getTooltip && marker.getTooltip() && marker.buildingData){
-          marker.setTooltipContent(localizedBuildingName(marker.buildingData));
+          const label = localizedBuildingName(marker.buildingData);
+          marker.setTooltipContent(label);
+          const element = marker.getElement?.();
+          if(element){
+            element.title = label;
+            element.setAttribute('aria-label', label);
+          }
         }
       });
     }
@@ -236,6 +255,7 @@
       fitCampusControl.setLabel(t.showCampus || 'Show whole campus');
     }
     if(typeof updateBuildingLabelVisibility === 'function') updateBuildingLabelVisibility();
+    localizeMapControls();
     updateServiceStatus();
     renderIndoorBuildings();
   }
@@ -246,6 +266,9 @@
     setupSuggestionList('searchInput', 'searchSuggestions');
     setupServiceStatus();
     setupIndoorEntry();
+    if(typeof map !== 'undefined' && map?.on){
+      map.on('popupopen', localizeMapControls);
+    }
   }
 
   window.CampusUI = {toast, refresh};

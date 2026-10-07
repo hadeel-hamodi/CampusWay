@@ -5,7 +5,8 @@
   const LANGUAGE_CODES = {
     en: 'en-US',
     he: 'he-IL',
-    ar: 'ar-SA'
+    ar: 'ar-SA',
+    ru: 'ru-RU'
   };
 
   const normalize = code =>

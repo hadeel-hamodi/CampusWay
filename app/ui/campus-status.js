@@ -10,6 +10,16 @@
   const STORAGE_CACHE = 'campuswayStatusCache';
   const REPORT_AVOID_HOURS = 24;
   const REPORT_KEEP_DAYS = 14;
+  const LANGUAGE_LOCALES = {
+    en:'en-GB',
+    he:'he-IL',
+    ar:'ar',
+    ru:'ru-RU'
+  };
+
+  function isRtlLanguage(lang){
+    return lang === 'he' || lang === 'ar';
+  }
 
   const EMPTY = {elevators:[], closures:[], openingHours:{}, reportEmail:''};
   let official = readJson(STORAGE_CACHE, null) || EMPTY;
@@ -161,7 +171,8 @@
   const DAY_NAMES = {
     en:['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     he:['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
-    ar:['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+    ar:['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+    ru:['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
   };
 
   function dayRanges(spec, dayIndex){
@@ -205,7 +216,8 @@
     const text = {
       en: state.open ? `Open now · until ${state.closes}` : state.opens ? `Closed now · opens ${dayName}${state.opens}` : 'Closed',
       he: state.open ? `פתוח עכשיו · עד ${state.closes}` : state.opens ? `סגור עכשיו · נפתח ${dayName}${state.opens}` : 'סגור',
-      ar: state.open ? `مفتوح الآن · حتى ${state.closes}` : state.opens ? `مغلق الآن · يفتح ${dayName}${state.opens}` : 'مغلق'
+      ar: state.open ? `مفتوح الآن · حتى ${state.closes}` : state.opens ? `مغلق الآن · يفتح ${dayName}${state.opens}` : 'مغلق',
+      ru: state.open ? `Открыто сейчас · до ${state.closes}` : state.opens ? `Закрыто сейчас · откроется ${dayName}${state.opens}` : 'Закрыто'
     };
     return text[lang] || text.en;
   }
@@ -276,6 +288,19 @@
         'closed':'مغلق أو مقفل', 'accessible-stall':'حمام ذوي الإعاقة غير صالح', cleaning:'يحتاج تنظيفًا أو مستلزمات',
         blocked:'الطريق مسدود أو أعمال بناء', other:'شيء آخر'
       }
+    },
+    ru:{
+      title:'Сообщить о проблеме', what:'Что не работает?', problem:'В чём проблема?', note:'Подробности (необязательно)',
+      notePlaceholder:'Например: дверь не открывается на 6-м этаже', save:'Сохранить сообщение', cancel:'Отмена', done:'Готово',
+      thanks:'Спасибо — сообщение сохранено на этом устройстве.',
+      avoid:'В течение следующих 24 часов CampusWay будет строить маршруты в обход этого лифта.',
+      shareHint:'Чтобы сообщить сотрудникам кампуса и другим студентам, отправьте это через:', email:'Отправить сотрудникам кампуса по электронной почте', copy:'Копировать сообщение', copied:'Скопировано',
+      yours:'Ваши недавние сообщения', fixed:'Снова работает', none:'Сообщений пока нет.',
+      problems:{
+        'out-of-service':'Не работает', doors:'Двери или кнопки не работают',
+        'closed':'Закрыто или заперто', 'accessible-stall':'Доступная кабина не работает', cleaning:'Требуется уборка или расходные материалы',
+        blocked:'Путь перекрыт или ведутся работы', other:'Другая проблема'
+      }
     }
   };
 
@@ -298,7 +323,7 @@
 
   function reportText(report, lang){
     const text = TEXT[lang] || TEXT.en;
-    const when = new Date(report.time).toLocaleString(lang === 'en' ? 'en-GB' : lang);
+    const when = new Date(report.time).toLocaleString(LANGUAGE_LOCALES[lang] || LANGUAGE_LOCALES.en);
     return [
       `CampusWay — ${text.title}`,
       `${report.buildingName || report.building}: ${report.label}`,
@@ -316,7 +341,10 @@
     if(!items.length) items.push({value:'other', label:text.problems.other, kind:'other'});
 
     document.getElementById('cwReportDialog')?.remove();
-    const dialog = el('dialog', {id:'cwReportDialog', class:'cw-dialog', 'aria-labelledby':'cwReportTitle', dir: lang === 'en' ? 'ltr' : 'rtl'});
+    const dialog = el('dialog', {
+      id:'cwReportDialog', class:'cw-dialog', 'aria-labelledby':'cwReportTitle',
+      lang, dir:isRtlLanguage(lang) ? 'rtl' : 'ltr'
+    });
     const close = () => { dialog.close(); dialog.remove(); };
 
     const select = el('select', {id:'cwReportItem'});
@@ -419,7 +447,7 @@
   }
 
   function elevatorName(connectorId, lang = 'en'){
-    const word = {en:'Elevator', he:'מעלית', ar:'مصعد'}[lang] || 'Elevator';
+    const word = {en:'Elevator', he:'מעלית', ar:'مصعد', ru:'Лифт'}[lang] || 'Elevator';
     return `${word} ${elevatorNumber(connectorId)}`;
   }
 

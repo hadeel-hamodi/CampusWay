@@ -367,7 +367,8 @@ const floorPlanMarkupCache = new Map();
 const INDOOR_T = {
   en:{campusMap:'← Campus map',building:'BUILDING',startFloor:'START FLOOR',startLocation:'START LOCATION',destinationFloor:'DESTINATION FLOOR',destination:'DESTINATION',route:'Route',autoMode:'Auto Mode',phoneSensors:'Phone Sensors',wheelchairMode:'Manual / Wheelchair',wheelchairControls:'Wheelchair controls',wheelchairHelp:'Move along the highlighted route, then confirm only when you reach the next shown point. No step counting or phone sensors are used.',previousPoint:'← Previous point',nextPoint:'✓ I reached the next point',accessibleRoute:'Accessible route',startNavigation:'▶ Start navigation',chooseRoute:'Choose a route.',floor:'Floor',navigation:'Navigation',noRoute:'No route yet',noRouteHelp:"Choose where you're starting and where you want to go.",routeNotFound:'No route found.',routeNotFoundHelp:'Try another start or destination.',noAccessibleRoute:'No step-free route found.',noAccessibleRouteHelp:'Try another entrance or destination. The previous route has been cleared.',livePosition:'Live position',notStarted:'Not started',howWorks:'How this demo works',howWorksText:'Choose a floor first. In Manual / Wheelchair mode, use the large buttons only after reaching the shown point; it does not count steps.',chooseDestinationBanner:'Choose a destination',routeAppear:'Your route will appear here.',recenter:'◎ Recenter'},
   he:{campusMap:'→ מפת הקמפוס',building:'בניין',startFloor:'קומת התחלה',startLocation:'נקודת התחלה',destinationFloor:'קומת יעד',destination:'יעד',route:'מסלול',autoMode:'מצב אוטומטי',phoneSensors:'חיישני הטלפון',wheelchairMode:'ידני / כיסא גלגלים',wheelchairControls:'בקרת כיסא גלגלים',wheelchairHelp:'התקדם לאורך המסלול המסומן ואשר רק כשהגעת לנקודה המוצגת הבאה. אין שימוש בספירת צעדים או בחיישני הטלפון.',previousPoint:'→ נקודה קודמת',nextPoint:'✓ הגעתי לנקודה הבאה',accessibleRoute:'מסלול נגיש',startNavigation:'▶ התחל ניווט',chooseRoute:'בחר מסלול.',floor:'קומה',navigation:'ניווט',noRoute:'אין מסלול עדיין',noRouteHelp:'בחר מאיפה להתחיל ולאן ברצונך להגיע.',routeNotFound:'לא נמצא מסלול.',routeNotFoundHelp:'נסה נקודת התחלה או יעד אחרים.',noAccessibleRoute:'לא נמצא מסלול ללא מדרגות.',noAccessibleRouteHelp:'נסה כניסה או יעד אחרים. המסלול הקודם נוקה.',livePosition:'מיקום נוכחי',notStarted:'טרם התחיל',howWorks:'איך הניווט עובד',howWorksText:'בחר קודם קומה. במצב ידני / כיסא גלגלים השתמש בכפתורים הגדולים רק לאחר שהגעת לנקודה המוצגת; אין ספירת צעדים.',chooseDestinationBanner:'בחר יעד',routeAppear:'המסלול יופיע כאן.',recenter:'◎ מרכז מחדש'},
-  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',wheelchairMode:'يدوي / كرسي متحرك',wheelchairControls:'تحكم الكرسي المتحرك',wheelchairHelp:'تحرّك على المسار المحدد، وأكّد فقط عندما تصل إلى النقطة التالية المعروضة. لا يتم عدّ الخطوات ولا استخدام حساسات الهاتف.',previousPoint:'→ النقطة السابقة',nextPoint:'✓ وصلت للنقطة التالية',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',routeNotFound:'لم يتم العثور على مسار.',routeNotFoundHelp:'جرّب نقطة بداية أو وجهة أخرى.',noAccessibleRoute:'لم يتم العثور على مسار بدون درج.',noAccessibleRouteHelp:'جرّب مدخلًا أو وجهة أخرى. تم حذف المسار السابق.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا. في وضع يدوي / كرسي متحرك استخدم الأزرار الكبيرة فقط بعد وصولك للنقطة المعروضة؛ لا يتم عدّ الخطوات.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'}
+  ar:{campusMap:'→ خريطة الحرم',building:'المبنى',startFloor:'طابق البداية',startLocation:'نقطة البداية',destinationFloor:'طابق الوجهة',destination:'الوجهة',route:'المسار',autoMode:'الوضع التلقائي',phoneSensors:'حساسات الهاتف',wheelchairMode:'يدوي / كرسي متحرك',wheelchairControls:'تحكم الكرسي المتحرك',wheelchairHelp:'تحرّك على المسار المحدد، وأكّد فقط عندما تصل إلى النقطة التالية المعروضة. لا يتم عدّ الخطوات ولا استخدام حساسات الهاتف.',previousPoint:'→ النقطة السابقة',nextPoint:'✓ وصلت للنقطة التالية',accessibleRoute:'مسار مناسب لذوي الاحتياجات الخاصة',startNavigation:'▶ ابدأ الملاحة',chooseRoute:'اختر مسارًا.',floor:'الطابق',navigation:'الملاحة',noRoute:'لا يوجد مسار بعد',noRouteHelp:'اختر نقطة البداية والمكان الذي تريد الوصول إليه.',routeNotFound:'لم يتم العثور على مسار.',routeNotFoundHelp:'جرّب نقطة بداية أو وجهة أخرى.',noAccessibleRoute:'لم يتم العثور على مسار بدون درج.',noAccessibleRouteHelp:'جرّب مدخلًا أو وجهة أخرى. تم حذف المسار السابق.',livePosition:'موقعك الحالي',notStarted:'لم تبدأ الملاحة',howWorks:'كيف يعمل هذا النظام',howWorksText:'اختر الطابق أولًا. في وضع يدوي / كرسي متحرك استخدم الأزرار الكبيرة فقط بعد وصولك للنقطة المعروضة؛ لا يتم عدّ الخطوات.',chooseDestinationBanner:'اختر وجهة',routeAppear:'سيظهر المسار هنا.',recenter:'◎ إعادة التمركز'},
+  ru:{campusMap:'← Карта кампуса',building:'ЗДАНИЕ',startFloor:'НАЧАЛЬНЫЙ ЭТАЖ',startLocation:'НАЧАЛЬНАЯ ТОЧКА',destinationFloor:'ЭТАЖ НАЗНАЧЕНИЯ',destination:'ПУНКТ НАЗНАЧЕНИЯ',route:'Маршрут',autoMode:'Автоматический режим',phoneSensors:'Датчики телефона',wheelchairMode:'Вручную / кресло-коляска',wheelchairControls:'Управление для кресла-коляски',wheelchairHelp:'Двигайтесь по выделенному маршруту и подтверждайте точку только после прибытия к ней. Подсчёт шагов и датчики телефона не используются.',previousPoint:'← Предыдущая точка',nextPoint:'✓ Я достиг следующей точки',accessibleRoute:'Доступный маршрут',startNavigation:'▶ Начать навигацию',chooseRoute:'Выберите маршрут.',floor:'Этаж',navigation:'Навигация',noRoute:'Маршрута пока нет',noRouteHelp:'Выберите начальную точку и место назначения.',routeNotFound:'Маршрут не найден.',routeNotFoundHelp:'Попробуйте другую начальную точку или место назначения.',noAccessibleRoute:'Маршрут без лестниц не найден.',noAccessibleRouteHelp:'Попробуйте другой вход или место назначения. Предыдущий маршрут очищен.',livePosition:'Текущая позиция',notStarted:'Навигация не начата',howWorks:'Как работает навигация',howWorksText:'Сначала выберите этаж. В ручном режиме / режиме кресла-коляски используйте большие кнопки только после прибытия к показанной точке; шаги не подсчитываются.',chooseDestinationBanner:'Выберите пункт назначения',routeAppear:'Здесь появится маршрут.',recenter:'◎ По центру'}
 };
 
 // Labels for the redesigned layout (merged into INDOOR_T).
@@ -377,22 +378,29 @@ const INDOOR_T_EXTRA = {
     howToMove:'How do you want to move?',autoDesc:'Preview the route automatically',sensorDesc:'The marker moves as you walk',wheelchairDesc:'Tap when you reach each point',
     accessibleHint:'Uses elevators and avoids stairs',chooseFloor:'Choose…',chooseFloorFirst:'Choose a floor first',chooseStart:'Choose starting point…',chooseDestination:'Choose destination…',
     groupRooms:'Rooms',groupRestrooms:'Restrooms',groupEntrances:'Entrances & exits',groupOther:'Other places',
-    restroom:'Restroom',entrance:'Entrance',shelter:'Shelter',terrace:'Terrace',landmark:'Landmark',gym:'Gym',library:'Library',elevator:'Elevator',elevators:'Elevators',stairs:'Stairs',near:'near',
+    restroom:'Restroom',entrance:'Entrance',shelter:'Shelter',terrace:'Terrace',landmark:'Landmark',gym:'Gym',library:'Library',elevator:'Elevator',elevators:'Elevators',stairs:'Stairs',parking:'Parking',clinic:'Clinic',food:'Food',museum:'Museum',near:'near',
     zoomIn:'Zoom in',zoomOut:'Zoom out',resetZoom:'Reset zoom'},
   he:{route:'הצג מסלול',building:'בניין',startFloor:'קומה',startLocation:'נקודת התחלה',destinationFloor:'קומה',destination:'יעד',
     yourRoute:'המסלול שלך',from:'מאיפה',to:'לאן',swap:'החלפה',swapTitle:'החלפת נקודת התחלה ויעד',indoorNav:'ניווט בתוך הבניין',
     howToMove:'איך תרצה להתקדם?',autoDesc:'תצוגה מקדימה אוטומטית של המסלול',sensorDesc:'הסמן זז כשאתה הולך',wheelchairDesc:'הקש כשאתה מגיע לכל נקודה',
     accessibleHint:'משתמש במעליות ונמנע ממדרגות',chooseFloor:'בחר…',chooseFloorFirst:'בחר קודם קומה',chooseStart:'בחר נקודת התחלה…',chooseDestination:'בחר יעד…',
     groupRooms:'חדרים',groupRestrooms:'שירותים',groupEntrances:'כניסות ויציאות',groupOther:'מקומות נוספים',
-    restroom:'שירותים',entrance:'כניסה',shelter:'מרחב מוגן',terrace:'מרפסת',landmark:'נקודת ציון',gym:'חדר כושר',library:'ספרייה',elevator:'מעלית',elevators:'מעליות',stairs:'מדרגות',near:'ליד',
+    restroom:'שירותים',entrance:'כניסה',shelter:'מרחב מוגן',terrace:'מרפסת',landmark:'נקודת ציון',gym:'חדר כושר',library:'ספרייה',elevator:'מעלית',elevators:'מעליות',stairs:'מדרגות',parking:'חניה',clinic:'מרפאה',food:'אוכל',museum:'מוזיאון',near:'ליד',
     zoomIn:'הגדלה',zoomOut:'הקטנה',resetZoom:'איפוס זום'},
   ar:{route:'اعرض المسار',building:'المبنى',startFloor:'الطابق',startLocation:'نقطة البداية',destinationFloor:'الطابق',destination:'الوجهة',
     yourRoute:'مسارك',from:'من',to:'إلى',swap:'تبديل',swapTitle:'تبديل نقطة البداية والوجهة',indoorNav:'الملاحة داخل المبنى',
     howToMove:'كيف تريد التنقل؟',autoDesc:'معاينة المسار تلقائيًا',sensorDesc:'يتحرك المؤشر أثناء مشيك',wheelchairDesc:'اضغط عند الوصول إلى كل نقطة',
     accessibleHint:'يستخدم المصاعد ويتجنب الدرج',chooseFloor:'اختر…',chooseFloorFirst:'اختر الطابق أولًا',chooseStart:'اختر نقطة البداية…',chooseDestination:'اختر الوجهة…',
     groupRooms:'الغرف',groupRestrooms:'المراحيض',groupEntrances:'المداخل والمخارج',groupOther:'أماكن أخرى',
-    restroom:'مرحاض',entrance:'مدخل',shelter:'ملجأ',terrace:'شرفة',landmark:'معلم',gym:'صالة رياضية',library:'مكتبة',elevator:'مصعد',elevators:'المصاعد',stairs:'درج',near:'قرب',
-    zoomIn:'تكبير',zoomOut:'تصغير',resetZoom:'إعادة التكبير'}
+    restroom:'مرحاض',entrance:'مدخل',shelter:'ملجأ',terrace:'شرفة',landmark:'معلم',gym:'صالة رياضية',library:'مكتبة',elevator:'مصعد',elevators:'المصاعد',stairs:'درج',parking:'موقف سيارات',clinic:'عيادة',food:'طعام',museum:'متحف',near:'قرب',
+    zoomIn:'تكبير',zoomOut:'تصغير',resetZoom:'إعادة التكبير'},
+  ru:{route:'Показать маршрут',building:'Здание',startFloor:'Этаж',startLocation:'Начальная точка',destinationFloor:'Этаж',destination:'Пункт назначения',
+    yourRoute:'Ваш маршрут',from:'Откуда',to:'Куда',swap:'Поменять',swapTitle:'Поменять местами начало и пункт назначения',indoorNav:'Навигация внутри здания',
+    howToMove:'Как вы хотите перемещаться?',autoDesc:'Автоматический просмотр маршрута',sensorDesc:'Маркер движется вместе с вами',wheelchairDesc:'Нажимайте после прибытия к каждой точке',
+    accessibleHint:'Использует лифты и избегает лестниц',chooseFloor:'Выберите…',chooseFloorFirst:'Сначала выберите этаж',chooseStart:'Выберите начальную точку…',chooseDestination:'Выберите пункт назначения…',
+    groupRooms:'Комнаты',groupRestrooms:'Туалеты',groupEntrances:'Входы и выходы',groupOther:'Другие места',
+    restroom:'Туалет',entrance:'Вход',shelter:'Укрытие',terrace:'Терраса',landmark:'Ориентир',gym:'Спортзал',library:'Библиотека',elevator:'Лифт',elevators:'Лифты',stairs:'Лестница',parking:'Парковка',clinic:'Клиника',food:'Еда',museum:'Музей',near:'рядом с',
+    zoomIn:'Увеличить',zoomOut:'Уменьшить',resetZoom:'Сбросить масштаб'}
 };
 Object.entries(INDOOR_T_EXTRA).forEach(([language, strings]) => Object.assign(INDOOR_T[language], strings));
 
@@ -468,10 +476,59 @@ function localizedFloor(f){
   const n=floorLabel(f);
   if(indoorLang==='ar') return `الطابق ${n}`;
   if(indoorLang==='he') return `קומה ${n}`;
+  if(indoorLang==='ru') return `Этаж ${n}`;
   return `Floor ${n}`;
 }
 
-function localizedNodeLabel(label){
+const RUSSIAN_INDOOR_LABELS={
+  'parking lot':'Парковка',
+  clinic:'Клиника',
+  cafeteria:'Столовая',
+  'teachers room buffet':'Буфет преподавателей',
+  'hecht museum':'Музей Хехта',
+  entrance:'Вход',
+  'emergency exit':'Аварийный выход',
+  'entrance to parking':'Вход на парковку',
+  terrace:'Терраса',
+  restroom:'Туалет',
+  shelter:'Укрытие',
+  landmark:'Ориентир',
+  gym:'Спортзал',
+  library:'Библиотека'
+};
+
+function russianIndoorNodeLabel(label,type=''){
+  const raw=String(label??'').trim();
+  const normalized=raw.toLowerCase();
+  const exact=RUSSIAN_INDOOR_LABELS[normalized];
+  if(exact) return exact;
+
+  const mainEntrance=normalized.match(/^main entrance\s*(.*)$/);
+  if(mainEntrance) return `Главный вход${mainEntrance[1] ? ` ${mainEntrance[1]}` : ''}`;
+
+  const elevator=normalized.match(/^elevators?\s*(\d+)?$/);
+  if(elevator) return `Лифт${elevator[1] ? ` ${elevator[1]}` : ''}`;
+
+  const stairs=normalized.match(/^stairs?\s*(\d+)?$/);
+  if(stairs) return `Лестница${stairs[1] ? ` ${stairs[1]}` : ''}`;
+
+  const typeKey={
+    restroom:'restroom',entrance:'entrance',shelter:'shelter',landmark:'landmark',
+    gym:'gym',library:'library',elevator:'elevator','virtual-elevator':'elevators',stairs:'stairs',
+    parking:'parking',clinic:'clinic',food:'food',museum:'museum'
+  }[type];
+  if(
+    !raw ||
+    /^node\s*\d+$/i.test(raw) ||
+    /[\u0590-\u05ff\u0600-\u06ff]/.test(raw)
+  ){
+    return typeKey ? it(typeKey) : (raw || 'Объект');
+  }
+
+  return raw;
+}
+
+function localizedNodeLabel(label,type=''){
   const raw=String(label??'');
   if(indoorLang==='ar'){
     if(raw.toLowerCase()==='entrance') return 'المدخل';
@@ -481,11 +538,14 @@ function localizedNodeLabel(label){
     if(raw.toLowerCase()==='entrance') return 'כניסה';
     if(raw.toLowerCase()==='elevators') return 'מעליות';
   }
+  if(indoorLang==='ru'){
+    return russianIndoorNodeLabel(raw,type);
+  }
   return raw;
 }
 
-function localizedInstruction(en, ar, he){
-  return indoorLang==='ar' ? ar : indoorLang==='he' ? he : en;
+function localizedInstruction(en, ar, he, ru){
+  return indoorLang==='ar' ? ar : indoorLang==='he' ? he : indoorLang==='ru' ? ru : en;
 }
 
 function applyIndoorTranslations(){
@@ -495,13 +555,15 @@ if(floorPlanLabel){
   floorPlanLabel.textContent = localizedInstruction(
     'Show floor plan',
     'عرض مخطط الطابق',
-    'הצג תוכנית קומה'
+    'הצג תוכנית קומה',
+    'Показать план этажа'
   );
 }
   const buildingNames={
     en:{madriga:'Terrace Building (Madriga)',education:'Education and Science',main:'Main Building','multi-purpose':'Multi-Purpose Building',rabin:'Rabin Building',student:'Student House'},
     ar:{madriga:'مبنى مدرجة',education:'مبنى التربية والعلوم',main:'المبنى الرئيسي','multi-purpose':'المبنى متعدد الأغراض',rabin:'مبنى رابين',student:'بيت الطالب'},
-    he:{madriga:'בניין מדרגה',education:'בניין חינוך ומדעים',main:'הבניין הראשי','multi-purpose':'בניין רב-תכליתי',rabin:'בניין רבין',student:'בית הסטודנט'}
+    he:{madriga:'בניין מדרגה',education:'בניין חינוך ומדעים',main:'הבניין הראשי','multi-purpose':'בניין רב-תכליתי',rabin:'בניין רבין',student:'בית הסטודנט'},
+    ru:{madriga:'Здание «Терраса» (Мадрига)',education:'Здание образования и науки',main:'Главное здание','multi-purpose':'Многофункциональное здание',rabin:'Здание Рабина',student:'Дом студентов'}
   };
 document.querySelectorAll('#building option').forEach(option => {
   option.textContent =
@@ -514,15 +576,28 @@ if($('currentBuildingName')){
   $('currentBuildingName').textContent =
     $('building').selectedOptions[0]?.textContent || BUILDING;
 }
-  $('directionTitle').textContent=localizedInstruction('Automatic direction setup','تحديد الاتجاه تلقائيًا','הגדרת כיוון אוטומטית');
+  $('directionTitle').textContent=localizedInstruction('Automatic direction setup','تحديد الاتجاه تلقائيًا','הגדרת כיוון אוטומטית','Автоматическая настройка направления');
   $('directionHelp').textContent=localizedInstruction(
     'Press Start and point the top of your phone along the route. CampusWay sets the initial direction automatically. Keep the phone generally facing your walk; ordinary changes in tilt do not need a new setup. Unclear readings pause position updates, which resume automatically when usable readings return. Turning around can move the marker back; walking backwards without turning is not supported. Position is estimated on this floor; leaving the route is not detected.',
     'اضغط ابدأ ووجّه أعلى الهاتف مع المسار. يحدد CampusWay اتجاه البداية تلقائيًا. أبقِ الهاتف باتجاه مشيك عمومًا؛ تغيّر الميلان العادي لا يتطلب إعدادًا جديدًا. عند عدم وضوح القراءة، يتوقف تحديث الموقع مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. يمكنك اللف والمشي للرجوع؛ المشي للخلف دون لف غير مدعوم. الموقع تقديري على هذا الطابق، ولا يكشف الخروج عن المسار.',
-    'לחץ התחל וכוון את קצה הטלפון לאורך המסלול. CampusWay מגדיר את כיוון ההתחלה אוטומטית. שמור את הטלפון בכיוון ההליכה באופן כללי; שינויי הטיה רגילים אינם דורשים הגדרה מחדש. קריאות לא ברורות משהות את עדכון המיקום, שמתחדש אוטומטית כשחוזרות קריאות תקינות. ניתן להסתובב ולחזור; הליכה לאחור בלי להסתובב אינה נתמכת. המיקום משוער בקומה זו; סטייה מהמסלול אינה מזוהה.');
-  $('calibrateBtn').textContent=localizedInstruction('Retry direction setup','أعد تحديد الاتجاه','נסה שוב להגדיר כיוון');
+    'לחץ התחל וכוון את קצה הטלפון לאורך המסלול. CampusWay מגדיר את כיוון ההתחלה אוטומטית. שמור את הטלפון בכיוון ההליכה באופן כללי; שינויי הטיה רגילים אינם דורשים הגדרה מחדש. קריאות לא ברורות משהות את עדכון המיקום, שמתחדש אוטומטית כשחוזרות קריאות תקינות. ניתן להסתובב ולחזור; הליכה לאחור בלי להסתובב אינה נתמכת. המיקום משוער בקומה זו; סטייה מהמסלול אינה מזוהה.',
+    'Нажмите «Старт» и направьте верхнюю часть телефона вдоль маршрута. CampusWay автоматически определит начальное направление. Держите телефон примерно по направлению движения; обычные изменения наклона не требуют повторной настройки. При неясных показаниях обновление позиции временно приостанавливается и автоматически возобновляется, когда показания снова становятся пригодными. После разворота маркер может двигаться назад; движение спиной вперёд без разворота не поддерживается. Позиция на этом этаже приблизительная; сход с маршрута не определяется.');
+  $('calibrateBtn').textContent=localizedInstruction('Retry direction setup','أعد تحديد الاتجاه','נסה שוב להגדיר כיוון','Повторить настройку направления');
   const rtl=indoorLang==='ar'||indoorLang==='he';
   document.documentElement.lang=indoorLang;
   document.documentElement.dir=rtl?'rtl':'ltr';
+  document.querySelector('.controlPanel')?.setAttribute('aria-label', localizedInstruction(
+    'Indoor route','مسار داخل المبنى','מסלול בתוך הבניין','Маршрут внутри здания'
+  ));
+  document.querySelector('.mapwrap')?.setAttribute('aria-label', localizedInstruction(
+    'Floor plan','مخطط الطابق','תוכנית הקומה','План этажа'
+  ));
+  $('mapSvg')?.setAttribute('aria-label', localizedInstruction(
+    'Simplified indoor navigation map',
+    'خريطة مبسطة للملاحة داخل المبنى',
+    'מפת ניווט פשוטה בתוך הבניין',
+    'Упрощённая карта навигации внутри здания'
+  ));
 
   const set=(selector,key)=>{
     const el=document.querySelector(selector);
@@ -1021,12 +1096,14 @@ if(context.destinationType === 'rest-space'){
         $('instruction').textContent = localizedInstruction(
           'Where to inside?',
           'إلى أين داخل المبنى؟',
-          'לאן בתוך הבניין?'
+          'לאן בתוך הבניין?',
+          'Куда внутри здания?'
         );
         $('subInstruction').textContent = localizedInstruction(
           'Choose a room or place under “To”.',
           'اختر غرفة أو مكانًا في خانة "إلى".',
-          'בחר חדר או מקום בשדה "לאן".'
+          'בחר חדר או מקום בשדה "לאן".',
+          'Выберите комнату или место в поле «Куда».'
         );
         showChosenStart();
       }
@@ -1094,14 +1171,16 @@ $('startBtn').disabled = true;
     $('status').textContent = localizedInstruction(
       'Building loaded. Choose a start and a destination.',
       'تم تحميل المبنى. اختر نقطة البداية والوجهة.',
-      'הבניין נטען. בחר נקודת התחלה ויעד.'
+      'הבניין נטען. בחר נקודת התחלה ויעד.',
+      'Здание загружено. Выберите начальную точку и пункт назначения.'
     );
   }catch(err){
     console.error(err);
     $('status').textContent = localizedInstruction(
       'Could not load this building. Please try again.',
       'تعذّر تحميل هذا المبنى. حاول مرة أخرى.',
-      'לא ניתן לטעון את הבניין. נסה שוב.'
+      'לא ניתן לטעון את הבניין. נסה שוב.',
+      'Не удалось загрузить это здание. Повторите попытку.'
     );
   }
 };
@@ -1141,7 +1220,7 @@ function resolveSelection(value){
 function selectionLabel(value){
   if(virtualDestinations.has(value)) return virtualDestinations.get(value).label;
   const node=nodeById(value);
-  return node?._displayLabel || node?.label || value;
+  return node ? (node._displayLabel || friendlyNodeName(node)) : value;
 }
 
 function userFacingLocationsForFloor(floorId){
@@ -1886,8 +1965,8 @@ function updateRouteBadges(){
     while(end<routeNodes.length-1 && routeNodes[end+1].floor!==routeNodes[end].floor) end++;
     const target=routeNodes[end];
     const methodText=method==='elevator'
-      ? localizedInstruction('Elevator','المصعد','מעלית')
-      : localizedInstruction('Stairs','الدرج','מדרגות');
+      ? localizedInstruction('Elevator','المصعد','מעלית','Лифт')
+      : localizedInstruction('Stairs','الدرج','מדרגות','Лестница');
     const group=svgEl('g',{class:`map-badge map-badge--${method}`},mapLayers.badges);
     svgEl('circle',{class:'badge-dot',r:6},group);
     const chip=makeChip(group, `${method==='elevator'?'⇅':'↗'} ${methodText} · ${localizedFloor(target.floor)}`, 'badge-chip');
@@ -2120,7 +2199,7 @@ function floorButtons(){
     if(floors[floors.length-1]!==routeNodes[end].floor) floors.push(routeNodes[end].floor);
     i=end-1;
   }
-  const arrow=(typeof indoorLang!=='undefined' && indoorLang!=='en') ? '←' : '→';
+  const arrow=(indoorLang==='ar'||indoorLang==='he') ? '←' : '→';
   $('routeCard').innerHTML=`<strong>${esc(aLabel)} ${arrow} ${esc(bLabel)}</strong><div class="muted">${floors.map(f=>localizedFloor(f)).join(` ${arrow} `)}</div>`;
 
   // Detailed steps: turns with a nearby room or place, one step per
@@ -2148,10 +2227,9 @@ const isSharedOrigin =
   sharedTransfer.originBuilding === currentBuilding;
 
 if(isSharedOrigin){
-  const destinationName =
-    sharedTransfer.destinationBuilding === 'rabin'
-      ? 'Rabin'
-      : 'Madriga';
+  const destinationName = indoorBuildingName(
+    sharedTransfer.destinationBuilding
+  );
 
   const destinationFloor =
     sharedTransfer.destinationBuilding === 'rabin'
@@ -2160,8 +2238,18 @@ if(isSharedOrigin){
 
   steps.push(
     sharedTransfer.method === 'elevator'
-      ? `Take the elevator directly to ${destinationName} Floor ${destinationFloor}`
-      : `Take the stairs to ${destinationName} Floor ${destinationFloor}`
+      ? localizedInstruction(
+          `Take the elevator directly to ${destinationName}, Floor ${destinationFloor}`,
+          `استقل المصعد مباشرة إلى ${destinationName}، الطابق ${destinationFloor}`,
+          `עלה במעלית ישירות אל ${destinationName}, קומה ${destinationFloor}`,
+          `Поднимитесь на лифте прямо в ${destinationName}, этаж ${destinationFloor}`
+        )
+      : localizedInstruction(
+          `Take the stairs to ${destinationName}, Floor ${destinationFloor}`,
+          `استخدم الدرج إلى ${destinationName}، الطابق ${destinationFloor}`,
+          `עלה במדרגות אל ${destinationName}, קומה ${destinationFloor}`,
+          `Поднимитесь по лестнице в ${destinationName}, этаж ${destinationFloor}`
+        )
   );
   stepItems.push({index:routeNodes.length-1});
 }else{
@@ -2172,20 +2260,22 @@ if(isSharedOrigin){
       ? localizedInstruction(
           `Walk ${indoorStepMeters(lastWalk)} m to arrive at ${bLabel}`,
           `امشِ ${indoorStepMeters(lastWalk)} م حتى تصل إلى ${localizedNodeLabel(bLabel)}`,
-          `לך ${indoorStepMeters(lastWalk)} מ׳ עד ${localizedNodeLabel(bLabel)}`
+          `לך ${indoorStepMeters(lastWalk)} מ׳ עד ${localizedNodeLabel(bLabel)}`,
+          `Пройдите ${indoorStepMeters(lastWalk)} м до ${localizedNodeLabel(bLabel)}`
         )
       : localizedInstruction(
           `Arrive at ${bLabel}`,
           `وصلت إلى ${localizedNodeLabel(bLabel)}`,
-          `הגעת אל ${localizedNodeLabel(bLabel)}`
+          `הגעת אל ${localizedNodeLabel(bLabel)}`,
+          `Вы пришли к ${localizedNodeLabel(bLabel)}`
         )
   );
   stepItems.push({index:routeNodes.length-1});
 }
   indoorRouteStepTexts=steps.slice();
   $('steps').innerHTML=`<ol class="stepList">${steps.map((s,i)=>`<li data-step-node="${stepItems[i]?.index ?? 0}" tabindex="0">${esc(s)}</li>`).join('')}</ol>`;
-  $('instruction').textContent=localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','עקוב אחר המסלול המסומן');
-  $('subInstruction').textContent=localizedInstruction(`Destination: ${bLabel}`,`الوجهة: ${localizedNodeLabel(bLabel)}`,`יעד: ${localizedNodeLabel(bLabel)}`);
+  $('instruction').textContent=localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','עקוב אחר המסלול המסומן','Следуйте по выделенному маршруту');
+  $('subInstruction').textContent=localizedInstruction(`Destination: ${bLabel}`,`الوجهة: ${localizedNodeLabel(bLabel)}`,`יעד: ${localizedNodeLabel(bLabel)}`,`Пункт назначения: ${localizedNodeLabel(bLabel)}`);
 const walkingSpeedMps = 1.2;
 
 const totalSeconds =
@@ -2199,7 +2289,8 @@ const walkingMinutes = Math.max(
 routeEtaText = localizedInstruction(
   `${walkingMinutes} min`,
   `${walkingMinutes} د`,
-  `${walkingMinutes} דק׳`
+  `${walkingMinutes} דק׳`,
+  `${walkingMinutes} мин`
 );
 $('eta').textContent = routeEtaText;
 }
@@ -2236,7 +2327,7 @@ function indoorLandmarkNear(node){
   if(!best) return '';
   const label=String(best.label).trim();
   if(best.type==='room'){
-    return localizedInstruction(`room ${label}`,`الغرفة ${label}`,`חדר ${label}`);
+    return localizedInstruction(`room ${label}`,`الغرفة ${label}`,`חדר ${label}`,`комната ${label}`);
   }
   if(typeof friendlyNodeName==='function') return localizedNodeLabel(friendlyNodeName(best));
   return localizedNodeLabel(label);
@@ -2244,8 +2335,8 @@ function indoorLandmarkNear(node){
 
 function indoorTurnWords(angle){
   const left=angle<0;
-  if(Math.abs(angle)>=140) return localizedInstruction(left?'make a sharp left':'make a sharp right',left?'انعطف بحدة إلى اليسار':'انعطف بحدة إلى اليمين',left?'פנה בחדות שמאלה':'פנה בחדות ימינה');
-  return localizedInstruction(left?'turn left':'turn right',left?'انعطف يسارًا':'انعطف يمينًا',left?'פנה שמאלה':'פנה ימינה');
+  if(Math.abs(angle)>=140) return localizedInstruction(left?'make a sharp left':'make a sharp right',left?'انعطف بحدة إلى اليسار':'انعطف بحدة إلى اليمين',left?'פנה בחדות שמאלה':'פנה בחדות ימינה',left?'резко поверните налево':'резко поверните направо');
+  return localizedInstruction(left?'turn left':'turn right',left?'انعطف يسارًا':'انعطف يمينًا',left?'פנה שמאלה':'פנה ימינה',left?'поверните налево':'поверните направо');
 }
 
 function indoorRouteStepItems(startLabel){
@@ -2297,13 +2388,14 @@ function indoorRouteStepItems(startLabel){
   const items=[{index:0,after:0,text:localizedInstruction(
     `Start at ${startLabel} on Floor ${floorLabel(first.floor)}`,
     `ابدأ من ${localizedNodeLabel(startLabel)} في ${localizedFloor(first.floor)}`,
-    `התחל ב-${localizedNodeLabel(startLabel)} ב${localizedFloor(first.floor)}`
+    `התחל ב-${localizedNodeLabel(startLabel)} ב${localizedFloor(first.floor)}`,
+    `Начните у ${localizedNodeLabel(startLabel)} на этаже ${floorLabel(first.floor)}`
   )}];
   const capital=text=>text.charAt(0).toUpperCase()+text.slice(1);
   for(const event of events){
     const walk=indoorWalkSince(event.fromIndex,event.index);
     const before=walk>=3
-      ? localizedInstruction(`Walk ${indoorStepMeters(walk)} m, then `,`امشِ ${indoorStepMeters(walk)} م، ثم `,`לך ${indoorStepMeters(walk)} מ׳, ואז `)
+      ? localizedInstruction(`Walk ${indoorStepMeters(walk)} m, then `,`امشِ ${indoorStepMeters(walk)} م، ثم `,`לך ${indoorStepMeters(walk)} מ׳, ואז `,`Пройдите ${indoorStepMeters(walk)} м, затем `)
       : '';
     if(event.kind==='ride'){
       const node=routeNodes[event.index],target=routeNodes[event.after];
@@ -2311,14 +2403,15 @@ function indoorRouteStepItems(startLabel){
       const verb=localizedInstruction(
         `take the ${event.method}${typeof ORDER!=='undefined' ? (up?' up':' down') : ''} to Floor ${floorLabel(target.floor)}`,
         `${up?'اصعد':'انزل'} ${event.method==='elevator'?'بالمصعد':'بالدرج'} إلى ${localizedFloor(target.floor)}`,
-        `${up?'עלה':'רד'} ב${event.method==='elevator'?'מעלית':'מדרגות'} ל${localizedFloor(target.floor)}`
+        `${up?'עלה':'רד'} ב${event.method==='elevator'?'מעלית':'מדרגות'} ל${localizedFloor(target.floor)}`,
+        `${up?'поднимитесь':'спуститесь'} ${event.method==='elevator'?'на лифте':'по лестнице'} на этаж ${floorLabel(target.floor)}`
       );
       items.push({index:event.index,after:event.after,text:before ? before+verb : capital(verb)});
       continue;
     }
     const landmark=indoorLandmarkNear(routeNodes[event.index]);
     const turn=indoorTurnWords(event.angle);
-    const near=landmark ? localizedInstruction(` near ${landmark}`,` قرب ${landmark}`,` ליד ${landmark}`) : '';
+    const near=landmark ? localizedInstruction(` near ${landmark}`,` قرب ${landmark}`,` ליד ${landmark}`,` рядом с ${landmark}`) : '';
     items.push({index:event.index,after:event.after,text:before ? before+turn+near : capital(turn+near)});
   }
   return items;
@@ -2426,7 +2519,7 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
   headingDeg=currentHeading();
   $('startBtn').disabled=false;
   updateDirectionControls();
-  $('status').textContent=localizedInstruction('Route ready.','المسار جاهز.','המסלול מוכן.');
+  $('status').textContent=localizedInstruction('Route ready.','المسار جاهز.','המסלול מוכן.','Маршрут готов.');
     describeRoute(routeMeters, verticalSeconds);
 
   // Show this route's walking time (and clear stale banner text from an earlier route).
@@ -2444,13 +2537,14 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
 function spatialDistanceText(distance){
   if(distance<1){
-    return localizedInstruction('less than 1 m','أقل من متر','פחות ממטר');
+    return localizedInstruction('less than 1 m','أقل من متر','פחות ממטר','менее 1 м');
   }
   const rounded=Math.max(1,Math.round(distance));
   return localizedInstruction(
     `about ${rounded} m`,
     `حوالي ${rounded} متر`,
-    `כ-${rounded} מ׳`
+    `כ-${rounded} מ׳`,
+    `около ${rounded} м`
   );
 }
 
@@ -2470,17 +2564,19 @@ function updateSpatialInstruction(){
     if($('turnIcon')) $('turnIcon').textContent = '↕';
     const target=routeNodes[targetIndex];
     const method=(current.type==='elevator'||next.type==='elevator')
-      ? localizedInstruction('elevator','المصعد','מעלית')
-      : localizedInstruction('stairs','الأدراج','מדרגות');
+      ? localizedInstruction('elevator','المصعد','מעלית','лифт')
+      : localizedInstruction('stairs','الأدراج','מדרגות','лестницу');
     $('instruction').textContent=localizedInstruction(
       `Take the ${method} to Floor ${floorLabel(target.floor)}`,
       `استخدم ${method} إلى ${localizedFloor(target.floor)}`,
-      `השתמש ב${method} כדי להגיע אל ${localizedFloor(target.floor)}`
+      `השתמש ב${method} כדי להגיע אל ${localizedFloor(target.floor)}`,
+      `Используйте ${method}, чтобы попасть на этаж ${floorLabel(target.floor)}`
     );
     $('subInstruction').textContent=localizedInstruction(
       'Continue from the marked point on the new floor.',
       'تابع من النقطة المحددة في الطابق الجديد.',
-      'המשך מהנקודה המסומנת בקומה החדשה.'
+      'המשך מהנקודה המסומנת בקומה החדשה.',
+      'Продолжайте от отмеченной точки на новом этаже.'
     );
     return;
   }
@@ -2501,17 +2597,18 @@ function updateSpatialInstruction(){
 }
 
   $('instruction').textContent=currentTurn>0
-    ? localizedInstruction('Turn right, then continue','انعطف يمينًا، ثم تابع','פנה ימינה והמשך')
+    ? localizedInstruction('Turn right, then continue','انعطف يمينًا، ثم تابع','פנה ימינה והמשך','Поверните направо и продолжайте')
     : currentTurn<0
-      ? localizedInstruction('Turn left, then continue','انعطف يسارًا، ثم تابع','פנה שמאלה והמשך')
-      : localizedInstruction('Continue straight','تابع للأمام','המשך ישר');
+      ? localizedInstruction('Turn left, then continue','انعطف يسارًا، ثم تابع','פנה שמאלה והמשך','Поверните налево и продолжайте')
+      : localizedInstruction('Continue straight','تابع للأمام','המשך ישר','Продолжайте прямо');
 
   if(targetIndex===routeNodes.length-1){
     const label=target._displayLabel||target.label;
     $('subInstruction').textContent=localizedInstruction(
       `${distanceText} to ${label}`,
       `${distanceText} حتى ${localizedNodeLabel(label)}`,
-      `${distanceText} עד ${localizedNodeLabel(label)}`
+      `${distanceText} עד ${localizedNodeLabel(label)}`,
+      `${distanceText} до ${localizedNodeLabel(label)}`
     );
     return;
   }
@@ -2521,17 +2618,18 @@ function updateSpatialInstruction(){
     $('subInstruction').textContent=localizedInstruction(
       `${distanceText} to ${checkpoint}`,
       `${distanceText} حتى ${checkpoint}`,
-      `${distanceText} עד ${checkpoint}`
+      `${distanceText} עד ${checkpoint}`,
+      `${distanceText} до ${checkpoint}`
     );
     return;
   }
 
   const targetTurn=wheelchairTurnAt(targetIndex);
   $('subInstruction').textContent=targetTurn>0
-    ? localizedInstruction(`${distanceText}, then turn right`,`${distanceText}، ثم انعطف يمينًا`,`${distanceText}, ואז פנה ימינה`)
+    ? localizedInstruction(`${distanceText}, then turn right`,`${distanceText}، ثم انعطف يمينًا`,`${distanceText}, ואז פנה ימינה`,`${distanceText}, затем поверните направо`)
     : targetTurn<0
-      ? localizedInstruction(`${distanceText}, then turn left`,`${distanceText}، ثم انعطف يسارًا`,`${distanceText}, ואז פנה שמאלה`)
-      : localizedInstruction(`${distanceText} to the next point`,`${distanceText} حتى النقطة التالية`,`${distanceText} עד הנקודה הבאה`);
+      ? localizedInstruction(`${distanceText}, then turn left`,`${distanceText}، ثم انعطف يسارًا`,`${distanceText}, ואז פנה שמאלה`,`${distanceText}, затем поверните налево`)
+      : localizedInstruction(`${distanceText} to the next point`,`${distanceText} حتى النقطة التالية`,`${distanceText} עד הנקודה הבאה`,`${distanceText} до следующей точки`);
 }
 
 
@@ -2549,12 +2647,14 @@ function rideInstruction(fromNode, toNode, targetNode){
     text:localizedInstruction(
       `Take the ${method} to Floor ${floorLabel(targetNode.floor)}`,
       `استخدم ${method==='elevator'?'المصعد':'الدرج'} إلى ${localizedFloor(targetNode.floor)}`,
-      `השתמש ב${method==='elevator'?'מעלית':'מדרגות'} אל ${localizedFloor(targetNode.floor)}`
+      `השתמש ב${method==='elevator'?'מעלית':'מדרגות'} אל ${localizedFloor(targetNode.floor)}`,
+      `Используйте ${method==='elevator'?'лифт':'лестницу'}, чтобы попасть на этаж ${floorLabel(targetNode.floor)}`
     ),
     sub:localizedInstruction(
       `Continue on Floor ${floorLabel(targetNode.floor)}`,
       `تابع في ${localizedFloor(targetNode.floor)}`,
-      `המשך ב${localizedFloor(targetNode.floor)}`
+      `המשך ב${localizedFloor(targetNode.floor)}`,
+      `Продолжайте на этаже ${floorLabel(targetNode.floor)}`
     )
   };
 }
@@ -2594,13 +2694,15 @@ function updateTurnInstruction(){
     $('instruction').textContent = localizedInstruction(
       'Returning along the route',
       'ترجع على المسار',
-      'חוזר לאורך המסלול'
+      'חוזר לאורך המסלול',
+      'Возвращайтесь по маршруту'
     );
 
     $('subInstruction').textContent = localizedInstruction(
       'Estimated position — keep the phone facing your walk.',
       'موقع تقديري — أبقِ الهاتف باتجاه مشيك.',
-      'מיקום משוער — שמור את הטלפון בכיוון ההליכה.'
+      'מיקום משוער — שמור את הטלפון בכיוון ההליכה.',
+      'Приблизительная позиция — держите телефон по направлению движения.'
     );
 
     return;
@@ -2610,7 +2712,8 @@ function updateTurnInstruction(){
     $('subInstruction').textContent = localizedInstruction(
       'Estimated position on the planned route.',
       'موقع تقديري على المسار المحدد.',
-      'מיקום משוער לאורך המסלול המתוכנן.'
+      'מיקום משוער לאורך המסלול המתוכנן.',
+      'Приблизительная позиция на запланированном маршруте.'
     );
   }
 
@@ -2640,18 +2743,21 @@ function updateTurnInstruction(){
       ? localizedInstruction(
           `Take the elevator to Floor ${floorLabel(b.floor)}`,
           `استخدم المصعد إلى ${localizedFloor(b.floor)}`,
-          `סע במעלית אל ${localizedFloor(b.floor)}`
+          `סע במעלית אל ${localizedFloor(b.floor)}`,
+          `Поднимитесь или спуститесь на лифте на этаж ${floorLabel(b.floor)}`
         )
       : localizedInstruction(
           `Take the stairs to Floor ${floorLabel(b.floor)}`,
           `استخدم الأدراج إلى ${localizedFloor(b.floor)}`,
-          `עלה או רד במדרגות אל ${localizedFloor(b.floor)}`
+          `עלה או רד במדרגות אל ${localizedFloor(b.floor)}`,
+          `Поднимитесь или спуститесь по лестнице на этаж ${floorLabel(b.floor)}`
         );
 
     $('subInstruction').textContent = localizedInstruction(
       `Continue on Floor ${floorLabel(b.floor)}`,
       `تابع في ${localizedFloor(b.floor)}`,
-      `המשך ב${localizedFloor(b.floor)}`
+      `המשך ב${localizedFloor(b.floor)}`,
+      `Продолжайте на этаже ${floorLabel(b.floor)}`
     );
 
     return;
@@ -2661,7 +2767,8 @@ function updateTurnInstruction(){
     $('instruction').textContent = localizedInstruction(
       'Continue to destination',
       'تابع إلى الوجهة',
-      'המשך אל היעד'
+      'המשך אל היעד',
+      'Продолжайте к пункту назначения'
     );
     return;
   }
@@ -2672,7 +2779,8 @@ function updateTurnInstruction(){
     $('instruction').textContent = localizedInstruction(
       'Continue straight',
       'تابع مباشرة',
-      'המשך ישר'
+      'המשך ישר',
+      'Продолжайте прямо'
     );
     return;
   }
@@ -2700,21 +2808,24 @@ function updateTurnInstruction(){
     $('instruction').textContent = localizedInstruction(
       'Continue straight',
       'تابع مباشرة',
-      'המשך ישר'
+      'המשך ישר',
+      'Продолжайте прямо'
     );
   }else if(angle > 0){
     setIcon('↱');
     $('instruction').textContent = localizedInstruction(
       'Turn right',
       'انعطف يمينًا',
-      'פנה ימינה'
+      'פנה ימינה',
+      'Поверните направо'
     );
   }else{
     setIcon('↰');
     $('instruction').textContent = localizedInstruction(
       'Turn left',
       'انعطف يسارًا',
-      'פנה שמאלה'
+      'פנה שמאלה',
+      'Поверните налево'
     );
   }
 }
@@ -2733,12 +2844,12 @@ function wheelchairCheckpointName(index, currentPoint=false){
   if(!node) return '';
   if(index===0) return localizedNodeLabel(node._displayLabel||node.label);
   if(index===routeNodes.length-1) return localizedNodeLabel(node._displayLabel||node.label);
-  if(node.type==='elevator') return localizedInstruction('the elevator','المصعد','המעלית');
-  if(node.type==='ramp') return localizedInstruction('the ramp','المنحدر','הרמפה');
-  if(node.type==='stairs') return localizedInstruction('the stairs','الدرج','המדרגות');
+  if(node.type==='elevator') return localizedInstruction('the elevator','المصعد','המעלית','лифта');
+  if(node.type==='ramp') return localizedInstruction('the ramp','المنحدر','הרמפה','пандуса');
+  if(node.type==='stairs') return localizedInstruction('the stairs','الدرج','המדרגות','лестницы');
   return currentPoint
-    ? localizedInstruction('the turn','المنعطف','הפנייה')
-    : localizedInstruction('the next turn','المنعطف التالي','הפנייה הבאה');
+    ? localizedInstruction('the turn','المنعطف','הפנייה','поворота')
+    : localizedInstruction('the next turn','المنعطف التالي','הפנייה הבאה','следующего поворота');
 }
 
 function wheelchairTurnAt(index){
@@ -2767,19 +2878,22 @@ function updateWheelchairInstruction(){
     $('instruction').textContent = localizedInstruction(
   'Destination reached — confirm arrival',
   'وصلت إلى الوجهة — أكّد الوصول',
-  'הגעת ליעד — אשר הגעה'
+  'הגעת ליעד — אשר הגעה',
+  'Пункт назначения достигнут — подтвердите прибытие'
 );
     $('subInstruction').textContent=localizedInstruction(
       `Check the sign or landmark to confirm: ${label}`,
       `تحقق من اللافتة أو المعلم لتأكيد الوصول: ${localizedNodeLabel(label)}`,
-      `בדוק את השלט או את נקודת הציון לאישור: ${localizedNodeLabel(label)}`
+      `בדוק את השלט או את נקודת הציון לאישור: ${localizedNodeLabel(label)}`,
+      `Проверьте табличку или ориентир для подтверждения: ${localizedNodeLabel(label)}`
     );
     $('eta').textContent = localizedInstruction(
   'Confirm arrival',
   'أكّد الوصول',
-  'אשר הגעה'
+  'אשר הגעה',
+  'Подтвердите прибытие'
 );
-    $('wheelchairNextBtn').textContent=localizedInstruction('✓ Destination reached','✓ وصلت للوجهة','✓ הגעתי ליעד');
+    $('wheelchairNextBtn').textContent=localizedInstruction('✓ Destination reached','✓ وصلت للوجهة','✓ הגעתי ליעד','✓ Пункт назначения достигнут');
     return;
   }
 
@@ -2793,24 +2907,27 @@ function updateWheelchairInstruction(){
     if($('turnIcon')) $('turnIcon').textContent = '↕';
     const usesElevator=routeNodes.slice(progressIndex,targetIndex+1).some(node=>node.type==='elevator');
     const method=usesElevator
-      ? localizedInstruction('elevator','المصعد','מעלית')
-      : localizedInstruction('accessible connector','الممر المهيأ','מעבר נגיש');
+      ? localizedInstruction('elevator','المصعد','מעלית','лифт')
+      : localizedInstruction('accessible connector','الممر المهيأ','מעבר נגיש','доступный переход');
     $('instruction').textContent=localizedInstruction(
       `Take the ${method} to Floor ${floorLabel(target.floor)}`,
       `استخدم ${method} إلى ${localizedFloor(target.floor)}`,
-      `השתמש ב${method} אל ${localizedFloor(target.floor)}`
+      `השתמש ב${method} אל ${localizedFloor(target.floor)}`,
+      `Используйте ${method}, чтобы попасть на этаж ${floorLabel(target.floor)}`
     );
     $('subInstruction').textContent=localizedInstruction(
       'Confirm after you arrive on that floor.',
       'أكّد بعد وصولك إلى هذا الطابق.',
-      'אשר לאחר ההגעה לקומה.'
+      'אשר לאחר ההגעה לקומה.',
+      'Подтвердите после прибытия на этот этаж.'
     );
     $('wheelchairNextBtn').textContent=localizedInstruction(
       `✓ Reached Floor ${floorLabel(target.floor)}`,
       `✓ وصلت إلى ${localizedFloor(target.floor)}`,
-      `✓ הגעתי אל ${localizedFloor(target.floor)}`
+      `✓ הגעתי אל ${localizedFloor(target.floor)}`,
+      `✓ Я на этаже ${floorLabel(target.floor)}`
     );
-    $('eta').textContent=localizedInstruction('Manual','يدوي','ידני');
+    $('eta').textContent=localizedInstruction('Manual','يدوي','ידני','Вручную');
     return;
   }
 
@@ -2822,23 +2939,24 @@ function updateWheelchairInstruction(){
     '↑';
 }
   $('instruction').textContent=turn>0
-    ? localizedInstruction('Turn right and follow the highlighted route','انعطف يمينًا واتبع المسار المحدد','פנה ימינה והמשך במסלול המסומן')
+    ? localizedInstruction('Turn right and follow the highlighted route','انعطف يمينًا واتبع المسار المحدد','פנה ימינה והמשך במסלול המסומן','Поверните направо и следуйте по выделенному маршруту')
     : turn<0
-      ? localizedInstruction('Turn left and follow the highlighted route','انعطف يسارًا واتبع المسار المحدد','פנה שמאלה והמשך במסלול המסומן')
-      : localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','המשך במסלול המסומן');
+      ? localizedInstruction('Turn left and follow the highlighted route','انعطف يسارًا واتبع المسار المحدد','פנה שמאלה והמשך במסלול המסומן','Поверните налево и следуйте по выделенному маршруту')
+      : localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','המשך במסלול המסומן','Следуйте по выделенному маршруту');
   const distance=CampusWheelchairNavigation.distanceToCheckpoint(
     routeNodes,
     {index:progressIndex,t:progressT},
     targetIndex
   );
   const distanceText=distance<1
-    ? localizedInstruction('less than 1 m','أقل من متر','פחות ממטר')
-    : localizedInstruction(`about ${Math.round(distance)} m`,`حوالي ${Math.round(distance)} متر`,`כ-${Math.round(distance)} מ׳`);
+    ? localizedInstruction('less than 1 m','أقل من متر','פחות ממטר','менее 1 м')
+    : localizedInstruction(`about ${Math.round(distance)} m`,`حوالي ${Math.round(distance)} متر`,`כ-${Math.round(distance)} מ׳`,`около ${Math.round(distance)} м`);
   const checkpoint=wheelchairCheckpointName(targetIndex);
   $('subInstruction').textContent=localizedInstruction(
     `${distanceText} to ${checkpoint}. Confirm only when you reach it.`,
     `${distanceText} حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
-    `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`
+    `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`,
+    `${distanceText} до ${checkpoint}. Подтвердите только после прибытия.`
   );
 let isOutdoorExit = false;
 
@@ -2874,24 +2992,28 @@ $('wheelchairNextBtn').textContent =
     ? localizedInstruction(
         '✓ I reached the exit — continue outdoors',
         '✓ وصلت إلى المخرج — تابع خارج المبنى',
-        '✓ הגעתי ליציאה — המשך החוצה'
+        '✓ הגעתי ליציאה — המשך החוצה',
+        '✓ Я у выхода — продолжить снаружи'
       )
     : target.type === 'elevator'
       ? localizedInstruction(
           '✓ I reached the elevator',
           '✓ وصلت إلى المصعد',
-          '✓ הגעתי למעלית'
+          '✓ הגעתי למעלית',
+          '✓ Я у лифта'
         )
       : targetIndex === routeNodes.length - 1
         ? localizedInstruction(
             '✓ I reached the destination',
             '✓ وصلت إلى الوجهة',
-            '✓ הגעתי ליעד'
+            '✓ הגעתי ליעד',
+            '✓ Я в пункте назначения'
           )
         : it('nextPoint');
 
 $('eta').textContent = localizedInstruction(
-  'Manual', 'يدوي', 'ידני'
+  'Manual', 'يدوي', 'ידני',
+  'Вручную'
 );
 }
 
@@ -2979,11 +3101,12 @@ if(
     ? localizedInstruction(
   'Confirm arrival when you are at the destination. Use Previous point if this was accidental.',
   'أكّد الوصول عندما تكون عند الوجهة. استخدم النقطة السابقة إذا كان الضغط بالخطأ.',
-  'אשר הגעה כשאתה נמצא ביעד. אם הלחיצה הייתה בטעות, השתמש בנקודה הקודמת.'
+  'אשר הגעה כשאתה נמצא ביעד. אם הלחיצה הייתה בטעות, השתמש בנקודה הקודמת.',
+  'Подтвердите прибытие, когда окажетесь в пункте назначения. Если нажатие было случайным, используйте кнопку «Предыдущая точка».'
 )
     : direction>0
-      ? localizedInstruction('Next point confirmed. Follow the new instruction.','تم تأكيد النقطة. اتبع الإرشاد الجديد.','הנקודה אושרה. המשך לפי ההנחיה החדשה.')
-      : localizedInstruction('Previous point confirmed.','تم تأكيد النقطة السابقة.','הנקודה הקודמת אושרה.');
+      ? localizedInstruction('Next point confirmed. Follow the new instruction.','تم تأكيد النقطة. اتبع الإرشاد الجديد.','הנקודה אושרה. המשך לפי ההנחיה החדשה.','Следующая точка подтверждена. Следуйте новой инструкции.')
+      : localizedInstruction('Previous point confirmed.','تم تأكيد النقطة السابقة.','הנקודה הקודמת אושרה.','Предыдущая точка подтверждена.');
 }
 
 // Readable name for a graph node (corridor ids such as "Node 133" are never shown).
@@ -2993,8 +3116,12 @@ function friendlyNodeName(node){
   if(node.type==='room') return raw;
   const typeKey={
     restroom:'restroom', entrance:'entrance', shelter:'shelter', landmark:'landmark',
-    gym:'gym', library:'library', elevator:'elevator', 'virtual-elevator':'elevators', stairs:'stairs'
+    gym:'gym', library:'library', elevator:'elevator', 'virtual-elevator':'elevators', stairs:'stairs',
+    parking:'parking', clinic:'clinic', food:'food', museum:'museum'
   }[node.type];
+  if(typeof indoorLang!=='undefined' && indoorLang==='ru'){
+    return russianIndoorNodeLabel(raw,node.type);
+  }
   const generic=!raw || /^node\s*\d+$/i.test(raw) ||
     /^(entrance|enter|restroom|shelter|landmark|gym|library|elevators?|stairs)$/i.test(raw);
   if(generic) return typeKey ? it(typeKey) : raw;
@@ -3019,7 +3146,7 @@ function updateProgressUI(){
 
   const cur=currentInterpolated();
   if(cur && navMode === 'sensor' && lastTravelDirection === -1){
-    $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — returning along the route`,`${localizedFloor(cur.floor)} — رجوع على المسار`,`${localizedFloor(cur.floor)} — חזרה לאורך המסלול`);
+    $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — returning along the route`,`${localizedFloor(cur.floor)} — رجوع على المسار`,`${localizedFloor(cur.floor)} — חזרה לאורך המסלול`,`Этаж ${floorLabel(cur.floor)} — возвращение по маршруту`);
     return;
   }
   if(navMode==='wheelchair'){
@@ -3030,7 +3157,8 @@ function updateProgressUI(){
       $('livePos').textContent=localizedInstruction(
         `Floor ${floorLabel(confirmed.floor)} — manual position on the route`,
         `${localizedFloor(confirmed.floor)} — موقع يدوي على المسار`,
-        `${localizedFloor(confirmed.floor)} — מיקום ידני במסלול`
+        `${localizedFloor(confirmed.floor)} — מיקום ידני במסלול`,
+        `Этаж ${floorLabel(confirmed.floor)} — позиция на маршруте указана вручную`
       );
       return;
     }
@@ -3038,13 +3166,14 @@ function updateProgressUI(){
     $('livePos').textContent=localizedInstruction(
       `Floor ${floorLabel(confirmed.floor)} — last confirmed point: ${label}`,
       `${localizedFloor(confirmed.floor)} — آخر نقطة مؤكدة: ${label}`,
-      `${localizedFloor(confirmed.floor)} — נקודה אחרונה שאושרה: ${label}`
+      `${localizedFloor(confirmed.floor)} — נקודה אחרונה שאושרה: ${label}`,
+      `Этаж ${floorLabel(confirmed.floor)} — последняя подтверждённая точка: ${label}`
     );
     return;
   }
   if(cur){
     const upcoming=upcomingRouteLabel();
-    $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — moving toward ${upcoming}`,`${localizedFloor(cur.floor)} — متجه نحو ${localizedNodeLabel(upcoming)}`,`${localizedFloor(cur.floor)} — מתקדם לכיוון ${localizedNodeLabel(upcoming)}`);
+    $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — moving toward ${upcoming}`,`${localizedFloor(cur.floor)} — متجه نحو ${localizedNodeLabel(upcoming)}`,`${localizedFloor(cur.floor)} — מתקדם לכיוון ${localizedNodeLabel(upcoming)}`,`Этаж ${floorLabel(cur.floor)} — движение к ${localizedNodeLabel(upcoming)}`);
   }
 }
 
@@ -3197,18 +3326,21 @@ function showFloorBoundary(direction=lastTravelDirection){
       ? localizedInstruction(
           `Take the stairs to Floor ${floorLabel(target.floor)}`,
           `استخدم الأدراج إلى ${localizedFloor(target.floor)}`,
-          `השתמש במדרגות כדי להגיע ל${localizedFloor(target.floor)}`
+          `השתמש במדרגות כדי להגיע ל${localizedFloor(target.floor)}`,
+          `Поднимитесь или спуститесь по лестнице на этаж ${floorLabel(target.floor)}`
         )
       : localizedInstruction(
           `Continue to Floor ${floorLabel(target.floor)}`,
           `تابع إلى ${localizedFloor(target.floor)}`,
-          `המשך אל ${localizedFloor(target.floor)}`
+          `המשך אל ${localizedFloor(target.floor)}`,
+          `Продолжайте до этажа ${floorLabel(target.floor)}`
         );
 
     $('subInstruction').textContent = localizedInstruction(
       'Confirm after reaching the indicated floor.',
       'أكّد بعد الوصول إلى الطابق المحدد.',
-      'אשר לאחר ההגעה לקומה המצוינת.'
+      'אשר לאחר ההגעה לקומה המצוינת.',
+      'Подтвердите после прибытия на указанный этаж.'
     );
 
     $('status').textContent = $('subInstruction').textContent;
@@ -3216,7 +3348,8 @@ function showFloorBoundary(direction=lastTravelDirection){
     $('sensorConfirmBtn').textContent = localizedInstruction(
       `I'm on Floor ${floorLabel(target.floor)}`,
       `أنا في ${localizedFloor(target.floor)}`,
-      `אני ב${localizedFloor(target.floor)}`
+      `אני ב${localizedFloor(target.floor)}`,
+      `Я на этаже ${floorLabel(target.floor)}`
     );
 
     $('sensorConfirmBtn').hidden = false;
@@ -3228,16 +3361,19 @@ function showFloorBoundary(direction=lastTravelDirection){
   $('instruction').textContent = localizedInstruction(
     `Take the elevator to Floor ${floorLabel(target.floor)}`,
     `استخدم المصعد إلى ${localizedFloor(target.floor)}`,
-    `סע במעלית אל ${localizedFloor(target.floor)}`
+    `סע במעלית אל ${localizedFloor(target.floor)}`,
+    `Поднимитесь или спуститесь на лифте на этаж ${floorLabel(target.floor)}`
   );
   $('subInstruction').textContent=localizedInstruction(
     'Tap after entering the elevator.',
     'اضغط بعد دخول المصعد.',
-    'לחץ לאחר הכניסה למעלית.'
+    'לחץ לאחר הכניסה למעלית.',
+    'Нажмите после входа в лифт.'
   );
   $('status').textContent=$('subInstruction').textContent;
   $('sensorConfirmBtn').textContent=localizedInstruction(
-    'I entered the elevator','دخلت المصعد','נכנסתי למעלית'
+    'I entered the elevator','دخلت المصعد','נכנסתי למעלית',
+    'Я в лифте'
   );
   $('sensorConfirmBtn').hidden=false;
 }
@@ -3265,22 +3401,47 @@ function showSensorArrivalConfirmation(){
   const exit = sensorArrivalIsExit();
 
   $('instruction').textContent = exit
-    ? localizedInstruction('Estimated exit','مخرج تقديري','יציאה משוערת')
-    : localizedInstruction('Estimated arrival','وصول تقديري','הגעה משוערת');
+    ? localizedInstruction(
+        'Estimated exit',
+        'مخرج تقديري',
+        'יציאה משוערת',
+        'Приблизительное достижение выхода'
+      )
+    : localizedInstruction(
+        'Estimated arrival',
+        'وصول تقديري',
+        'הגעה משוערת',
+        'Приблизительное прибытие'
+      );
+
   $('subInstruction').textContent = exit
     ? localizedInstruction(
         'Confirm when you reach the exit.',
         'أكّد عندما تصل إلى المخرج.',
-        'אשר כשתגיע ליציאה.'
+        'אשר כשתגיע ליציאה.',
+        'Подтвердите, когда дойдёте до выхода.'
       )
     : localizedInstruction(
         'Check the room sign, then confirm your arrival.',
         'تحقق من رقم الغرفة، ثم أكّد وصولك.',
-        'בדוק את שלט החדר, ואז אשר את ההגעה.'
+        'בדוק את שלט החדר, ואז אשר את ההגעה.',
+        'Проверьте табличку на двери, затем подтвердите прибытие.'
       );
+
   $('sensorConfirmBtn').textContent = exit
-    ? localizedInstruction('✓ I reached the exit','✓ وصلت إلى المخرج','✓ הגעתי ליציאה')
-    : localizedInstruction('✓ I have arrived','✓ لقد وصلت','✓ הגעתי');
+    ? localizedInstruction(
+        '✓ I reached the exit',
+        '✓ وصلت إلى المخرج',
+        '✓ הגעתי ליציאה',
+        '✓ Я дошёл до выхода'
+      )
+    : localizedInstruction(
+        '✓ I have arrived',
+        '✓ لقد وصلت',
+        '✓ הגעתי',
+        '✓ Я на месте'
+      );
+
   $('sensorConfirmBtn').hidden = false;
 }
 
@@ -3358,7 +3519,7 @@ function animateStepMovement(timestamp){
 }
 
 function heldDirectionMessage(){
-  $('status').textContent=localizedInstruction('Direction unclear — position updates paused temporarily. They resume automatically when readings are usable. Keep the phone facing your walk.','الاتجاه غير واضح — تحديث الموقع متوقف مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. أبقِ الهاتف باتجاه مشيك.','הכיוון אינו ברור — עדכון המיקום מושהה זמנית ויתחדש אוטומטית כשהקריאות יהיו תקינות. שמור את הטלפון בכיוון ההליכה.');
+  $('status').textContent=localizedInstruction('Direction unclear — position updates paused temporarily. They resume automatically when readings are usable. Keep the phone facing your walk.','الاتجاه غير واضح — تحديث الموقع متوقف مؤقتًا ويستأنف تلقائيًا عند تحسّن القراءة. أبقِ الهاتف باتجاه مشيك.','הכיוון אינו ברור — עדכון המיקום מושהה זמנית ויתחדש אוטומטית כשהקריאות יהיו תקינות. שמור את הטלפון בכיוון ההליכה.','Направление неясно — обновление позиции временно приостановлено. Оно автоматически возобновится, когда показания станут пригодными. Держите телефон по направлению движения.');
 }
 
 function handleDetectedStep(stepTime){
@@ -3390,8 +3551,8 @@ function handleDetectedStep(stepTime){
     stepMovementQueue.push(result.moved);
     projectedStepCursor={index:result.index,t:result.t};
     $('status').textContent=direction.direction>0
-      ? localizedInstruction('Walking forward — estimated position.','مشي للأمام — موقع تقديري.','הליכה קדימה — מיקום משוער.')
-      : localizedInstruction('Returning — estimated position.','رجوع — موقع تقديري.','חזרה — מיקום משוער.');
+      ? localizedInstruction('Walking forward — estimated position.','مشي للأمام — موقع تقديري.','הליכה קדימה — מיקום משוער.','Движение вперёд — приблизительная позиция.')
+      : localizedInstruction('Returning — estimated position.','رجوع — موقع تقديري.','חזרה — מיקום משוער.','Возвращение — приблизительная позиция.');
     if(movementAnimationFrame===null){
       lastMovementFrameTime=0;
       movementAnimationFrame=requestAnimationFrame(animateStepMovement);
@@ -3447,13 +3608,13 @@ function completeNavigation(){
   updateProgressUI();
 
   const destLabel=dest._displayLabel||dest.label;
-  $('instruction').textContent=localizedInstruction('You have arrived','لقد وصلت','הגעת ליעד');
+  $('instruction').textContent=localizedInstruction('You have arrived','لقد وصلت','הגעת ליעד','Вы прибыли');
   $('subInstruction').textContent=destLabel;
-  $('eta').textContent=localizedInstruction('Arrived','وصلت','הגעת');
+  $('eta').textContent=localizedInstruction('Arrived','وصلت','הגעת','Прибытие');
   $('livePos').textContent=`${localizedFloor(dest.floor)} — ${localizedNodeLabel(destLabel)}`;
   $('progressBar').style.width='100%';
   $('startBtn').disabled=true;
-  $('status').textContent=localizedInstruction('Arrived.','وصلت.','הגעת.');
+  $('status').textContent=localizedInstruction('Arrived.','وصلت.','הגעת.','Прибытие.');
   const journeyStage=sessionStorage.getItem('journeyStage');
   arrivalNextStep=null;
 
@@ -3487,7 +3648,8 @@ function completeNavigation(){
       $('status').textContent=localizedInstruction(
         'Connection reached. Continue into the next building when you are ready.',
         'وصلت إلى الممر. تابع إلى المبنى التالي عندما تكون جاهزًا.',
-        'הגעת למעבר. המשך לבניין הבא כשתהיה מוכן.'
+        'הגעת למעבר. המשך לבניין הבא כשתהיה מוכן.',
+        'Переход достигнут. Продолжайте в следующее здание, когда будете готовы.'
       );
 
       arrivalNextStep={
@@ -3516,31 +3678,36 @@ function completeNavigation(){
     $('instruction').textContent = localizedInstruction(
       'Continue outdoors',
       'تابع خارج المبنى',
-      'המשך מחוץ לבניין'
+      'המשך מחוץ לבניין',
+      'Продолжить снаружи'
     );
 
     $('subInstruction').textContent = localizedInstruction(
       'You reached the exit. Your outdoor route is ready.',
       'وصلت إلى المخرج. مسارك الخارجي جاهز.',
-      'הגעת ליציאה. המסלול החיצוני שלך מוכן.'
+      'הגעת ליציאה. המסלול החיצוני שלך מוכן.',
+      'Вы достигли выхода. Внешний маршрут готов.'
     );
 
     $('eta').textContent = localizedInstruction(
       'Exit',
       'المخرج',
-      'יציאה'
+      'יציאה',
+      'Выход'
     );
 
     $('status').textContent = localizedInstruction(
       'Exit reached. Continue on the outdoor route when you are ready.',
       'وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.',
-      'הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.'
+      'הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.',
+      'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
 
 $('status').textContent = localizedInstruction(
   'Opening the outdoor route...',
   'جارٍ فتح المسار الخارجي...',
-  'פותח את המסלול החיצוני...'
+  'פותח את המסלול החיצוני...',
+  'Открывается внешний маршрут...'
 );
 
 setTimeout(returnToOutdoorJourney, 400);
@@ -3569,7 +3736,8 @@ return;
       $('status').textContent=localizedInstruction(
         'Connection reached. Continue into the Terrace Building when you are ready.',
         'وصلت إلى الممر. تابع إلى مبنى مدرجة عندما تكون جاهزًا.',
-        'הגעת למעבר. המשך לבניין מדרגה כשתהיה מוכן.'
+        'הגעת למעבר. המשך לבניין מדרגה כשתהיה מוכן.',
+        'Переход достигнут. Продолжайте в здание «Терраса», когда будете готовы.'
       );
       arrivalNextStep={
         kind:'building',
@@ -3584,19 +3752,23 @@ return;
     sessionStorage.setItem('campusTransitionDirection','outdoor');
     sessionStorage.removeItem('intermediateIndoorTransfer');
     $('instruction').textContent=localizedInstruction(
-      'Continue outdoors','تابع خارج المبنى','המשך מחוץ לבניין'
+      'Continue outdoors','تابع خارج المبنى','המשך מחוץ לבניין',
+      'Продолжить снаружи'
     );
     $('subInstruction').textContent=localizedInstruction(
-      'You reached the exit. Your outdoor route is ready.','وصلت إلى المخرج. مسارك الخارجي جاهز.','הגעת ליציאה. המסלול החיצוני שלך מוכן.'
+      'You reached the exit. Your outdoor route is ready.','وصلت إلى المخرج. مسارك الخارجي جاهز.','הגעת ליציאה. המסלול החיצוני שלך מוכן.',
+      'Вы достигли выхода. Внешний маршрут готов.'
     );
-    $('eta').textContent=localizedInstruction('Exit','المخرج','יציאה');
+    $('eta').textContent=localizedInstruction('Exit','المخرج','יציאה','Выход');
     $('status').textContent=localizedInstruction(
-      'Exit reached. Continue on the outdoor route when you are ready.','وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.','הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.'
+      'Exit reached. Continue on the outdoor route when you are ready.','وصلت إلى المخرج. تابع على المسار الخارجي عندما تكون جاهزًا.','הגעת ליציאה. המשך במסלול החיצוני כשתהיה מוכן.',
+      'Вы достигли выхода. Продолжайте по внешнему маршруту, когда будете готовы.'
     );
 $('status').textContent = localizedInstruction(
   'Opening the outdoor route...',
   'جارٍ فتح المسار الخارجي...',
-  'פותח את המסלול החיצוני...'
+  'פותח את המסלול החיצוני...',
+  'Открывается внешний маршрут...'
 );
 
 setTimeout(returnToOutdoorJourney, 400);
@@ -3735,13 +3907,15 @@ function beginSharedElevatorRide(){
   $('instruction').textContent = localizedInstruction(
     'Stay in the elevator',
     'ابقَ في المصعد',
-    'הישאר במעלית'
+    'הישאר במעלית',
+    'Оставайтесь в лифте'
   );
 
   $('subInstruction').textContent = localizedInstruction(
     'Opening the next building. Your exit floor still needs confirmation.',
     'يتم فتح المبنى التالي. يجب تأكيد طابق الخروج بعد الوصول.',
-    'פותח את הבניין הבא. יש לאשר את קומת היציאה לאחר ההגעה.'
+    'פותח את הבניין הבא. יש לאשר את קומת היציאה לאחר ההגעה.',
+    'Открывается следующее здание. После прибытия потребуется подтвердить этаж выхода.'
   );
 
   window.location.replace(
@@ -3858,19 +4032,22 @@ function showPendingSharedElevatorRide(){
   $('instruction').textContent = localizedInstruction(
     `Stay in the elevator until Floor ${floorLabel(ride.exitFloor)}`,
     `ابقَ في المصعد حتى ${localizedFloor(ride.exitFloor)}`,
-    `הישאר במעלית עד ${localizedFloor(ride.exitFloor)}`
+    `הישאר במעלית עד ${localizedFloor(ride.exitFloor)}`,
+    `Оставайтесь в лифте до этажа ${floorLabel(ride.exitFloor)}`
   );
 
   $('subInstruction').textContent = localizedInstruction(
     'Your current floor is not confirmed. Tap only after exiting on the indicated floor.',
     'لم يتم تأكيد طابقك الحالي. اضغط فقط بعد الخروج في الطابق المحدد.',
-    'הקומה הנוכחית שלך אינה מאושרת. לחץ רק לאחר היציאה בקומה המצוינת.'
+    'הקומה הנוכחית שלך אינה מאושרת. לחץ רק לאחר היציאה בקומה המצוינת.',
+    'Текущий этаж не подтверждён. Нажмите только после выхода на указанном этаже.'
   );
 
   const buttonText = localizedInstruction(
     `✓ I exited on Floor ${floorLabel(ride.exitFloor)}`,
     `✓ خرجت في ${localizedFloor(ride.exitFloor)}`,
-    `✓ יצאתי ב${localizedFloor(ride.exitFloor)}`
+    `✓ יצאתי ב${localizedFloor(ride.exitFloor)}`,
+    `✓ Выход на этаже ${floorLabel(ride.exitFloor)}`
   );
 
   $('directionCard').hidden = true;
@@ -3887,7 +4064,8 @@ function showPendingSharedElevatorRide(){
   $('eta').textContent = localizedInstruction(
     'Awaiting exit confirmation',
     'بانتظار تأكيد الخروج',
-    'ממתין לאישור יציאה'
+    'ממתין לאישור יציאה',
+    'Ожидание подтверждения выхода'
   );
 
   $('status').textContent = $('subInstruction').textContent;
@@ -3951,19 +4129,22 @@ function showSharedElevatorEntry(){
   $('instruction').textContent = localizedInstruction(
     'Enter the shared elevator',
     'ادخل المصعد المشترك',
-    'היכנס למעלית המשותפת'
+    'היכנס למעלית המשותפת',
+    'Войдите в общий лифт'
   );
 
   $('subInstruction').textContent = localizedInstruction(
     'Confirm only after entering. You will confirm your exit floor in the next building.',
     'أكّد فقط بعد دخول المصعد. ستؤكد طابق الخروج في المبنى التالي.',
-    'אשר רק לאחר הכניסה למעלית. תאשר את קומת היציאה בבניין הבא.'
+    'אשר רק לאחר הכניסה למעלית. תאשר את קומת היציאה בבניין הבא.',
+    'Подтвердите только после входа. Этаж выхода нужно будет подтвердить в следующем здании.'
   );
 
   const text = localizedInstruction(
     '✓ I entered the elevator',
     '✓ دخلت المصعد',
-    '✓ נכנסתי למעלית'
+    '✓ נכנסתי למעלית',
+    '✓ Я в лифте'
   );
 
   $('directionCard').hidden = true;
@@ -4039,20 +4220,22 @@ function updateDirectionControls(){
       ? localizedInstruction(
           '✓ Confirm arrival and continue',
           '✓ أكّد الوصول وتابع',
-          '✓ אשר הגעה והמשך'
+          '✓ אשר הגעה והמשך',
+          '✓ Подтвердить прибытие и продолжить'
         )
       : localizedInstruction(
           '✓ Confirm arrival',
           '✓ أكّد الوصول',
-          '✓ אשר הגעה'
+          '✓ אשר הגעה',
+          '✓ Подтвердить прибытие'
         );
   }
   $('recenterBtn').style.bottom=wheelchairActive?'auto':'';
   $('recenterBtn').style.top=wheelchairActive?'72px':'';
   if(wheelchairMode && !navigationActive){
     $('wheelchairStatus').textContent=routeNodes.length<2
-      ? localizedInstruction('Choose a route first.','اختر المسار أولًا.','בחר תחילה מסלול.')
-      : localizedInstruction('Press Start navigation, then confirm each point only after reaching it.','اضغط ابدأ الملاحة، ثم أكّد كل نقطة فقط بعد وصولك إليها.','לחץ התחל ניווט, ולאחר מכן אשר כל נקודה רק אחרי שהגעת אליה.');
+      ? localizedInstruction('Choose a route first.','اختر المسار أولًا.','בחר תחילה מסלול.','Сначала выберите маршрут.')
+      : localizedInstruction('Press Start navigation, then confirm each point only after reaching it.','اضغط ابدأ الملاحة، ثم أكّد كل نقطة فقط بعد وصولك إليها.','לחץ התחל ניווט, ולאחר מכן אשר כל נקודה רק אחרי שהגעת אליה.','Нажмите «Начать навигацию», затем подтверждайте каждую точку только после прибытия к ней.');
   }
     showSharedElevatorEntry();
 }
@@ -4075,8 +4258,8 @@ function requireDirectionCalibration(){
   const atEnd=progressIndex===routeNodes.length-1 && progressT===0;
   const returning=(atEnd ? -1 : atStart ? 1 : intendedDirection)<0;
   const message=returning
-    ? localizedInstruction('Point the phone back along the route toward the starting location, then press Start navigation.','وجّه الهاتف راجعًا على المسار نحو نقطة البداية، ثم اضغط ابدأ الملاحة.','כוון את הטלפון חזרה לאורך המסלול לנקודת ההתחלה ולחץ התחל ניווט.')
-    : localizedInstruction('Point the phone along the next part of the route toward your destination, then press Start navigation.','وجّه الهاتف مع الجزء التالي من المسار نحو الوجهة، ثم اضغط ابدأ الملاحة.','כוון את הטלפון לאורך החלק הבא במסלול לכיוון היעד ולחץ התחל ניווט.');
+    ? localizedInstruction('Point the phone back along the route toward the starting location, then press Start navigation.','وجّه الهاتف راجعًا على المسار نحو نقطة البداية، ثم اضغط ابدأ الملاحة.','כוון את הטלפון חזרה לאורך המסלול לנקודת ההתחלה ולחץ התחל ניווט.','Направьте телефон назад вдоль маршрута к начальной точке, затем нажмите «Начать навигацию».')
+    : localizedInstruction('Point the phone along the next part of the route toward your destination, then press Start navigation.','وجّه الهاتف مع الجزء التالي من المسار نحو الوجهة، ثم اضغط ابدأ الملاحة.','כוון את הטלפון לאורך החלק הבא במסלול לכיוון היעד ולחץ התחל ניווט.','Направьте телефон вдоль следующего участка маршрута к пункту назначения, затем нажмите «Начать навигацию».');
   $('directionStatus').textContent=message;
   $('status').textContent=message;
   updateDirectionControls();
@@ -4098,7 +4281,8 @@ function updateSensorDirectionStatus(now=performance.now()){
     $('status').textContent=localizedInstruction(
       'Direction readings restored — position updates resume automatically with your next clear steps.',
       'عادت قراءات الاتجاه — يستأنف تحديث الموقع تلقائيًا مع خطواتك التالية ذات الاتجاه الواضح.',
-      'נתוני הכיוון חזרו — עדכון המיקום יתחדש אוטומטית בצעדים הבאים שכיוונם ברור.');
+      'נתוני הכיוון חזרו — עדכון המיקום יתחדש אוטומטית בצעדים הבאים שכיוונם ברור.',
+      'Показания направления восстановлены — обновление позиции автоматически возобновится при следующих шагах с ясным направлением.');
   }
 }
 
@@ -4143,7 +4327,8 @@ function updateDeviceMotion(e){
     $('status').textContent = localizedInstruction(
       'Motion readings unavailable. Keep this page open and check sensor access.',
       'قراءات الحركة غير متاحة. أبقِ الصفحة مفتوحة وتحقق من إذن الحساسات.',
-      'נתוני תנועה אינם זמינים. השאר את הדף פתוח ובדוק הרשאה לחיישנים.'
+      'נתוני תנועה אינם זמינים. השאר את הדף פתוח ובדוק הרשאה לחיישנים.',
+      'Данные движения недоступны. Оставьте эту страницу открытой и проверьте доступ к датчикам.'
     );
 
     return;
@@ -4155,7 +4340,8 @@ function updateDeviceMotion(e){
     $('status').textContent = localizedInstruction(
       'Motion readings restored. Start walking.',
       'عادت قراءات الحركة. ابدأ المشي.',
-      'נתוני התנועה חזרו. התחל ללכת.'
+      'נתוני התנועה חזרו. התחל ללכת.',
+      'Данные движения восстановлены. Начните идти.'
     );
   }
 
@@ -4182,7 +4368,12 @@ async function requestSensorPermission(requestToken){
     return true;
   }catch(err){
     if(requestToken === navigationStartToken){
-      $('status').textContent=err.message || 'Sensor permission was not granted.';
+      $('status').textContent=localizedInstruction(
+        'Sensor permission was not granted.',
+        'لم يتم منح إذن استخدام الحساسات.',
+        'לא ניתנה הרשאה לשימוש בחיישנים.',
+        'Доступ к датчикам не предоставлен.'
+      );
     }
     return false;
   }
@@ -4234,13 +4425,15 @@ async function calibrateHeadingAutomatically(token){
   $('status').textContent = localizedInstruction(
     'Hold your phone facing forward...',
     'أمسك الهاتف باتجاه الأمام...',
-    'החזק את הטלפון בכיוון ההליכה...'
+    'החזק את הטלפון בכיוון ההליכה...',
+    'Держите телефон по направлению движения...'
   );
 
   $('instruction').textContent = localizedInstruction(
     'Hold your phone facing forward',
     'أمسك الهاتف باتجاه الأمام',
-    'החזק את הטלפון בכיוון ההליכה'
+    'החזק את הטלפון בכיוון ההליכה',
+    'Держите телефон по направлению движения'
   );
 
   const atStart=progressIndex===0 && progressT===0;
@@ -4275,7 +4468,8 @@ async function calibrateHeadingAutomatically(token){
     $('status').textContent=localizedInstruction(
       'Walking direction is unavailable at this location.',
       'لا يمكن تحديد اتجاه المشي في هذا الموقع.',
-      'לא ניתן לקבוע את כיוון ההליכה במיקום הזה.');
+      'לא ניתן לקבוע את כיוון ההליכה במיקום הזה.',
+      'В этом месте направление движения недоступно.');
     return false;
   }
 
@@ -4297,7 +4491,8 @@ async function calibrateHeadingAutomatically(token){
   $('status').textContent = localizedInstruction(
     'Keep the phone upright and facing forward, then try again.',
     'أبقِ الهاتف قائمًا وباتجاه الأمام، ثم حاول مجددًا.',
-    'החזק את הטלפון זקוף ובכיוון ההליכה, ואז נסה שוב.'
+    'החזק את הטלפון זקוף ובכיוון ההליכה, ואז נסה שוב.',
+    'Держите телефон вертикально и по направлению движения, затем повторите попытку.'
   );
 
   return false;
@@ -4362,20 +4557,30 @@ async function startNavigation(){
   $('startBtn').disabled=true;
   if(navMode === 'auto'){
     followCamera=false;
-    $('status').textContent='Auto navigation running.';
-    $('instruction').textContent='Navigation started';
+    $('status').textContent=localizedInstruction(
+      'Auto navigation running.',
+      'الملاحة التلقائية تعمل.',
+      'הניווט האוטומטי פועל.',
+      'Автоматическая навигация запущена.'
+    );
+    $('instruction').textContent=localizedInstruction(
+      'Navigation started',
+      'بدأت الملاحة',
+      'הניווט התחיל',
+      'Навигация началась'
+    );
     startAutoDemo();
   }else if(navMode === 'sensor'){
     followCamera=true;
     $('mapViewport').scrollIntoView?.({block:'start',behavior:'smooth'});
-    $('directionStatus').textContent=localizedInstruction('Direction set. Keep the phone facing your walk.','تم تثبيت الاتجاه. أبقِ الهاتف باتجاه مشيك.','הכיוון נקבע. שמור את הטלפון בכיוון ההליכה.');
-    $('status').textContent=localizedInstruction('Start walking. Position is estimated.','ابدأ المشي. الموقع تقديري.','התחל ללכת. המיקום משוער.');
-    $('instruction').textContent=localizedInstruction('Start walking','ابدأ المشي','התחל ללכת');
+    $('directionStatus').textContent=localizedInstruction('Direction set. Keep the phone facing your walk.','تم تثبيت الاتجاه. أبقِ الهاتف باتجاه مشيك.','הכיוון נקבע. שמור את הטלפון בכיוון ההליכה.','Направление установлено. Держите телефон по направлению движения.');
+    $('status').textContent=localizedInstruction('Start walking. Position is estimated.','ابدأ المشي. الموقع تقديري.','התחל ללכת. המיקום משוער.','Начните идти. Позиция приблизительная.');
+    $('instruction').textContent=localizedInstruction('Start walking','ابدأ المشي','התחל ללכת','Начните идти');
   }else{
     followCamera=true;
     $('mapViewport').scrollIntoView?.({block:'start',behavior:'smooth'});
-    $('status').textContent=localizedInstruction('Manual wheelchair navigation started.','بدأت الملاحة اليدوية للكرسي المتحرك.','הניווט הידני לכיסא גלגלים התחיל.');
-    $('wheelchairStatus').textContent=localizedInstruction('Move along the highlighted route and confirm the next point after reaching it.','تحرّك على المسار المحدد وأكّد النقطة التالية بعد وصولك إليها.','התקדם במסלול המסומן ואשר את הנקודה הבאה לאחר ההגעה.');
+    $('status').textContent=localizedInstruction('Manual wheelchair navigation started.','بدأت الملاحة اليدوية للكرسي المتحرك.','הניווט הידני לכיסא גלגלים התחיל.','Ручная навигация для кресла-коляски запущена.');
+    $('wheelchairStatus').textContent=localizedInstruction('Move along the highlighted route and confirm the next point after reaching it.','تحرّك على المسار المحدد وأكّد النقطة التالية بعد وصولك إليها.','התקדם במסלול המסומן ואשר את הנקודה הבאה לאחר ההגעה.','Двигайтесь по выделенному маршруту и подтвердите следующую точку после прибытия к ней.');
   }
   updateTurnInstruction();
 }
@@ -4420,7 +4625,7 @@ function syncNavigationModeUI(){
   $('wheelchairModeBtn').setAttribute('aria-pressed',String(navMode==='wheelchair'));
   $('wheelchairMapControls').setAttribute('aria-label',it('wheelchairControls'));
   $('livePositionTitle').textContent=navMode==='wheelchair'
-    ? localizedInstruction('Last confirmed position','آخر موقع مؤكّد','מיקום אחרון שאושר')
+    ? localizedInstruction('Last confirmed position','آخر موقع مؤكّد','מיקום אחרון שאושר','Последняя подтверждённая позиция')
     : it('livePosition');
 }
 
@@ -4440,7 +4645,8 @@ function setNavigationMode(mode){
     $('accessibleRoute').title=localizedInstruction(
       'Wheelchair mode keeps stair-free routing on.',
       'وضع الكرسي المتحرك يُبقي المسار بدون درج مفعّلًا.',
-      'מצב כיסא גלגלים משאיר מסלול ללא מדרגות פעיל.'
+      'מצב כיסא גלגלים משאיר מסלול ללא מדרגות פעיל.',
+      'В режиме кресла-коляски маршруты без лестниц всегда включены.'
     );
     if(routeNodes.length){
       progressIndex=0;
@@ -4457,7 +4663,8 @@ function setNavigationMode(mode){
       ? localizedInstruction(
           'Mobility profile keeps stair-free routing on.',
           'ملف الإعاقة الحركية يُبقي المسار بدون درج مفعّلًا.',
-          'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.'
+          'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.',
+          'Профиль ограниченной мобильности всегда использует маршруты без лестниц.'
         )
       : '';
   }
@@ -4466,9 +4673,9 @@ function setNavigationMode(mode){
   $('startBtn').disabled=routeNodes.length<2 || (mode==='auto' && progressIndex>=routeNodes.length-1);
   $('status').textContent=mode==='wheelchair'
     ? resetManualPosition
-      ? localizedInstruction('Position reset to the route start. Press Start navigation.','تمت إعادة الموقع إلى بداية المسار. اضغط ابدأ الملاحة.','המיקום הוחזר לתחילת המסלול. לחץ התחל ניווט.')
-      : localizedInstruction('Press Start navigation. This mode does not use steps or phone sensors.','اضغط ابدأ الملاحة. هذا الوضع لا يستخدم الخطوات أو حساسات الهاتف.','לחץ התחל ניווט. מצב זה אינו משתמש בצעדים או בחיישני הטלפון.')
-    : localizedInstruction('Press Start navigation to use this mode.', 'اضغط ابدأ الملاحة لاستخدام هذا الوضع.', 'לחץ התחל ניווט כדי להשתמש במצב זה.');
+      ? localizedInstruction('Position reset to the route start. Press Start navigation.','تمت إعادة الموقع إلى بداية المسار. اضغط ابدأ الملاحة.','המיקום הוחזר לתחילת המסלול. לחץ התחל ניווט.','Позиция возвращена к началу маршрута. Нажмите «Начать навигацию».')
+      : localizedInstruction('Press Start navigation. This mode does not use steps or phone sensors.','اضغط ابدأ الملاحة. هذا الوضع لا يستخدم الخطوات أو حساسات الهاتف.','לחץ התחל ניווט. מצב זה אינו משתמש בצעדים או בחיישני הטלפון.','Нажмите «Начать навигацию». Этот режим не использует подсчёт шагов или датчики телефона.')
+    : localizedInstruction('Press Start navigation to use this mode.', 'اضغط ابدأ الملاحة لاستخدام هذا الوضع.', 'לחץ התחל ניווט כדי להשתמש במצב זה.','Нажмите «Начать навигацию», чтобы использовать этот режим.');
 
   if(forceAccessible &&
      $('fromFloor').value && $('toFloor').value &&
@@ -4478,8 +4685,8 @@ function setNavigationMode(mode){
   }
   if(forceAccessible && routeNodes.length){
     clearRouteState(
-      localizedInstruction('Calculate a stair-free route','احسب مسارًا بدون درج','חשב מסלול ללא מדרגות'),
-      localizedInstruction('Choose a start and destination again for wheelchair navigation.','اختر نقطة البداية والوجهة من جديد لملاحة الكرسي المتحرك.','בחר שוב נקודת התחלה ויעד לניווט בכיסא גלגלים.')
+      localizedInstruction('Calculate a stair-free route','احسب مسارًا بدون درج','חשב מסלול ללא מדרגות','Рассчитать маршрут без лестниц'),
+      localizedInstruction('Choose a start and destination again for wheelchair navigation.','اختر نقطة البداية والوجهة من جديد لملاحة الكرسي المتحرك.','בחר שוב נקודת התחלה ויעד לניווט בכיסא גלגלים.','Снова выберите начальную точку и пункт назначения для навигации на кресле-коляске.')
     );
     return;
   }
@@ -4530,12 +4737,14 @@ $('sensorConfirmBtn').onclick=async()=>{
     $('sensorConfirmBtn').textContent=localizedInstruction(
       `I exited on Floor ${floorLabel(target.floor)}`,
       `خرجت في ${localizedFloor(target.floor)}`,
-      `יצאתי ב${localizedFloor(target.floor)}`
+      `יצאתי ב${localizedFloor(target.floor)}`,
+      `Я вышел на этаже ${floorLabel(target.floor)}`
     );
     $('subInstruction').textContent=localizedInstruction(
       'Confirm only after exiting on the indicated floor.',
       'أكّد فقط بعد الخروج في الطابق المحدد.',
-      'אשר רק לאחר היציאה בקומה המצוינת.'
+      'אשר רק לאחר היציאה בקומה המצוינת.',
+      'Подтвердите только после выхода на указанном этаже.'
     );
     $('status').textContent=$('subInstruction').textContent;
     return;
@@ -4737,13 +4946,13 @@ function showArrivalDialog(next){
   const close=()=>{ if(dialog.open) dialog.close(); };
 
   dialog.dataset.kind=next ? next.kind : 'arrived';
-  campusLink.textContent=localizedInstruction('Back to campus map','العودة إلى خريطة الحرم','חזרה למפת הקמפוס');
+  campusLink.textContent=localizedInstruction('Back to campus map','العودة إلى خريطة الحرم','חזרה למפת הקמפוס','Вернуться к карте кампуса');
 
   if(!next){
-    $('arrivalTitle').textContent=localizedInstruction('You have arrived!','لقد وصلت!','הגעת ליעד!');
+    $('arrivalTitle').textContent=localizedInstruction('You have arrived!','لقد وصلت!','הגעת ליעד!','Вы прибыли!');
     $('arrivalText').textContent=place;
-    primary.textContent=localizedInstruction('Done','تم','סיום');
-    secondary.textContent=localizedInstruction('New route from here','مسار جديد من هنا','מסלול חדש מכאן');
+    primary.textContent=localizedInstruction('Done','تم','סיום','Готово');
+    secondary.textContent=localizedInstruction('New route from here','مسار جديد من هنا','מסלול חדש מכאן','Новый маршрут отсюда');
     primary.onclick=close;
     secondary.onclick=()=>{ close(); setRouteFromArrival(); };
     campusLink.hidden=false;
@@ -4752,15 +4961,15 @@ function showArrivalDialog(next){
       ? outdoorJourneyTargetName()
       : indoorBuildingName(next.building);
     $('arrivalTitle').textContent=next.kind==='outdoor'
-      ? localizedInstruction('You reached the exit','وصلت إلى المخرج','הגעת ליציאה')
-      : localizedInstruction('You reached the connection','وصلت إلى الممر','הגעת למעבר');
+      ? localizedInstruction('You reached the exit','وصلت إلى المخرج','הגעת ליציאה','Вы достигли выхода')
+      : localizedInstruction('You reached the connection','وصلت إلى الممر','הגעת למעבר','Вы достигли перехода');
     $('arrivalText').textContent=target
-      ? localizedInstruction(`Next: ${target}`,`التالي: ${target}`,`הבא: ${target}`)
+      ? localizedInstruction(`Next: ${target}`,`التالي: ${target}`,`הבא: ${target}`,`Далее: ${target}`)
       : place;
     primary.textContent=next.kind==='outdoor'
-      ? localizedInstruction('Continue outdoors →','تابع في الخارج ←','המשך בחוץ ←')
-      : localizedInstruction('Continue →','تابع ←','המשך ←');
-    secondary.textContent=localizedInstruction('Stay here','ابقَ هنا','הישאר כאן');
+      ? localizedInstruction('Continue outdoors →','تابع في الخارج ←','המשך בחוץ ←','Продолжить снаружи →')
+      : localizedInstruction('Continue →','تابع ←','המשך ←','Продолжить →');
+    secondary.textContent=localizedInstruction('Stay here','ابقَ هنا','הישאר כאן','Остаться здесь');
     primary.onclick=()=>{ close(); next.run(); };
     secondary.onclick=close;
     campusLink.hidden=true;
@@ -4800,7 +5009,15 @@ const INDOOR_T_MORE={
     emergencyNone:'لا يوجد ملجأ مرسوم في هذا المبنى. جارٍ فتح خريطة الحرم للعثور على أقرب ملجأ…',
     outOfServiceNote:'مُبلَّغ أنه معطّل — المسارات تتجنبه',yourReport:'بلاغك',closedNote:'مغلق:',
     chooseDestinationFirst:'اختر وجهة أولًا.',restroomItem:'مرحاض',otherItem:'شيء آخر',
-    stepHint:'اضغط على خطوة لسماعها'}
+    stepHint:'اضغط على خطوة لسماعها'},
+  ru:{findStart:'Найдите своё местоположение (комната, вход, лифт…)',findDestination:'Найдите комнату или место (например, 5025, туалет)',
+    searchNoMatch:'В этом здании подходящее место не найдено',voiceGuide:'Голосовые подсказки',voiceOn:'Голосовые подсказки включены.',
+    share:'Поделиться',report:'Сообщить о проблеме',emergency:'Ближайшее укрытие',emergencyRoute:'Ближайшее укрытие',
+    emergencyChooseStart:'Выберите своё местоположение в поле «Откуда», затем снова нажмите «Ближайшее укрытие».',
+    emergencyNone:'В этом здании нет отмеченного укрытия. Открывается карта кампуса для поиска ближайшего…',
+    outOfServiceNote:'сообщено, что не работает — маршруты его избегают',yourReport:'ваше сообщение',closedNote:'Закрыто:',
+    chooseDestinationFirst:'Сначала выберите пункт назначения.',restroomItem:'Туалет',otherItem:'Другое',
+    stepHint:'Нажмите на шаг, чтобы прослушать его'}
 };
 Object.entries(INDOOR_T_MORE).forEach(([language, strings]) => Object.assign(INDOOR_T[language], strings));
 
@@ -4830,20 +5047,20 @@ function foldIndoorText(value){
 }
 
 const INDOOR_SEARCH_KINDS={
-  restroom:['restroom','restrooms','toilet','toilets','bathroom','wc','שירותים','נוחיות','حمام','مرحاض','مراحيض'],
-  'virtual-elevator':['elevator','elevators','lift','מעלית','מעליות','مصعد','مصاعد'],
-  entrance:['entrance','exit','door','כניסה','יציאה','مدخل','مخرج'],
-  shelter:['shelter','safe room','mamad','מקלט','מרחב מוגן','ממד','ملجأ','ملجا'],
-  food:['food','cafe','coffee','buffet','אוכל','קפה','מזנון','طعام','مقهى','قهوة'],
-  library:['library','ספרייה','ספריה','مكتبة'],
-  gym:['gym','כושר','جيم'],
-  parking:['parking','חניה','חנייה','חניון','موقف'],
-  museum:['museum','מוזיאון','متحف'],
-  clinic:['clinic','מרפאה','عيادة']
+  restroom:['restroom','restrooms','toilet','toilets','bathroom','wc','שירותים','נוחיות','حمام','مرحاض','مراحيض','туалет','туалеты','санузел'],
+  'virtual-elevator':['elevator','elevators','lift','מעלית','מעליות','مصعد','مصاعد','лифт','лифты'],
+  entrance:['entrance','exit','door','כניסה','יציאה','مدخل','مخرج','вход','выход','дверь'],
+  shelter:['shelter','safe room','mamad','מקלט','מרחב מוגן','ממד','ملجأ','ملجا','укрытие','убежище'],
+  food:['food','cafe','coffee','buffet','אוכל','קפה','מזנון','طعام','مقهى','قهوة','еда','кафе','кофе','буфет'],
+  library:['library','ספרייה','ספריה','مكتبة','библиотека'],
+  gym:['gym','כושר','جيم','спортзал','тренажёрный зал'],
+  parking:['parking','חניה','חנייה','חניון','موقف','парковка'],
+  museum:['museum','מוזיאון','متحف','музей'],
+  clinic:['clinic','מרפאה','عيادة','клиника','медпункт']
 };
 
 function indoorSearchResults(query){
-  const wanted=foldIndoorText(String(query||'').replace(/^(?:room|غرفة|חדר)\s+/i,''));
+  const wanted=foldIndoorText(String(query||'').replace(/^(?:room|غرفة|חדר|комната|аудитория|кабинет)\s+/i,''));
   if(!wanted || !GRAPH) return [];
   const kinds=new Set(Object.entries(INDOOR_SEARCH_KINDS)
     .filter(([,words])=>words.some(word=>{
@@ -4968,10 +5185,10 @@ function speakIndoor(text, force=false){
   const synth=window.speechSynthesis;
   synth.cancel();
   const utterance=new SpeechSynthesisUtterance(text);
-  const prefix=indoorLang==='he'?'he':indoorLang==='ar'?'ar':'en';
+  const prefix=indoorLang==='he'?'he':indoorLang==='ar'?'ar':indoorLang==='ru'?'ru':'en';
   const voice=synth.getVoices().find(item=>item.lang && item.lang.toLowerCase().startsWith(prefix));
   if(voice){ utterance.voice=voice; utterance.lang=voice.lang; }
-  else utterance.lang=indoorLang==='he'?'he-IL':indoorLang==='ar'?'ar':'en-US';
+  else utterance.lang=indoorLang==='he'?'he-IL':indoorLang==='ar'?'ar':indoorLang==='ru'?'ru-RU':'en-US';
   utterance.rate=.95;
   synth.speak(utterance);
 }
@@ -5086,7 +5303,7 @@ function shareIndoorDestination(){
   const label=selectionLabel(raw);
   const node=nodeById(nodeId);
   const placeName=node?.type==='room'
-    ? localizedInstruction(`Room ${String(node.label).trim()}`,`غرفة ${String(node.label).trim()}`,`חדר ${String(node.label).trim()}`)
+    ? localizedInstruction(`Room ${String(node.label).trim()}`,`غرفة ${String(node.label).trim()}`,`חדר ${String(node.label).trim()}`,`Комната ${String(node.label).trim()}`)
     : label;
   const title=`${placeName} — ${indoorBuildingDisplayName()}`;
   const url=new URL('../index.html',window.location.href);
@@ -5220,7 +5437,8 @@ if(savedAccessibilityProfile === 'mobility'){
   $('accessibleRoute').title = localizedInstruction(
     'Mobility profile keeps stair-free routing on.',
     'ملف الإعاقة الحركية يُبقي المسار بدون درج مفعّلًا.',
-    'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.'
+    'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.',
+    'Профиль ограниченной мобильности всегда использует маршруты без лестниц.'
   );
 }
 

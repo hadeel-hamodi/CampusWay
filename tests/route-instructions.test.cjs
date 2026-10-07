@@ -66,3 +66,66 @@ test('a long straight walk names a building you pass and on which side', () => {
   assert.match(instructions.formatStep(steps[1], 'en'), /^Walk \d+ m, passing Main Building on your left$/);
   assert.match(instructions.formatStep(steps[1], 'he'), /משמאלך/);
 });
+
+test('Russian route instructions cover starts, turns, stairs, landmarks and arrival', () => {
+  const expectedCompass = {
+    north:'на север',
+    northeast:'на северо-восток',
+    east:'на восток',
+    southeast:'на юго-восток',
+    south:'на юг',
+    southwest:'на юго-запад',
+    west:'на запад',
+    northwest:'на северо-запад'
+  };
+  Object.entries(expectedCompass).forEach(([heading, text]) => {
+    assert.equal(
+      instructions.formatStep({kind:'start', heading}, 'ru'),
+      `Двигайтесь ${text}`
+    );
+  });
+
+  assert.equal(
+    instructions.formatStep({kind:'start', name:'Главный корпус', heading:'north'}, 'ru'),
+    'Начните в точке «Главный корпус» и двигайтесь на север'
+  );
+
+  const expectedTurns = {
+    left:'поверните налево',
+    right:'поверните направо',
+    'slight-left':'держитесь левее',
+    'slight-right':'держитесь правее',
+    'sharp-left':'резко поверните налево',
+    'sharp-right':'резко поверните направо'
+  };
+  Object.entries(expectedTurns).forEach(([turn, text]) => {
+    assert.equal(
+      instructions.formatStep({kind:'turn', meters:20, turn, landmark:'Библиотека'}, 'ru'),
+      `Пройдите 20 м, затем ${text} рядом с ориентиром «Библиотека»`
+    );
+  });
+
+  assert.equal(
+    instructions.formatStep({kind:'stairs', meters:15}, 'ru'),
+    'Пройдите 15 м, затем воспользуйтесь лестницей'
+  );
+  assert.equal(
+    instructions.formatStep({kind:'pass', meters:30, landmark:'Кафе', side:'left'}, 'ru'),
+    'Пройдите 30 м; ориентир «Кафе» будет слева'
+  );
+  assert.equal(
+    instructions.formatStep({kind:'pass', meters:30, landmark:'Кафе', side:'right'}, 'ru'),
+    'Пройдите 30 м; ориентир «Кафе» будет справа'
+  );
+  assert.equal(
+    instructions.formatStep({kind:'arrive', meters:10, name:'Аудитория 5001'}, 'ru'),
+    'Пройдите 10 м до точки «Аудитория 5001»'
+  );
+});
+
+test('an unknown instruction language still falls back to English', () => {
+  assert.equal(
+    instructions.formatStep({kind:'stairs', meters:10}, 'xx'),
+    'Walk 10 m, then take the stairs'
+  );
+});

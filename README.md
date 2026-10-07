@@ -15,7 +15,7 @@ CampusWay is a University of Haifa student project for indoor and outdoor campus
 - Outdoor routing along the mapped campus path network.
 - Indoor routing between rooms and across floors.
 - Connected journeys between buildings.
-- English, Hebrew and Arabic interfaces.
+- English, Hebrew, Arabic and Russian interfaces.
 - Accessibility profiles, including Mobility and Spatial routing.
 - Search for rooms, buildings, food places, shops and campus services.
 - Voice search and voice guidance.
@@ -99,7 +99,7 @@ Interface changes should preserve existing routing and journey behaviour. Valida
 
 Offline app files are managed in `service-worker.js` through `CACHE_NAME` and `APP_FILES`.
 
-The interface supports English, Hebrew and Arabic.
+The interface supports English, Hebrew, Arabic and Russian.
 
 ## Documentation
 
@@ -132,8 +132,9 @@ CampusWay is a student project under active development. Mapping coverage, devic
 
 ## Team
 
-- Yasmin ([@ja4smin](https://github.com/ja4smin))
+- Jasmin Taya ([@ja4smin](https://github.com/ja4smin))
 - Hadeel Hamodi ([@hadeel-hamodi](https://github.com/hadeel-hamodi))
 - Naseem Muhammad
+- Shady Salem
 
 Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. Map library: [Leaflet](https://leafletjs.com/).

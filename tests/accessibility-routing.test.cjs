@@ -197,6 +197,7 @@ function indoorHarness(graph, accessible = true, profile = 'general') {
     document:{getElementById:element},
     console:{log(){}},
     GRAPH:graph,
+    indoorLang:'en',
     CampusRoutePlanner:routePlanner,
     sessionStorage:{getItem(key){return key === 'accessibilityProfile' ? profile : null;}}
   });
