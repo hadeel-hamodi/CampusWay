@@ -193,7 +193,10 @@ test('choosing Visual enables audio and contrast, then leaving Visual disables b
   const displayCalls = [];
   const context = vm.createContext({
     PROFILE_IDS:new Set(['general','mobility','visual','spatial','mental']),
-    PREFERENCE_KEYS:{profile:'accessibilityProfile'},
+    PREFERENCE_KEYS:{
+  profile:'accessibilityProfile',
+  contrast:'campusway.highContrastEnabled'
+},
     currentProfile:'general',
     currentOutdoorDestination:null,
     t:{profiles:[
@@ -201,6 +204,7 @@ test('choosing Visual enables audio and contrast, then leaving Visual disables b
       {id:'general',label:'General',sub:'Fastest route'}
     ]},
     writeStoredPreference(){},
+    readStoredPreference(){ return null; },
     setAudioEnabled(value, options){ displayCalls.push(['audio',value,options]); },
     setContrastEnabled(value, options){ displayCalls.push(['contrast',value,options]); },
     updateRestSpaceServiceButton(){},
@@ -227,9 +231,9 @@ test('choosing Visual enables audio and contrast, then leaving Visual disables b
 
 assert.deepEqual(JSON.parse(JSON.stringify(displayCalls)), [
   ['audio',true,{announce:false}],
-  ['contrast',true,{announce:false}],
+  ['contrast',true,{persist:false,announce:false}],
   ['audio',false,{announce:false}],
-  ['contrast',false,{announce:false}]
+  ['contrast',false,{persist:false,announce:false}]
 ]);
 });
 
@@ -282,7 +286,7 @@ test('an existing Visual profile receives display defaults once when no choices 
 
   assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
     ['audio',true,{persist:true,announce:false}],
-    ['contrast',true,{persist:true,announce:false}]
+    ['contrast',true,{persist:false,announce:false}]
   ]);
 });
 

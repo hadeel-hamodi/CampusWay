@@ -1139,10 +1139,10 @@ function restoreDisplayPreferences(){
     storedAudio === null ? useVisualDefaults : storedAudio === 'true',
     {persist: storedAudio === null && useVisualDefaults, announce: false}
   );
-  setContrastEnabled(
-    storedContrast === null ? useVisualDefaults : storedContrast === 'true',
-    {persist: storedContrast === null && useVisualDefaults, announce: false}
-  );
+setContrastEnabled(
+  storedContrast === null ? useVisualDefaults : storedContrast === 'true',
+  {persist: false, announce: false}
+);
 }
 
 function setTextSize(size, {persist = true} = {}){
@@ -1686,12 +1686,20 @@ function setAccessibilityProfile(
 
   if(currentProfile === 'visual' && applyRecommendedSettings){
     setAudioEnabled(true, {announce: false});
-    setContrastEnabled(true, {announce: false});
+    const storedContrast = readStoredPreference(PREFERENCE_KEYS.contrast);
+setContrastEnabled(
+  storedContrast === null ? true : storedContrast === 'true',
+  {persist: false, announce: false}
+);
   }
 
   if(changed && previousProfile === 'visual' && currentProfile !== 'visual'){
   setAudioEnabled(false, {announce: false});
-  setContrastEnabled(false, {announce: false});
+  const storedContrast = readStoredPreference(PREFERENCE_KEYS.contrast);
+setContrastEnabled(
+  storedContrast === 'true',
+  {persist: false, announce: false}
+);
 }
 
 updateVisualVoiceControls();
