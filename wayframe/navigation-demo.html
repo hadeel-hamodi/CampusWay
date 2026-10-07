@@ -3602,6 +3602,16 @@ function setJourneyPlanLegByKind(kind){
     console.warn('Could not update the journey plan:',error);
   }
 }
+function advanceJourneyPlanLeg(){
+  try{
+    const plan=JSON.parse(sessionStorage.getItem('journeyPlan') || 'null');
+    if(!plan?.legs?.length) return;
+    plan.currentLeg=Math.min(Number(plan.currentLeg || 0)+1,plan.legs.length-1);
+    sessionStorage.setItem('journeyPlan',JSON.stringify(plan));
+  }catch(error){
+    console.warn('Could not advance the journey plan:',error);
+  }
+}
 function returnToOutdoorJourney(){
   sessionStorage.setItem(
     'campusTransitionDirection',
@@ -3690,10 +3700,13 @@ function completeNavigation(){
         'Переход достигнут. Продолжайте в следующее здание, когда будете готовы.'
       );
 
+      setJourneyPlanLegByKind('transfer');
+      if(typeof renderIndoorJourneyPlan === 'function') renderIndoorJourneyPlan();
       arrivalNextStep={
         kind:'building',
         building:destinationBuilding,
         run(){
+          advanceJourneyPlanLeg();
           window.location.replace(
             `./navigation-demo.html?building=${encodeURIComponent(destinationBuilding)}`
           );
@@ -3773,6 +3786,8 @@ return;
         'הגעת למעבר. המשך לבניין מדרגה כשתהיה מוכן.',
         'Переход достигнут. Продолжайте в здание «Терраса», когда будете готовы.'
       );
+      advanceJourneyPlanLeg();
+      if(typeof renderIndoorJourneyPlan === 'function') renderIndoorJourneyPlan();
       arrivalNextStep={
         kind:'building',
         building:'madriga',
