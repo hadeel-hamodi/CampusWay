@@ -1614,13 +1614,6 @@ addCampusNode(
   35.019914656877525
 );
 
-// Garden Café entrance → new path point
-addEdge(
-  'campus_main_floor600_exit',
-  'campus_main_garden_path',
-  'footway'
-);
-
 // New path point → top of the small stairs
 addEdge(
   'campus_main_garden_path',
@@ -2229,6 +2222,18 @@ addEdge(
   'footway'
 );
 
+addCampusNode(
+  'campus_smoking_spot_1',
+  32.761700872883566,
+  35.01953255099758
+);
+
+addEdge(
+  'campus_smoking_spot_1',
+  'campus_extra_walk_2',
+  'footway'
+);
+
 addEdge('campus_extra_walk_1', 'campus_extra_walk_2', 'footway');
 addEdge('campus_extra_walk_2', 'campus_extra_walk_3', 'footway');
 addEdge('campus_extra_walk_3', 'campus_extra_walk_4', 'footway');
@@ -2269,11 +2274,41 @@ addEdge(
   'footway'
 );
 
+addCampusNode(
+  'campus_main_floor600_garden_link',
+32.76187454976023, 35.019863724344056
+);
+
 addEdge(
+  'campus_main_floor600_garden_link',
   'campus_main_floor600_garden_junction',
+  'footway'
+);
+
+addEdge(
+  'campus_main_floor600_garden_link',
   'campus_main_floor600_exit',
   'footway'
 );
+
+addCampusNode(
+  'campus_main_garden_walk_1',
+  32.761776151701234,
+  35.019724576209875
+);
+
+addEdge(
+  'campus_main_garden_walk_1',
+  'campus_main_floor600_garden_link',
+  'footway'
+);
+
+addEdge(
+  'campus_main_garden_path',
+  'campus_main_floor600_garden_link',
+  'footway'
+);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   for(const correction of CAMPUS_CORRECTIONS){

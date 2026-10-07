@@ -891,8 +891,8 @@
           "id": "floor3_n17",
           "label": "stairs",
           "type": "stairs",
-          "x": 0.54798,
-          "y": 0.502723,
+          "x": 0.546195,
+          "y": 0.504139,
           "floor": "floor3"
         },
         {
@@ -916,8 +916,8 @@
           "id": "floor3_n21",
           "label": "Node 22",
           "type": "corridor",
-          "x": 0.427863,
-          "y": 0.415597,
+          "x": 0.425926,
+          "y": 0.41632,
           "floor": "floor3"
         },
         {
@@ -940,32 +940,32 @@
           "id": "floor3_n25",
           "label": "Node 26",
           "type": "corridor",
-          "x": 0.283144,
-          "y": 0.451389,
+          "x": 0.281145,
+          "y": 0.451773,
           "floor": "floor3"
         },
         {
           "id": "floor3_n26",
           "label": "Node 27",
           "type": "corridor",
-          "x": 0.270202,
-          "y": 0.449755,
+          "x": 0.271503,
+          "y": 0.45207,
           "floor": "floor3"
         },
         {
           "id": "floor3_n27",
           "label": "Node 28",
           "type": "corridor",
-          "x": 0.411616,
-          "y": 0.450844,
+          "x": 0.415366,
+          "y": 0.451377,
           "floor": "floor3"
         },
         {
           "id": "floor3_n28",
           "label": "Node 29",
           "type": "corridor",
-          "x": 0.244949,
-          "y": 0.451117,
+          "x": 0.241429,
+          "y": 0.451773,
           "floor": "floor3"
         },
         {
@@ -1026,7 +1026,7 @@
         },
         {
           "id": "floor3_n38",
-          "label": "Stairs",
+          "label": "staris",
           "type": "stairs",
           "connectorId": "null",
           "x": 0.529672,
@@ -1035,7 +1035,7 @@
         },
         {
           "id": "floor3_n39",
-          "label": "Stairs",
+          "label": "staris",
           "type": "stairs",
           "connectorId": "StairsC",
           "x": 0.530303,
@@ -1074,8 +1074,8 @@
           "label": "Node 47",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.561553,
-          "y": 0.326117,
+          "x": 0.560135,
+          "y": 0.32427,
           "floor": "floor3"
         },
         {
@@ -1083,8 +1083,8 @@
           "label": "Node 48",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.553039,
-          "y": 0.257408,
+          "x": 0.558114,
+          "y": 0.259695,
           "floor": "floor3"
         },
         {
@@ -1092,8 +1092,8 @@
           "label": "Node 49",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.553039,
-          "y": 0.227615,
+          "x": 0.556902,
+          "y": 0.227277,
           "floor": "floor3"
         },
         {
@@ -1101,8 +1101,8 @@
           "label": "elevator",
           "type": "elevator",
           "connectorId": "elevator1",
-          "x": 0.523674,
-          "y": 0.256264,
+          "x": 0.523771,
+          "y": 0.258126,
           "floor": "floor3"
         },
         {
@@ -1254,8 +1254,8 @@
           "label": "3046/1",
           "type": "room",
           "connectorId": "",
-          "x": 0.810816,
-          "y": 0.33238,
+          "x": 0.811388,
+          "y": 0.335279,
           "floor": "floor3"
         },
         {
@@ -1263,8 +1263,8 @@
           "label": "3046/2",
           "type": "room",
           "connectorId": "",
-          "x": 0.811448,
-          "y": 0.312772,
+          "x": 0.811207,
+          "y": 0.314037,
           "floor": "floor3"
         },
         {
@@ -1272,8 +1272,8 @@
           "label": "3046/3",
           "type": "room",
           "connectorId": "",
-          "x": 0.823443,
-          "y": 0.311955,
+          "x": 0.823834,
+          "y": 0.314037,
           "floor": "floor3"
         },
         {
@@ -1341,7 +1341,7 @@
         },
         {
           "id": "floor3_n82",
-          "label": "Pilpelet Cafe",
+          "label": "pelpelet",
           "type": "food",
           "connectorId": "",
           "x": 0.477229,
@@ -1545,6 +1545,105 @@
           "x": 0.207071,
           "y": 0.344499,
           "floor": "floor3"
+        },
+        {
+          "id": "floor3_n107",
+          "label": "terrace",
+          "type": "landmark",
+          "connectorId": "",
+          "x": 0.26431,
+          "y": 0.429986,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n108",
+          "label": "terrace",
+          "type": "landmark",
+          "connectorId": "",
+          "x": 0.384144,
+          "y": 0.430283,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n109",
+          "label": "Node 110",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.383226,
+          "y": 0.449594,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n110",
+          "label": "Node 111",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.263238,
+          "y": 0.451178,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n111",
+          "label": "Node 112",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.404346,
+          "y": 0.450782,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n112",
+          "label": "Restroom",
+          "type": "restroom",
+          "connectorId": "",
+          "x": 0.462357,
+          "y": 0.34841,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n114",
+          "label": "Node 115",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.475589,
+          "y": 0.348895,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n115",
+          "label": "terrace",
+          "type": "landmark",
+          "connectorId": "",
+          "x": 0.637927,
+          "y": 0.386243,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n116",
+          "label": "terrace",
+          "type": "landmark",
+          "connectorId": "",
+          "x": 0.758418,
+          "y": 0.38671,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n117",
+          "label": "Node 118",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.637747,
+          "y": 0.413087,
+          "floor": "floor3"
+        },
+        {
+          "id": "floor3_n118",
+          "label": "Node 119",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.759139,
+          "y": 0.414021,
+          "floor": "floor3"
         }
       ],
       "connections": [
@@ -1555,10 +1654,6 @@
         {
           "from": "floor3_n20",
           "to": "floor3_n21"
-        },
-        {
-          "from": "floor3_n27",
-          "to": "floor3_n23"
         },
         {
           "from": "floor3_n23",
@@ -1587,10 +1682,6 @@
         {
           "from": "floor3_n26",
           "to": "floor3_n5"
-        },
-        {
-          "from": "floor3_n26",
-          "to": "floor3_n28"
         },
         {
           "from": "floor3_n28",
@@ -1678,10 +1769,6 @@
         },
         {
           "from": "floor3_n27",
-          "to": "floor3_n1"
-        },
-        {
-          "from": "floor3_n27",
           "to": "floor3_n0"
         },
         {
@@ -1749,10 +1836,6 @@
           "to": "floor3_n78"
         },
         {
-          "from": "floor3_n91",
-          "to": "floor3_n92"
-        },
-        {
           "from": "floor3_n92",
           "to": "floor3_n63"
         },
@@ -1771,10 +1854,6 @@
         {
           "from": "floor3_n94",
           "to": "floor3_n77"
-        },
-        {
-          "from": "floor3_n94",
-          "to": "floor3_n95"
         },
         {
           "from": "floor3_n95",
@@ -1907,9 +1986,73 @@
         {
           "from": "floor3_n105",
           "to": "floor3_n16"
+        },
+        {
+          "from": "floor3_n114",
+          "to": "floor3_n112"
+        },
+        {
+          "from": "floor3_n114",
+          "to": "floor3_n20"
+        },
+        {
+          "from": "floor3_n27",
+          "to": "floor3_n111"
+        },
+        {
+          "from": "floor3_n111",
+          "to": "floor3_n109"
+        },
+        {
+          "from": "floor3_n109",
+          "to": "floor3_n23"
+        },
+        {
+          "from": "floor3_n109",
+          "to": "floor3_n108"
+        },
+        {
+          "from": "floor3_n28",
+          "to": "floor3_n110"
+        },
+        {
+          "from": "floor3_n110",
+          "to": "floor3_n26"
+        },
+        {
+          "from": "floor3_n107",
+          "to": "floor3_n110"
+        },
+        {
+          "from": "floor3_n1",
+          "to": "floor3_n111"
+        },
+        {
+          "from": "floor3_n95",
+          "to": "floor3_n118"
+        },
+        {
+          "from": "floor3_n118",
+          "to": "floor3_n116"
+        },
+        {
+          "from": "floor3_n118",
+          "to": "floor3_n94"
+        },
+        {
+          "from": "floor3_n92",
+          "to": "floor3_n117"
+        },
+        {
+          "from": "floor3_n117",
+          "to": "floor3_n115"
+        },
+        {
+          "from": "floor3_n117",
+          "to": "floor3_n91"
         }
       ],
-      "nextNodeId": 107
+      "nextNodeId": 119
     },
     "floor2": {
       "nodes": [
@@ -2328,8 +2471,8 @@
           "label": "1007",
           "type": "room",
           "connectorId": "",
-          "x": 0.231061,
-          "y": 0.309096,
+          "x": 0.230766,
+          "y": 0.309078,
           "floor": "floor2"
         },
         {
@@ -2337,8 +2480,8 @@
           "label": "1007",
           "type": "room",
           "connectorId": "",
-          "x": 0.117109,
-          "y": 0.308687,
+          "x": 0.117761,
+          "y": 0.309078,
           "floor": "floor2"
         },
         {
@@ -2655,6 +2798,78 @@
           "x": 0.274222,
           "y": 0.381332,
           "floor": "floor2"
+        },
+        {
+          "id": "floor2_n105",
+          "label": "Node 106",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.408105,
+          "y": 0.373725,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n106",
+          "label": "Node 107",
+          "type": "corridor",
+          "connectorId": "",
+          "x": 0.407452,
+          "y": 0.541331,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n107",
+          "label": "stairs",
+          "type": "stairs",
+          "connectorId": "",
+          "x": 0.584611,
+          "y": 0.390898,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n108",
+          "label": "stairs",
+          "type": "stairs",
+          "connectorId": "",
+          "x": 0.534566,
+          "y": 0.390898,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n109",
+          "label": "stairs",
+          "type": "stairs",
+          "connectorId": "",
+          "x": 0.382627,
+          "y": 0.39051,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n110",
+          "label": "stairs",
+          "type": "stairs",
+          "connectorId": "",
+          "x": 0.329426,
+          "y": 0.391676,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n111",
+          "label": "stairs",
+          "type": "stairs",
+          "connectorId": "",
+          "x": 0.203185,
+          "y": 0.307568,
+          "floor": "floor2"
+        },
+        {
+          "id": "floor2_n112",
+          "label": "stairs",
+          "type": "stairs",
+          "connectorId": "",
+          "x": 0.141069,
+          "y": 0.308451,
+          "floor": "floor2"
         }
       ],
       "connections": [
@@ -2871,18 +3086,6 @@
           "to": "floor2_n0"
         },
         {
-          "from": "floor2_n68",
-          "to": "floor2_n78"
-        },
-        {
-          "from": "floor2_n78",
-          "to": "floor2_n59"
-        },
-        {
-          "from": "floor2_n78",
-          "to": "floor2_n79"
-        },
-        {
           "from": "floor2_n79",
           "to": "floor2_n51"
         },
@@ -3009,9 +3212,45 @@
         {
           "from": "floor2_n103",
           "to": "floor2_n66"
+        },
+        {
+          "from": "floor2_n110",
+          "to": "floor2_n57"
+        },
+        {
+          "from": "floor2_n56",
+          "to": "floor2_n109"
+        },
+        {
+          "from": "floor2_n53",
+          "to": "floor2_n108"
+        },
+        {
+          "from": "floor2_n54",
+          "to": "floor2_n107"
+        },
+        {
+          "from": "floor2_n58",
+          "to": "floor2_n111"
+        },
+        {
+          "from": "floor2_n111",
+          "to": "floor2_n78"
+        },
+        {
+          "from": "floor2_n78",
+          "to": "floor2_n112"
+        },
+        {
+          "from": "floor2_n112",
+          "to": "floor2_n59"
+        },
+        {
+          "from": "floor2_n59",
+          "to": "floor2_n79"
         }
       ],
-      "nextNodeId": 104
+      "nextNodeId": 113
     },
     "floorminus1": {
       "nodes": [
@@ -3020,8 +3259,8 @@
           "label": "stairs",
           "type": "stairs",
           "connectorId": "Stairs3",
-          "x": 0.255807,
-          "y": 0.526425,
+          "x": 0.255361,
+          "y": 0.526374,
           "floor": "floorminus1"
         },
         {
@@ -3040,15 +3279,6 @@
           "connectorId": "",
           "x": 0.265603,
           "y": 0.570368,
-          "floor": "floorminus1"
-        },
-        {
-          "id": "floorminus1_n6",
-          "label": "Restroom",
-          "type": "restroom",
-          "connectorId": "",
-          "x": 0.551717,
-          "y": 0.627227,
           "floor": "floorminus1"
         },
         {
@@ -3115,12 +3345,21 @@
           "floor": "floorminus1"
         },
         {
-          "id": "floorminus1_n15",
-          "label": "Node 16",
+          "id": "floorminus1_n16",
+          "label": "Shelter",
+          "type": "shelter",
+          "connectorId": "",
+          "x": 0.273731,
+          "y": 0.638951,
+          "floor": "floorminus1"
+        },
+        {
+          "id": "floorminus1_n17",
+          "label": "Node 18",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.551524,
-          "y": 0.608567,
+          "x": 0.284396,
+          "y": 0.63863,
           "floor": "floorminus1"
         }
       ],
@@ -3132,10 +3371,6 @@
         {
           "from": "floorminus1_n8",
           "to": "floorminus1_n10"
-        },
-        {
-          "from": "floorminus1_n10",
-          "to": "floorminus1_n11"
         },
         {
           "from": "floorminus1_n13",
@@ -3158,19 +3393,23 @@
           "to": "floorminus1_n7"
         },
         {
-          "from": "floorminus1_n12",
-          "to": "floorminus1_n15"
-        },
-        {
-          "from": "floorminus1_n15",
-          "to": "floorminus1_n6"
-        },
-        {
           "from": "floorminus1_n14",
           "to": "floorminus1_n0"
+        },
+        {
+          "from": "floorminus1_n17",
+          "to": "floorminus1_n10"
+        },
+        {
+          "from": "floorminus1_n17",
+          "to": "floorminus1_n16"
+        },
+        {
+          "from": "floorminus1_n17",
+          "to": "floorminus1_n11"
         }
       ],
-      "nextNodeId": 16
+      "nextNodeId": 18
     },
     "floor0": {
       "nodes": [
@@ -3220,168 +3459,6 @@
           "floor": "floor0"
         },
         {
-          "id": "floor0_n5",
-          "label": "0042",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.519624,
-          "y": 0.486276,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n6",
-          "label": "0041",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.458123,
-          "y": 0.485158,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n7",
-          "label": "0040",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.435396,
-          "y": 0.485566,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n8",
-          "label": "0009",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.475168,
-          "y": 0.756264,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n9",
-          "label": "0008",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.475484,
-          "y": 0.766885,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n10",
-          "label": "0008/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.460017,
-          "y": 0.766476,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n11",
-          "label": "0008/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.456229,
-          "y": 0.777505,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n12",
-          "label": "0006",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.503577,
-          "y": 0.779548,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n13",
-          "label": "0007",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.509259,
-          "y": 0.766885,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n14",
-          "label": "0007/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.527252,
-          "y": 0.770969,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n15",
-          "label": "0050",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.439499,
-          "y": 0.607843,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n16",
-          "label": "0051",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.448653,
-          "y": 0.609886,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n17",
-          "label": "0052",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.46633,
-          "y": 0.608252,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n18",
-          "label": "0053/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.484007,
-          "y": 0.609886,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n19",
-          "label": "0053",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.502315,
-          "y": 0.615605,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n20",
-          "label": "0054",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.541772,
-          "y": 0.613971,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n21",
-          "label": "0056",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.532618,
-          "y": 0.607843,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n22",
-          "label": "0055",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.521886,
-          "y": 0.608252,
-          "floor": "floor0"
-        },
-        {
           "id": "floor0_n23",
           "label": "0015",
           "type": "room",
@@ -3409,303 +3486,6 @@
           "floor": "floor0"
         },
         {
-          "id": "floor0_n26",
-          "label": "0042/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.51431,
-          "y": 0.475626,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n27",
-          "label": "0041/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.462542,
-          "y": 0.474809,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n28",
-          "label": "0039",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.369108,
-          "y": 0.48543,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n29",
-          "label": "0039/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.375421,
-          "y": 0.472358,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n30",
-          "label": "0040/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.42056,
-          "y": 0.443764,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n31",
-          "label": "0040/2",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.411721,
-          "y": 0.438045,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n32",
-          "label": "0039/2",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.386153,
-          "y": 0.42579,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n33",
-          "label": "0033",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.33186,
-          "y": 0.468273,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n34",
-          "label": "0032",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.294613,
-          "y": 0.492783,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n35",
-          "label": "0031",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.270307,
-          "y": 0.4936,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n36",
-          "label": "0035",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.28388,
-          "y": 0.449891,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n37",
-          "label": "0034",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.30787,
-          "y": 0.451934,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n38",
-          "label": "0036",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.271886,
-          "y": 0.443764,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n39",
-          "label": "0036/2",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.258838,
-          "y": 0.429357,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n40",
-          "label": "0036/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.266667,
-          "y": 0.451906,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n41",
-          "label": "0029",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.197496,
-          "y": 0.4872,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n42",
-          "label": "0030",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.219592,
-          "y": 0.486792,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n43",
-          "label": "0030/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.228746,
-          "y": 0.430419,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n44",
-          "label": "0028/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.140362,
-          "y": 0.463099,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n45",
-          "label": "0028",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.123422,
-          "y": 0.502315,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n46",
-          "label": "0027",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.13447,
-          "y": 0.520697,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n47",
-          "label": "0026",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.1633,
-          "y": 0.521378,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n48",
-          "label": "0024",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.23548,
-          "y": 0.515387,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n49",
-          "label": "0024/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.229167,
-          "y": 0.535403,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n50",
-          "label": "0025",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.229798,
-          "y": 0.563589,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n51",
-          "label": "0025/2",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.204861,
-          "y": 0.560321,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n52",
-          "label": "0025/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.204545,
-          "y": 0.548066,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n53",
-          "label": "0037",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.31734,
-          "y": 0.519336,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n54",
-          "label": "0038",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.368476,
-          "y": 0.519336,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n55",
-          "label": "0038/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.35585,
-          "y": 0.548747,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n56",
-          "label": "0011",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.856778,
-          "y": 0.272073,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n57",
-          "label": "0011",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.901864,
-          "y": 0.272073,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n58",
-          "label": "0011",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.946498,
-          "y": 0.270906,
-          "floor": "floor0"
-        },
-        {
           "id": "floor0_n59",
           "label": "stairs",
           "type": "stairs",
@@ -3719,8 +3499,8 @@
           "label": "stairs",
           "type": "stairs",
           "connectorId": "Stairs3",
-          "x": 0.541877,
-          "y": 0.455746,
+          "x": 0.54206,
+          "y": 0.456394,
           "floor": "floor0"
         },
         {
@@ -3902,555 +3682,6 @@
           "x": 0.621949,
           "y": 0.469499,
           "floor": "floor0"
-        },
-        {
-          "id": "floor0_n82",
-          "label": "Node 83",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.564914,
-          "y": 0.614187,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n83",
-          "label": "Node 84",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.533039,
-          "y": 0.614788,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n84",
-          "label": "Node 85",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.521675,
-          "y": 0.615605,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n85",
-          "label": "Node 86",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.483796,
-          "y": 0.616013,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n86",
-          "label": "Node 87",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.46612,
-          "y": 0.615605,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n87",
-          "label": "Node 88",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.449074,
-          "y": 0.615196,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n88",
-          "label": "Node 89",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.438342,
-          "y": 0.615196,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n89",
-          "label": "Node 90",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.496738,
-          "y": 0.615741,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n90",
-          "label": "Node 91",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.530934,
-          "y": 0.471405,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n91",
-          "label": "Node 92",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.531513,
-          "y": 0.501178,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n92",
-          "label": "Node 93",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.519571,
-          "y": 0.500817,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n93",
-          "label": "Node 94",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.45802,
-          "y": 0.502356,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n94",
-          "label": "Node 95",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.436027,
-          "y": 0.503268,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n95",
-          "label": "Node 96",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.369318,
-          "y": 0.50354,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n96",
-          "label": "Node 97",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.456545,
-          "y": 0.475626,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n97",
-          "label": "Node 98",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.520623,
-          "y": 0.473992,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n98",
-          "label": "Node 99",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.369213,
-          "y": 0.472903,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n99",
-          "label": "Node 100",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.435817,
-          "y": 0.454248,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n100",
-          "label": "Node 101",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.421296,
-          "y": 0.454657,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n101",
-          "label": "Node 102",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.411827,
-          "y": 0.454657,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n102",
-          "label": "Node 103",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.316077,
-          "y": 0.502042,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n103",
-          "label": "Node 104",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.324285,
-          "y": 0.468273,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n104",
-          "label": "Node 105",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.324285,
-          "y": 0.450708,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n105",
-          "label": "Node 106",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.369108,
-          "y": 0.43396,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n106",
-          "label": "Node 107",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.385522,
-          "y": 0.433551,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n107",
-          "label": "Node 108",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.294718,
-          "y": 0.502179,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n108",
-          "label": "Node 109",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.270202,
-          "y": 0.501906,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n109",
-          "label": "Node 110",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.368476,
-          "y": 0.548611,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n110",
-          "label": "Node 111",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.301662,
-          "y": 0.451525,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n111",
-          "label": "Node 112",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.30202,
-          "y": 0.439488,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n112",
-          "label": "Node 113",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.28367,
-          "y": 0.43927,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n113",
-          "label": "Node 114",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.266288,
-          "y": 0.445207,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n114",
-          "label": "Node 115",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.235901,
-          "y": 0.502587,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n115",
-          "label": "Node 116",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.219171,
-          "y": 0.502587,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n116",
-          "label": "Node 117",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.197391,
-          "y": 0.502996,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n117",
-          "label": "Node 118",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.219276,
-          "y": 0.430692,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n118",
-          "label": "Node 119",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.236532,
-          "y": 0.534995,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n119",
-          "label": "Node 120",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.419613,
-          "y": 0.614788,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n120",
-          "label": "Node 121",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.23811,
-          "y": 0.563589,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n121",
-          "label": "Node 122",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.238426,
-          "y": 0.582108,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n122",
-          "label": "Node 123",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.256103,
-          "y": 0.581699,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n123",
-          "label": "Node 124",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.256103,
-          "y": 0.502179,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n124",
-          "label": "Node 125",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.218855,
-          "y": 0.563589,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n125",
-          "label": "Node 126",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.20907,
-          "y": 0.562908,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n126",
-          "label": "Node 127",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.209806,
-          "y": 0.549837,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n127",
-          "label": "Node 128",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.162984,
-          "y": 0.502587,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n128",
-          "label": "Node 129",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.134575,
-          "y": 0.502587,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n129",
-          "label": "Node 130",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.11069,
-          "y": 0.502587,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n130",
-          "label": "Node 131",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.111322,
-          "y": 0.475218,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n131",
-          "label": "Node 132",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.140046,
-          "y": 0.474809,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n132",
-          "label": "Node 133",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.324916,
-          "y": 0.502042,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n133",
-          "label": "Node 134",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.502736,
-          "y": 0.793981,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n134",
-          "label": "Node 135",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.503683,
-          "y": 0.786629,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n135",
-          "label": "Node 136",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.456334,
-          "y": 0.786629,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n136",
-          "label": "Node 137",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.454756,
-          "y": 0.766204,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n137",
-          "label": "Node 138",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.483796,
-          "y": 0.764978,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n139",
-          "label": "Node 140",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.503051,
-          "y": 0.767021,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n140",
-          "label": "Node 141",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.51915,
-          "y": 0.771514,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n142",
-          "label": "Node 143",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.259091,
-          "y": 0.445044,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n143",
-          "label": "0034/1",
-          "type": "room",
-          "connectorId": "",
-          "x": 0.286227,
-          "y": 0.416821,
-          "floor": "floor0"
-        },
-        {
-          "id": "floor0_n144",
-          "label": "Node 145",
-          "type": "corridor",
-          "connectorId": "",
-          "x": 0.283501,
-          "y": 0.416636,
-          "floor": "floor0"
         }
       ],
       "connections": [
@@ -4569,434 +3800,6 @@
         {
           "from": "floor0_n77",
           "to": "floor0_n59"
-        },
-        {
-          "from": "floor0_n82",
-          "to": "floor0_n20"
-        },
-        {
-          "from": "floor0_n20",
-          "to": "floor0_n83"
-        },
-        {
-          "from": "floor0_n83",
-          "to": "floor0_n21"
-        },
-        {
-          "from": "floor0_n83",
-          "to": "floor0_n84"
-        },
-        {
-          "from": "floor0_n84",
-          "to": "floor0_n22"
-        },
-        {
-          "from": "floor0_n84",
-          "to": "floor0_n19"
-        },
-        {
-          "from": "floor0_n85",
-          "to": "floor0_n18"
-        },
-        {
-          "from": "floor0_n85",
-          "to": "floor0_n86"
-        },
-        {
-          "from": "floor0_n86",
-          "to": "floor0_n17"
-        },
-        {
-          "from": "floor0_n86",
-          "to": "floor0_n87"
-        },
-        {
-          "from": "floor0_n87",
-          "to": "floor0_n16"
-        },
-        {
-          "from": "floor0_n87",
-          "to": "floor0_n88"
-        },
-        {
-          "from": "floor0_n88",
-          "to": "floor0_n15"
-        },
-        {
-          "from": "floor0_n89",
-          "to": "floor0_n85"
-        },
-        {
-          "from": "floor0_n89",
-          "to": "floor0_n84"
-        },
-        {
-          "from": "floor0_n63",
-          "to": "floor0_n90"
-        },
-        {
-          "from": "floor0_n90",
-          "to": "floor0_n91"
-        },
-        {
-          "from": "floor0_n91",
-          "to": "floor0_n92"
-        },
-        {
-          "from": "floor0_n92",
-          "to": "floor0_n5"
-        },
-        {
-          "from": "floor0_n92",
-          "to": "floor0_n93"
-        },
-        {
-          "from": "floor0_n93",
-          "to": "floor0_n6"
-        },
-        {
-          "from": "floor0_n93",
-          "to": "floor0_n96"
-        },
-        {
-          "from": "floor0_n96",
-          "to": "floor0_n27"
-        },
-        {
-          "from": "floor0_n92",
-          "to": "floor0_n97"
-        },
-        {
-          "from": "floor0_n97",
-          "to": "floor0_n26"
-        },
-        {
-          "from": "floor0_n93",
-          "to": "floor0_n94"
-        },
-        {
-          "from": "floor0_n94",
-          "to": "floor0_n7"
-        },
-        {
-          "from": "floor0_n94",
-          "to": "floor0_n95"
-        },
-        {
-          "from": "floor0_n95",
-          "to": "floor0_n54"
-        },
-        {
-          "from": "floor0_n95",
-          "to": "floor0_n28"
-        },
-        {
-          "from": "floor0_n94",
-          "to": "floor0_n99"
-        },
-        {
-          "from": "floor0_n99",
-          "to": "floor0_n100"
-        },
-        {
-          "from": "floor0_n100",
-          "to": "floor0_n101"
-        },
-        {
-          "from": "floor0_n100",
-          "to": "floor0_n30"
-        },
-        {
-          "from": "floor0_n101",
-          "to": "floor0_n31"
-        },
-        {
-          "from": "floor0_n95",
-          "to": "floor0_n98"
-        },
-        {
-          "from": "floor0_n98",
-          "to": "floor0_n29"
-        },
-        {
-          "from": "floor0_n98",
-          "to": "floor0_n105"
-        },
-        {
-          "from": "floor0_n105",
-          "to": "floor0_n106"
-        },
-        {
-          "from": "floor0_n106",
-          "to": "floor0_n32"
-        },
-        {
-          "from": "floor0_n102",
-          "to": "floor0_n53"
-        },
-        {
-          "from": "floor0_n103",
-          "to": "floor0_n33"
-        },
-        {
-          "from": "floor0_n103",
-          "to": "floor0_n104"
-        },
-        {
-          "from": "floor0_n104",
-          "to": "floor0_n37"
-        },
-        {
-          "from": "floor0_n95",
-          "to": "floor0_n109"
-        },
-        {
-          "from": "floor0_n109",
-          "to": "floor0_n55"
-        },
-        {
-          "from": "floor0_n102",
-          "to": "floor0_n107"
-        },
-        {
-          "from": "floor0_n107",
-          "to": "floor0_n34"
-        },
-        {
-          "from": "floor0_n104",
-          "to": "floor0_n110"
-        },
-        {
-          "from": "floor0_n110",
-          "to": "floor0_n111"
-        },
-        {
-          "from": "floor0_n111",
-          "to": "floor0_n112"
-        },
-        {
-          "from": "floor0_n112",
-          "to": "floor0_n36"
-        },
-        {
-          "from": "floor0_n112",
-          "to": "floor0_n113"
-        },
-        {
-          "from": "floor0_n113",
-          "to": "floor0_n40"
-        },
-        {
-          "from": "floor0_n112",
-          "to": "floor0_n38"
-        },
-        {
-          "from": "floor0_n107",
-          "to": "floor0_n108"
-        },
-        {
-          "from": "floor0_n108",
-          "to": "floor0_n35"
-        },
-        {
-          "from": "floor0_n88",
-          "to": "floor0_n119"
-        },
-        {
-          "from": "floor0_n122",
-          "to": "floor0_n121"
-        },
-        {
-          "from": "floor0_n121",
-          "to": "floor0_n120"
-        },
-        {
-          "from": "floor0_n120",
-          "to": "floor0_n50"
-        },
-        {
-          "from": "floor0_n122",
-          "to": "floor0_n123"
-        },
-        {
-          "from": "floor0_n120",
-          "to": "floor0_n124"
-        },
-        {
-          "from": "floor0_n124",
-          "to": "floor0_n125"
-        },
-        {
-          "from": "floor0_n125",
-          "to": "floor0_n51"
-        },
-        {
-          "from": "floor0_n125",
-          "to": "floor0_n126"
-        },
-        {
-          "from": "floor0_n126",
-          "to": "floor0_n52"
-        },
-        {
-          "from": "floor0_n114",
-          "to": "floor0_n118"
-        },
-        {
-          "from": "floor0_n114",
-          "to": "floor0_n48"
-        },
-        {
-          "from": "floor0_n118",
-          "to": "floor0_n49"
-        },
-        {
-          "from": "floor0_n108",
-          "to": "floor0_n123"
-        },
-        {
-          "from": "floor0_n123",
-          "to": "floor0_n114"
-        },
-        {
-          "from": "floor0_n114",
-          "to": "floor0_n115"
-        },
-        {
-          "from": "floor0_n115",
-          "to": "floor0_n42"
-        },
-        {
-          "from": "floor0_n115",
-          "to": "floor0_n116"
-        },
-        {
-          "from": "floor0_n116",
-          "to": "floor0_n41"
-        },
-        {
-          "from": "floor0_n116",
-          "to": "floor0_n127"
-        },
-        {
-          "from": "floor0_n127",
-          "to": "floor0_n47"
-        },
-        {
-          "from": "floor0_n127",
-          "to": "floor0_n128"
-        },
-        {
-          "from": "floor0_n128",
-          "to": "floor0_n45"
-        },
-        {
-          "from": "floor0_n128",
-          "to": "floor0_n46"
-        },
-        {
-          "from": "floor0_n128",
-          "to": "floor0_n129"
-        },
-        {
-          "from": "floor0_n129",
-          "to": "floor0_n130"
-        },
-        {
-          "from": "floor0_n130",
-          "to": "floor0_n131"
-        },
-        {
-          "from": "floor0_n131",
-          "to": "floor0_n44"
-        },
-        {
-          "from": "floor0_n115",
-          "to": "floor0_n117"
-        },
-        {
-          "from": "floor0_n117",
-          "to": "floor0_n43"
-        },
-        {
-          "from": "floor0_n132",
-          "to": "floor0_n95"
-        },
-        {
-          "from": "floor0_n132",
-          "to": "floor0_n102"
-        },
-        {
-          "from": "floor0_n132",
-          "to": "floor0_n103"
-        },
-        {
-          "from": "floor0_n134",
-          "to": "floor0_n135"
-        },
-        {
-          "from": "floor0_n135",
-          "to": "floor0_n136"
-        },
-        {
-          "from": "floor0_n135",
-          "to": "floor0_n11"
-        },
-        {
-          "from": "floor0_n136",
-          "to": "floor0_n10"
-        },
-        {
-          "from": "floor0_n134",
-          "to": "floor0_n12"
-        },
-        {
-          "from": "floor0_n134",
-          "to": "floor0_n139"
-        },
-        {
-          "from": "floor0_n139",
-          "to": "floor0_n13"
-        },
-        {
-          "from": "floor0_n139",
-          "to": "floor0_n140"
-        },
-        {
-          "from": "floor0_n140",
-          "to": "floor0_n14"
-        },
-        {
-          "from": "floor0_n139",
-          "to": "floor0_n137"
-        },
-        {
-          "from": "floor0_n137",
-          "to": "floor0_n9"
-        },
-        {
-          "from": "floor0_n137",
-          "to": "floor0_n8"
-        },
-        {
-          "from": "floor0_n133",
-          "to": "floor0_n134"
-        },
-        {
-          "from": "floor0_n113",
-          "to": "floor0_n142"
-        },
-        {
-          "from": "floor0_n142",
-          "to": "floor0_n39"
-        },
-        {
-          "from": "floor0_n144",
-          "to": "floor0_n112"
-        },
-        {
-          "from": "floor0_n144",
-          "to": "floor0_n143"
         }
       ],
       "nextNodeId": 145
@@ -5419,7 +4222,7 @@
         },
         {
           "id": "floor4_n47",
-          "label": "Stairs",
+          "label": "starirs",
           "type": "stairs",
           "connectorId": "",
           "x": 0.524621,

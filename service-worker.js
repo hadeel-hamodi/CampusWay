@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v41';
+const CACHE_NAME = 'campusway-v42';
 
 const APP_FILES = [
 './',
@@ -106,6 +106,13 @@ self.addEventListener('fetch', event => {
   if(event.request.method !== 'GET'){
     return;
   }
+
+  const requestURL = new URL(event.request.url);
+
+// Handle only files hosted with CampusWay.
+if(requestURL.origin !== self.location.origin){
+  return;
+}
 
   // Live campus status: try the network first so new outages and closures
   // show up at once; use the saved copy when offline.

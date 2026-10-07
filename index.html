@@ -146,6 +146,26 @@
           <div class="profiles" id="profileList" role="group" aria-labelledby="lbl-profile" hidden></div>
         </div>
 
+        <div id="visualVoiceControls" hidden>
+  <button
+    id="visualVoiceRouteBtn"
+    class="btn btn-primary"
+    type="button"
+    onclick="startVisualVoiceFlow()"
+    style="width:100%;margin-top:12px">
+    Plan route by voice
+  </button>
+
+  <button
+    id="visualVoiceStopBtn"
+    class="btn btn-ghost"
+    type="button"
+    onclick="stopVisualVoiceFlow()"
+    style="width:100%;margin-top:8px">
+    Stop voice planning
+  </button>
+</div>
+
         <div id="alertArea" aria-live="polite"></div>
       </section>
 
@@ -282,7 +302,7 @@ const T = {
     destination:'To',
     searchPlaceholder:'Search a building, room or place',
     startfrom:'From',
-    startPlaceholder:'Default: Carmel Gate',
+    startPlaceholder:'Search a building, room or place',
     display:'Display & Audio',
     contrast:'High Contrast',
     audio:'Audio Guide',
@@ -530,7 +550,7 @@ const PROFILE_IDS = new Set(['general','mobility','visual','spatial','mental']);
 const storedProfile = sessionStorage.getItem('accessibilityProfile');
 let currentProfile = PROFILE_IDS.has(storedProfile) ? storedProfile : 'general';
 sessionStorage.setItem('accessibilityProfile', currentProfile);
-let audioOn = false;
+let audioOn = currentProfile === 'visual';
 // Search and navigation share the canonical indoor graph files.
 let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
@@ -772,7 +792,39 @@ function updateRestSpaceServiceButton(){
   }
 }
 
+function updateVisualVoiceControls(){
+  const controls = document.getElementById('visualVoiceControls');
+  if(!controls) return;
+
+  controls.hidden = currentProfile !== 'visual';
+
+  document.getElementById('visualVoiceRouteBtn').textContent =
+    visualVoiceText(
+      'Plan route by voice',
+      'תכנון מסלול בקול',
+      'خطط للمسار بالصوت'
+    );
+
+  document.getElementById('visualVoiceStopBtn').textContent =
+    visualVoiceText(
+      'Stop voice planning',
+      'עצור תכנון קולי',
+      'أوقف التخطيط الصوتي'
+    );
+}
+
 function applyTranslations(){
+  updateVisualVoiceControls();
+  const audioButton = document.getElementById('audioBtn');
+if(audioButton){
+  audioButton.classList.toggle('active', audioOn);
+  audioButton.setAttribute('aria-pressed', String(audioOn));
+}
+
+const voiceArea = document.getElementById('voiceArea');
+if(voiceArea){
+  voiceArea.classList.toggle('show', audioOn);
+}
   document.getElementById('lbl-destination').textContent = t.destination;
   document.getElementById('searchInput').placeholder = t.searchPlaceholder;
   document.getElementById('lbl-startfrom').textContent = t.startfrom;
@@ -961,6 +1013,10 @@ function buildProfiles(){
       btn.classList.add('active');
       const previousProfile = currentProfile;
 
+      if(previousProfile === 'visual'){
+      stopVisualVoiceFlow();
+      }
+
       currentProfile = p.id;
       sessionStorage.setItem('accessibilityProfile', currentProfile);
 
@@ -983,6 +1039,11 @@ function buildProfiles(){
       }else{
         clearRestSpacePreview();
       }
+      updateVisualVoiceControls();
+
+if(currentProfile === 'visual'){
+  void startVisualVoiceFlow();
+}
     };
     el.appendChild(btn);
   });
@@ -5096,6 +5157,28 @@ if(outdoorLegRequired){
 
 if(requestId !== outdoorRouteRequestId) return;
 
+if(
+  outdoorLegRequired &&
+  !outdoorResult &&
+  currentProfile === 'visual'
+){
+  const message = visualVoiceText(
+    'No mapped outdoor route was found. Try another starting point or destination.',
+    'לא נמצא מסלול חיצוני ממופה. נסה נקודת התחלה או יעד אחרים.',
+    'لم يتم العثور على مسار خارجي مرسوم. جرّب نقطة بداية أو وجهة أخرى.'
+  );
+
+  document.getElementById('continueIndoorBtn').style.display = 'none';
+  document.getElementById('routeTitle').textContent = message;
+  document.getElementById('routeSub').textContent = '';
+  document.getElementById('routeEta').textContent = '—';
+  document.getElementById('routeCard').classList.add('show');
+
+  if(!visualVoiceActive) speak(message);
+
+  return {ok:false, message};
+}
+
 if(outdoorLegRequired && !outdoorResult && currentProfile === 'mobility'){
   const indoorBtn = document.getElementById('continueIndoorBtn');
   indoorBtn.style.display = 'none';
@@ -5703,13 +5786,31 @@ if(hasOriginIndoorJourney){
 
   document.getElementById('routeCard').classList.add('show');
   map.closePopup();
-  if(destinationIsStartBuilding){
-    speak(document.getElementById('routeTitle').textContent);
-  }else{
-    speak(`${t.routeFrom}${lang === 'he' ? '' : ' '}${startLabel} ${t.routeTo} ${displayDestination}.${sameBuilding ? '' : ` ${etaNum} ${seconds < 3600 ? t.minWalk : t.hours}.`}`);
-    // With the Audio Guide on, the directions follow the summary.
-    if(audioOn && routeStepTexts.length) speakRouteSteps(0, {queue:true});
+if(currentProfile === 'visual' && visualVoiceActive){
+  // The guided flow announces the result after routing finishes.
+}else if(destinationIsStartBuilding){
+  speak(document.getElementById('routeTitle').textContent);
+}else{
+  speak(`${t.routeFrom}${lang === 'he' ? '' : ' '}${startLabel} ${t.routeTo} ${displayDestination}.${sameBuilding ? '' : ` ${etaNum} ${seconds < 3600 ? t.minWalk : t.hours}.`}`);
+
+  if(
+    audioOn &&
+    currentProfile !== 'visual' &&
+    routeStepTexts.length
+  ){
+    speakRouteSteps(0, {queue:true});
   }
+}
+
+
+  return {
+  ok:true,
+  minutes:seconds > 0 ? Math.ceil(seconds / 60) : null,
+  nextAction:indoorBtn.style.display === 'block'
+    ? document.getElementById('lbl-continue-indoor').textContent
+    : null
+};
+
 }
 
 function closeRoute(){
@@ -6824,7 +6925,8 @@ function pickIndoorStart(nodeId, label, buildingKey, displayLabel = ''){
     main: 'Main Building',
     rabin: 'Rabin Building',
     student: 'Student House',
-    education: 'Education and Science'
+    education: 'Education and Science',
+    'multi-purpose': 'Multi-Purpose Building',
   };
 
   const buildingName = buildingNames[buildingKey];
@@ -7335,12 +7437,12 @@ const buildingNames = {
 
   console.log('INDOOR CONTEXT BEFORE ROUTETO:', sessionStorage.getItem('indoorContext'));
 
-  routeTo(
-    building.name,
-    building.lat,
-    building.lng,
-    {keepIndoorContext:true}
-  );
+return routeTo(
+  building.name,
+  building.lat,
+  building.lng,
+  {keepIndoorContext:true}
+);
 }
 
 async function pickDestination(name, lat, lng){
@@ -7356,7 +7458,7 @@ async function pickDestination(name, lat, lng){
     kind: 'building', name, lat, lng, displayValue
   };
   searchSuggestions.style.display = 'none';
-  routeTo(name, lat, lng);
+  return routeTo(name, lat, lng);
 }
 
 let destinationSearchRequestId = 0;
@@ -7622,7 +7724,809 @@ async function startVoiceMeter() {
     console.warn('Microphone animation unavailable:', error);
   }
 }
+
+function normalizeVoiceAnswer(text){
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[.,!?؟،]/g, ' ')
+    .replace(/\b(option|number|choice)\b/g, ' ')
+    .replace(/(?:אפשרות|מספר|خيار|رقم)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function visualVoiceText(en, he, ar){
+  return lang === 'he' ? he : lang === 'ar' ? ar : en;
+}
+let cancelVisualSpeaking = null;
+
+function speakVisualQuestion(text){
+  return new Promise(resolve => {
+    if(
+      currentProfile !== 'visual' ||
+      !('speechSynthesis' in window)
+    ){
+      resolve(false);
+      return;
+    }
+
+    if(cancelVisualSpeaking) cancelVisualSpeaking();
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = getVoice();
+    let finished = false;
+
+    const finish = success => {
+      if(finished) return;
+      finished = true;
+
+      if(cancelVisualSpeaking === cancel){
+        cancelVisualSpeaking = null;
+      }
+
+      resolve(success);
+    };
+
+    const cancel = () => finish(false);
+    cancelVisualSpeaking = cancel;
+
+    utterance.rate = 0.97;
+    utterance.pitch = 1;
+    utterance.lang =
+      lang === 'he' ? 'he-IL' :
+      lang === 'ar' ? 'ar-SA' : 'en-US';
+
+    if(voice){
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+
+    utterance.onend = () => finish(true);
+    utterance.onerror = () => finish(false);
+
+    try{
+      window.speechSynthesis.speak(utterance);
+    }catch(error){
+      finish(false);
+    }
+  });
+}
+
+let visualVoiceActive = false;
+
+let visualVoiceRunId = 0;
+let cancelVisualListening = null;
+
+function stopVisualVoiceFlow(){
+  visualVoiceRunId++;
+  visualVoiceActive = false;
+
+  if(cancelVisualSpeaking) cancelVisualSpeaking();
+  if(cancelVisualListening) cancelVisualListening();
+
+  if('speechSynthesis' in window){
+    window.speechSynthesis.cancel();
+  }
+}
+// Reset automatically when a new voice-planning run begins.
+let visualNoSpeechState = {runId: null, count: 0};
+
+function listenVisualAnswer(target, runId){
+  return new Promise(resolve => {
+    const Recognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const isCurrent = () =>
+      currentProfile === 'visual' &&
+      runId === visualVoiceRunId;
+
+    if(!isCurrent()){
+      resolve({answer: null, error: 'aborted'});
+      return;
+    }
+
+    if(!Recognition || micActive){
+      resolve({
+        answer: null,
+        error: !Recognition ? 'unsupported' : 'busy'
+      });
+      return;
+    }
+
+    activeMicButtonId =
+      target === 'start' ? 'startMicBtn' : 'micBtn';
+
+    const button = document.getElementById(activeMicButtonId);
+    const input = target === 'start' ? startInput : searchInput;
+    const placeholder = input.placeholder;
+    const session = new Recognition();
+
+    let answer = null;
+    let recognitionError = null;
+    let finished = false;
+    let timer = null;
+    let endTimer = null;
+
+    session.lang =
+      lang === 'he' ? 'he-IL' :
+      lang === 'ar' ? 'ar-SA' : 'en-US';
+
+    session.interimResults = false;
+    session.maxAlternatives = 1;
+
+    const finish = () => {
+      if(finished) return;
+      finished = true;
+
+      clearTimeout(timer);
+      clearTimeout(endTimer);
+
+      if(recognition === session){
+        button?.classList.remove('listening');
+        input.placeholder = placeholder;
+        recognition = null;
+        micActive = false;
+      try{
+      stopVoiceMeter();
+      }catch(error){
+        console.warn('Voice meter cleanup failed:', error);
+      }
+      }
+
+      if(cancelVisualListening === cancel){
+        cancelVisualListening = null;
+      }
+
+      resolve(isCurrent()
+        ? {
+            answer,
+            error: recognitionError || (answer ? null : 'no-speech')
+          }
+        : {answer: null, error: 'aborted'}
+      );
+    };
+
+    const cancel = () => {
+      answer = null;
+      recognitionError = 'aborted';
+      try{ session.abort(); }catch(error){}
+      finish();
+    };
+
+    // Normally onend finishes cleanup. This is a fallback if it never fires.
+    const waitForEnd = () => {
+      clearTimeout(timer);
+      clearTimeout(endTimer);
+      endTimer = setTimeout(() => {
+        try{ session.abort(); }catch(error){}
+        finish();
+      }, 1500);
+    };
+
+    recognition = session;
+    micActive = true;
+    cancelVisualListening = cancel;
+
+    session.onstart = () => {
+      if(finished) return;
+      if(!isCurrent()){
+        cancel();
+        return;
+      }
+
+      button?.classList.add('listening');
+      input.placeholder = t.voiceListening;
+    };
+
+    session.onresult = event => {
+      if(finished || recognitionError) return;
+
+      answer = event.results[0][0].transcript
+        .replace(/(\d)[,٬](?=\d)/g, '$1')
+        .trim();
+
+      waitForEnd();
+      try{ session.stop(); }catch(error){ finish(); }
+    };
+
+    session.onerror = event => {
+      if(finished) return;
+
+      answer = null;
+      recognitionError = recognitionError || event.error || 'unknown';
+      waitForEnd();
+    };
+
+    session.onend = finish;
+
+    timer = setTimeout(() => {
+      if(finished) return;
+
+      answer = null;
+      recognitionError = 'no-speech';
+      waitForEnd();
+      try{ session.abort(); }catch(error){ finish(); }
+    }, 25000);
+
+    try{
+      session.start();
+    }catch(error){
+      recognitionError =
+        error.name === 'NotAllowedError' ? 'not-allowed' : 'unknown';
+      finish();
+    }
+  });
+}
+
+async function askVisualQuestion(question, target, runId){
+  const isCurrent = () =>
+    currentProfile === 'visual' &&
+    runId === visualVoiceRunId;
+
+  if(visualNoSpeechState.runId !== runId){
+    visualNoSpeechState = {runId, count: 0};
+  }
+
+  let prompt = question;
+
+  while(isCurrent()){
+    if(prompt){
+      const spoken = await speakVisualQuestion(prompt);
+      if(!spoken || !isCurrent()) return null;
+    }
+
+    const result = await listenVisualAnswer(target, runId);
+    if(!isCurrent()) return null;
+
+    if(result.error === 'aborted'){
+      stopVisualVoiceFlow();
+      return null;
+    }
+
+    if(result.error === 'no-speech'){
+      visualNoSpeechState.count++;
+
+      if(visualNoSpeechState.count >= 2){
+        await speakVisualQuestion(visualVoiceText(
+          'I still couldn’t catch your answer. Voice planning has stopped. You can try again with Plan route by voice.',
+          'עדיין לא הצלחתי לקלוט את התשובה שלך. התכנון הקולי נעצר. אפשר לנסות שוב באמצעות הכפתור לתכנון מסלול בקול.',
+          'ما زلت لم أتمكن من التقاط إجابتك. توقف تخطيط المسار بالصوت. يمكنك المحاولة مجددًا باستخدام زر تخطيط المسار بالصوت.'
+        ));
+
+        if(isCurrent()) stopVisualVoiceFlow();
+        return null;
+      }
+
+      prompt = visualVoiceText(
+        'I didn’t catch that.',
+        'לא הצלחתי לקלוט את התשובה.',
+        'لم أتمكن من التقاط إجابتك.'
+      );
+      continue;
+    }
+
+    if(result.error){
+      const messages = {
+        'not-allowed': [
+          'Microphone access is blocked. Allow the microphone for this site in your browser settings.',
+          'הגישה למיקרופון חסומה. אפשר גישה למיקרופון עבור האתר בהגדרות הדפדפן.',
+          'الوصول إلى الميكروفون محظور. اسمح لهذا الموقع باستخدام الميكروفون في إعدادات المتصفح.'
+        ],
+        'service-not-allowed': [
+          'Voice recognition is blocked in this browser.',
+          'זיהוי קולי חסום בדפדפן הזה.',
+          'التعرف على الصوت محظور في هذا المتصفح.'
+        ],
+        'audio-capture': [
+          'The browser couldn’t access your microphone. Check that it is connected and available.',
+          'הדפדפן לא הצליח לגשת למיקרופון. בדוק שהוא מחובר וזמין.',
+          'لم يتمكن المتصفح من الوصول إلى الميكروفون. تحقق من أنه متصل ومتاح.'
+        ],
+        'network': [
+          'The voice service couldn’t connect. Check your internet connection and try again.',
+          'לא ניתן להתחבר לשירות הקולי. בדוק את החיבור לאינטרנט ונסה שוב.',
+          'تعذر الاتصال بالخدمة الصوتية. تحقق من اتصالك بالإنترنت وحاول مجددًا.'
+        ]
+      };
+
+      const message = messages[result.error] || [
+        'Voice recognition isn’t working right now. Please try again later.',
+        'הזיהוי הקולי אינו פועל כרגע. נסה שוב מאוחר יותר.',
+        'التعرف على الصوت لا يعمل حاليًا. حاول مجددًا لاحقًا.'
+      ];
+
+      await speakVisualQuestion(visualVoiceText(...message));
+      if(isCurrent()) stopVisualVoiceFlow();
+      return null;
+    }
+
+    // Any recognized answer resets consecutive no-speech attempts.
+    visualNoSpeechState.count = 0;
+
+    const answer = result.answer;
+    const command = normalizeVoiceAnswer(answer);
+
+    if([
+      'cancel', 'stop',
+      'ביטול', 'בטל', 'עצור',
+      'إلغاء', 'الغاء', 'توقف'
+    ].includes(command)){
+      stopVisualVoiceFlow();
+      return null;
+    }
+
+    return answer;
+  }
+
+  return null;
+}
+
+async function chooseVisualLocation(answer, target, runId){
+  await indoorSearchGraphsReady;
+
+  const isCurrent = () =>
+    currentProfile === 'visual' &&
+    runId === visualVoiceRunId;
+
+  if(!isCurrent()) return null;
+
+  const matches = target === 'start'
+    ? getStartMatches(answer)
+    : getDestinationMatches(answer);
+
+  const buildings = matches.buildingMatches.map(building => ({
+    kind:'building',
+    building,
+    label:localizedBuildingNameByEnglishName(building.name),
+    exact:buildingIsExactSearch(building, matches.query)
+  }));
+
+  const rooms = matches.roomMatches.map(match => ({
+    kind:'room',
+    match,
+    label:
+      `${indoorSearchName(match.node)} — ` +
+      localizedBuildingNameByEnglishName(match.buildingName),
+    exact:
+      String(match.node.label).trim().toLowerCase() === matches.query
+  }));
+
+  const all = [...buildings, ...rooms];
+  const exact = all.filter(choice => choice.exact);
+  const choices = exact.length ? exact : all;
+
+  if(!choices.length){
+    await speakVisualQuestion(visualVoiceText(
+    'I could not find that room or building. Please try again.',
+    'לא מצאתי את החדר או הבניין. נסה שוב בבקשה.',
+    'لم أجد هذه الغرفة أو هذا المبنى. حاول مرة أخرى من فضلك.'
+    ));
+    return null;
+  }
+
+  if(choices.length > 5){
+    await speakVisualQuestion(visualVoiceText(
+      'There are several matches. Please restart voice planning and use a more specific room or building name.',
+      'יש כמה תוצאות. נסה שוב בתכנון הקולי עם שם חדר או בניין מדויק יותר.',
+      'هناك عدة نتائج. أعد التخطيط الصوتي واستخدم اسم غرفة أو مبنى أكثر تحديدًا.'
+    ));
+    return null;
+  }
+
+  let selected = choices[0];
+
+  if(choices.length > 1){
+    const options = choices
+      .map((choice, index) => `${index + 1}. ${choice.label}`)
+      .join('. ');
+
+    const reply = await askVisualQuestion(
+      visualVoiceText(
+        `I found several places. ${options}. Say the option number.`,
+        `מצאתי כמה מקומות. ${options}. אמור את מספר האפשרות.`,
+        `وجدت عدة أماكن. ${options}. قل رقم الخيار.`
+      ),
+      target,
+      runId
+    );
+
+    if(!reply || !isCurrent()) return null;
+
+    const numbers = {
+      '1':1, 'one':1, 'first':1, 'אחת':1, 'אחד':1, 'واحد':1, '١':1,
+      '2':2, 'two':2, 'second':2, 'שתיים':2, 'שניים':2, 'اثنين':2, '٢':2,
+      '3':3, 'three':3, 'third':3, 'שלוש':3, 'שלושה':3, 'ثلاثة':3, '٣':3,
+      '4':4, 'four':4, 'fourth':4, 'ארבע':4, 'ארבעה':4, 'أربعة':4, '٤':4,
+      '5':5, 'five':5, 'fifth':5, 'חמש':5, 'חמישה':5, 'خمسة':5, '٥':5
+    };
+
+    const number = numbers[normalizeVoiceAnswer(reply)];
+    selected = choices[number - 1];
+
+    if(!selected){
+      await speakVisualQuestion(visualVoiceText(
+        'That option was not recognised. Please try voice planning again.',
+        'האפשרות לא זוהתה. נסה שוב בתכנון הקולי.',
+        'لم أتعرف على هذا الخيار. حاول التخطيط الصوتي مجددًا.'
+      ));
+      return null;
+    }
+  }
+
+  let confirmation = await askVisualQuestion(
+    visualVoiceText(
+  `${selected.label}. Is that correct?`,
+  `${selected.label}. האם זה נכון?`,
+  `${selected.label}. هل هذا صحيح؟`
+      ),
+    target,
+    runId
+  );
+
+  if(!confirmation || !isCurrent()) return null;
+
+const yesAnswers = [
+  'yes', 'yes please', 'yeah', 'yep', 'correct',
+  'כן', 'כן בבקשה', 'נכון',
+  'نعم', 'نعم من فضلك', 'صحيح',
+'آه', 'اه', 'أه', 'أيوه', 'ايوه', 'أيوا', 'ايوا',
+];
+
+const noAnswers = ['no', 'nope', 'לא', 'لا'];
+
+let normalized = normalizeVoiceAnswer(confirmation);
+
+if(
+  !yesAnswers.includes(normalized) &&
+  !noAnswers.includes(normalized)
+){
+  confirmation = await askVisualQuestion(
+    visualVoiceText(
+      'Please say yes or no.',
+      'אמור כן או לא.',
+      'قل نعم أو لا.'
+    ),
+    target,
+    runId
+  );
+
+  if(!confirmation || !isCurrent()) return null;
+
+  normalized = normalizeVoiceAnswer(confirmation);
+}
+
+if(!yesAnswers.includes(normalized)){
+  await speakVisualQuestion(visualVoiceText(
+    'The location was not confirmed. Please try voice planning again.',
+    'המיקום לא אושר. נסה שוב בתכנון הקולי.',
+    'لم يتم تأكيد الموقع. حاول التخطيط الصوتي مجددًا.'
+  ));
+  return null;
+}
+
+  return selected;
+}
+
+function getVisualGPSPosition(runId){
+  return new Promise(resolve => {
+    if(
+      currentProfile !== 'visual' ||
+      runId !== visualVoiceRunId ||
+      !navigator.geolocation
+    ){
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        if(
+          currentProfile !== 'visual' ||
+          runId !== visualVoiceRunId
+        ){
+          resolve(null);
+          return;
+        }
+
+        resolve({
+          lat:position.coords.latitude,
+          lng:position.coords.longitude
+        });
+      },
+      () => resolve(null),
+      {
+        enableHighAccuracy:true,
+        timeout:15000,
+        maximumAge:30000
+      }
+    );
+  });
+}
+
+function applyVisualGPSStart(position){
+  clearIndoorStartJourney();
+
+  customStart = {
+    lat:position.lat,
+    lng:position.lng,
+    label:'📍 GPS'
+  };
+
+  startInput.value = t.gpsActive;
+  selectedStartLocation = {
+    kind:'gps',
+    displayValue:t.gpsActive
+  };
+
+  document.getElementById('gpsBtn').classList.add('active');
+
+  if(gpsMarker) map.removeLayer(gpsMarker);
+
+  gpsMarker = L.circleMarker(
+    [position.lat, position.lng],
+    {
+      radius:10,
+      color:'#0891B2',
+      fillColor:'#0891B2',
+      fillOpacity:0.4,
+      weight:3
+    }
+  ).addTo(map);
+
+  gpsMarker.bindPopup('📍 ' + t.yourLocation);
+  startSuggestions.style.display = 'none';
+  map.flyTo([position.lat, position.lng], 17, {duration:0.8});
+}
+
+async function startVisualVoiceFlow(){
+  if(currentProfile !== 'visual') return;
+
+  const Recognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(!Recognition || !('speechSynthesis' in window)){
+    notify(t.voiceNotSupported);
+    return;
+  }
+
+  stopVisualVoiceFlow();
+
+  // Stop an existing microphone session before asking questions.
+  if(micActive && recognition){
+    recognition.abort();
+    return;
+  }
+
+  const runId = visualVoiceRunId;
+  visualVoiceActive = true;
+  const isCurrent = () =>
+    currentProfile === 'visual' &&
+    runId === visualVoiceRunId;
+
+  try{
+    const startAnswer = await askVisualQuestion(
+      visualVoiceText(
+        'Where are you starting? Say a room or building name, or say use my location.',
+        'מאיפה אתה מתחיל? אמור שם חדר או בניין, או אמור השתמש במיקום שלי.',
+        'من أين تبدأ؟ قل اسم غرفة أو مبنى، أو قل استخدم موقعي.'
+      ),
+      'start',
+      runId
+    );
+
+    if(!startAnswer || !isCurrent()) return;
+
+    const gpsCommands = [
+      'gps',
+      'use gps',
+      'use my location',
+      'my location',
+      'השתמש במיקום שלי',
+      'המיקום שלי',
+      'استخدم موقعي',
+      'موقعي'
+    ];
+
+    const useGPS = gpsCommands.includes(
+      normalizeVoiceAnswer(startAnswer)
+    );
+
+    let gpsPosition = null;
+    let startingPlace = null;
+
+    if(useGPS){
+      const spoken = await speakVisualQuestion(visualVoiceText(
+        'Getting your location. Your browser may ask for location permission.',
+        'מאתר את המיקום שלך. הדפדפן עשוי לבקש הרשאה למיקום.',
+        'جارٍ تحديد موقعك. قد يطلب المتصفح إذن الوصول إلى الموقع.'
+      ));
+
+      if(!spoken || !isCurrent()) return;
+
+      gpsPosition = await getVisualGPSPosition(runId);
+      if(!isCurrent()) return;
+
+      if(!gpsPosition){
+        await speakVisualQuestion(visualVoiceText(
+          'Your location could not be obtained. Please try again and say a room or building name.',
+          'לא ניתן לקבל את המיקום שלך. נסה שוב ואמור שם חדר או בניין.',
+          'تعذر الحصول على موقعك. حاول مجددًا وقل اسم غرفة أو مبنى.'
+        ));
+        return;
+      }
+    }else{
+      startingPlace = await chooseVisualLocation(
+        startAnswer,
+        'start',
+        runId
+      );
+
+      if(!startingPlace || !isCurrent()) return;
+    }
+
+  let destination = null;
+let firstDestinationAttempt = true;
+
+while(isCurrent() && !destination){
+  const question = firstDestinationAttempt
+    ? visualVoiceText(
+        'Where would you like to go? Say a room or building name.',
+        'לאן תרצה להגיע? אמור שם חדר או בניין.',
+        'إلى أين تريد الذهاب؟ قل اسم غرفة أو مبنى.'
+      )
+    : '';
+
+  firstDestinationAttempt = false;
+
+  const destinationAnswer = await askVisualQuestion(
+    question,
+    'destination',
+    runId
+  );
+
+  if(!destinationAnswer || !isCurrent()) return;
+
+  destination = await chooseVisualLocation(
+    destinationAnswer,
+    'destination',
+    runId
+  );
+
+  if(!isCurrent()) return;
+}
+    // Both locations are confirmed before replacing the journey.
+    currentOutdoorDestination = null;
+    outdoorRouteRequestId++;
+
+    if(gpsPosition){
+      applyVisualGPSStart(gpsPosition);
+    }else{
+      document.getElementById('gpsBtn').classList.remove('active');
+
+      if(startingPlace.kind === 'room'){
+        const match = startingPlace.match;
+        pickIndoorStart(
+          match.node.id,
+          match.node.label,
+          match.buildingKey
+        );
+
+        if(customStart?.nodeId !== match.node.id){
+          await speakVisualQuestion(visualVoiceText(
+            'This starting room could not be selected. Please use the search fields.',
+            'לא ניתן לבחור בחדר ההתחלה הזה. השתמש בשדות החיפוש.',
+            'تعذر اختيار غرفة البداية هذه. استخدم حقول البحث.'
+          ));
+          return;
+        }
+      }else{
+        const building = startingPlace.building;
+        pickStart(building.name, building.lat, building.lng);
+      }
+    }
+
+    if(!isCurrent()) return;
+
+    let result;
+
+if(destination.kind === 'room'){
+  const match = destination.match;
+  result = await pickIndoorDestination(
+    match.node.id,
+    match.node.label,
+    match.buildingKey,
+    indoorSearchName(match.node)
+  );
+}else{
+  const building = destination.building;
+  result = await pickDestination(
+    building.name,
+    building.lat,
+    building.lng
+  );
+}
+
+if(!isCurrent()) return;
+
+if(!result?.ok){
+  await speakVisualQuestion(
+    result?.message || visualVoiceText(
+      'Route planning could not finish. Please try again.',
+      'תכנון המסלול לא הושלם. נסה שוב.',
+      'تعذر إكمال تخطيط المسار. حاول مجددًا.'
+    )
+  );
+  return;
+}
+
+const summary = result.minutes
+  ? visualVoiceText(
+      `Journey planned. Estimated time: ${result.minutes} minutes.`,
+      `המסלול תוכנן. זמן משוער: ${result.minutes} דקות.`,
+      `تم تخطيط الرحلة. الوقت التقديري: ${result.minutes} دقائق.`
+    )
+  : visualVoiceText(
+      'Journey planned.',
+      'המסלול תוכנן.',
+      'تم تخطيط الرحلة.'
+    );
+if(result.nextAction){
+  const reply = await askVisualQuestion(
+    `${summary} ` + visualVoiceText(
+      'Would you like to open indoor navigation?',
+      'האם תרצה לפתוח את הניווט בתוך המבנה?',
+      'هل تريد فتح الملاحة داخل المبنى؟'
+    ),
+    'destination',
+    runId
+  );
+
+  if(!reply || !isCurrent()) return;
+
+  const startAnswers = [
+    'start', 'yes', 'yes please', 'yeah', 'yep', 'correct',
+    'כן', 'נכון', 'התחל', 'תתחיל',
+    'نعم', 'صحيح', 'آه', 'اه', 'أه',
+    'أيوه', 'ايوه', 'أيوا', 'ايوا',
+    'ah', 'aywa', 'ابدأ', 'ابدا'
+  ];
+
+  if(startAnswers.includes(normalizeVoiceAnswer(reply))){
+    startIndoorTransition();
+  }
+}else{
+  await speakVisualQuestion(
+    `${summary} ` + visualVoiceText(
+      'Automatic spoken guidance during the outdoor walk is not available yet.',
+      'הנחיות קוליות אוטומטיות במהלך ההליכה בחוץ עדיין אינן זמינות.',
+      'الإرشادات الصوتية التلقائية أثناء المشي خارج المبنى غير متاحة بعد.'
+    )
+  );
+}
+  }catch(error){
+    console.error('Visual voice planning failed:', error);
+
+    if(isCurrent()){
+      await speakVisualQuestion(visualVoiceText(
+        'Voice planning could not finish. Please try again or use the search fields.',
+        'התכנון הקולי לא הושלם. נסה שוב או השתמש בשדות החיפוש.',
+        'تعذر إكمال التخطيط الصوتي. حاول مجددًا أو استخدم حقول البحث.'
+      ));
+    }
+  }
+  finally{
+  if(runId === visualVoiceRunId){
+    visualVoiceActive = false;
+  }
+}
+}
+
 function toggleMic(target = 'destination') {
+  if(visualVoiceActive){
+  stopVisualVoiceFlow();
+  return;
+}
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 

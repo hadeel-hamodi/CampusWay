@@ -727,15 +727,6 @@
           "floor": "floor4"
         },
         {
-          "id": "floor4_n108",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.894591,
-          "y": 0.511875,
-          "floor": "floor4"
-        },
-        {
           "id": "floor4_n109",
           "label": "Restroom",
           "type": "restroom",
@@ -778,15 +769,6 @@
           "connectorId": "",
           "x": 0.101827,
           "y": 0.479321,
-          "floor": "floor4"
-        },
-        {
-          "id": "floor4_n114",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.115126,
-          "y": 0.511622,
           "floor": "floor4"
         }
       ],
@@ -1096,10 +1078,6 @@
           "to": "floor4_n46"
         },
         {
-          "from": "floor4_n108",
-          "to": "floor4_n44"
-        },
-        {
           "from": "floor4_n26",
           "to": "floor4_n84"
         },
@@ -1126,10 +1104,6 @@
         {
           "from": "floor4_n95",
           "to": "floor4_n112"
-        },
-        {
-          "from": "floor4_n99",
-          "to": "floor4_n114"
         },
         {
           "from": "floor4_n103",
@@ -3890,15 +3864,6 @@
           "floor": "floor2"
         },
         {
-          "id": "floor2_n186",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.899832,
-          "y": 0.52963,
-          "floor": "floor2"
-        },
-        {
           "id": "floor2_n187",
           "label": "Node 188",
           "type": "corridor",
@@ -3923,15 +3888,6 @@
           "connectorId": "",
           "x": 0.743013,
           "y": 0.547603,
-          "floor": "floor2"
-        },
-        {
-          "id": "floor2_n190",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.107071,
-          "y": 0.530828,
           "floor": "floor2"
         },
         {
@@ -4758,10 +4714,6 @@
           "to": "floor2_n92"
         },
         {
-          "from": "floor2_n186",
-          "to": "floor2_n93"
-        },
-        {
           "from": "floor2_n189",
           "to": "floor2_n3"
         },
@@ -4780,10 +4732,6 @@
         {
           "from": "floor2_n187",
           "to": "floor2_n123"
-        },
-        {
-          "from": "floor2_n190",
-          "to": "floor2_n191"
         },
         {
           "from": "floor2_n191",
@@ -6222,15 +6170,6 @@
           "floor": "floor6"
         },
         {
-          "id": "floor6_n163",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.90833,
-          "y": 0.503861,
-          "floor": "floor6"
-        },
-        {
           "id": "floor6_n164",
           "label": "Shelter",
           "type": "shelter",
@@ -6264,15 +6203,6 @@
           "connectorId": "",
           "x": 0.139263,
           "y": 0.489974,
-          "floor": "floor6"
-        },
-        {
-          "id": "floor6_n168",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.088803,
-          "y": 0.502783,
           "floor": "floor6"
         },
         {
@@ -6883,20 +6813,12 @@
           "to": "floor6_n101"
         },
         {
-          "from": "floor6_n83",
-          "to": "floor6_n163"
-        },
-        {
           "from": "floor6_n164",
           "to": "floor6_n118"
         },
         {
           "from": "floor6_n121",
           "to": "floor6_n165"
-        },
-        {
-          "from": "floor6_n168",
-          "to": "floor6_n149"
         },
         {
           "from": "floor6_n155",
@@ -8126,15 +8048,6 @@
           "floor": "floor5"
         },
         {
-          "id": "floor5_n147",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.905739,
-          "y": 0.511016,
-          "floor": "floor5"
-        },
-        {
           "id": "floor5_n148",
           "label": "Restroom",
           "type": "restroom",
@@ -8186,15 +8099,6 @@
           "connectorId": "",
           "x": 0.139586,
           "y": 0.502266,
-          "floor": "floor5"
-        },
-        {
-          "id": "floor5_n154",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.086888,
-          "y": 0.512144,
           "floor": "floor5"
         }
       ],
@@ -8744,10 +8648,6 @@
           "to": "floor5_n55"
         },
         {
-          "from": "floor5_n147",
-          "to": "floor5_n79"
-        },
-        {
           "from": "floor5_n82",
           "to": "floor5_n149"
         },
@@ -8770,10 +8670,6 @@
         {
           "from": "floor5_n138",
           "to": "floor5_n153"
-        },
-        {
-          "from": "floor5_n139",
-          "to": "floor5_n154"
         }
       ],
       "nextNodeId": 155
@@ -9375,15 +9271,6 @@
           "floor": "floor3"
         },
         {
-          "id": "floor3_n85",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.874523,
-          "y": 0.493378,
-          "floor": "floor3"
-        },
-        {
           "id": "floor3_n86",
           "label": "Restroom",
           "type": "restroom",
@@ -9444,15 +9331,6 @@
           "connectorId": "",
           "x": 0.22387,
           "y": 0.434697,
-          "floor": "floor3"
-        },
-        {
-          "id": "floor3_n94",
-          "label": "Shelter",
-          "type": "shelter",
-          "connectorId": "",
-          "x": 0.099493,
-          "y": 0.492487,
           "floor": "floor3"
         },
         {
@@ -9756,10 +9634,6 @@
           "to": "floor3_n86"
         },
         {
-          "from": "floor3_n85",
-          "to": "floor3_n41"
-        },
-        {
           "from": "floor3_n77",
           "to": "floor3_n38"
         },
@@ -9770,10 +9644,6 @@
         {
           "from": "floor3_n93",
           "to": "floor3_n75"
-        },
-        {
-          "from": "floor3_n79",
-          "to": "floor3_n94"
         },
         {
           "from": "floor3_n95",
