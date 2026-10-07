@@ -250,6 +250,43 @@ body{overflow:hidden;}
 }
 .settings-text-size-options button:hover{border-color:var(--primary);background:var(--primary-soft);}
 .settings-text-size-options button.selected{border-color:var(--primary);background:var(--primary);color:#fff;}
+.settings-manage-schedule{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;min-height:46px;margin-top:10px;padding:9px 12px;
+  border:2px solid var(--primary);border-radius:12px;
+  background:var(--primary-soft);color:var(--primary);font-weight:800;
+}
+.settings-manage-schedule:hover{background:var(--primary);color:#fff;}
+.schedule-card{width:min(680px,100%);}
+.schedule-intro{margin:0 0 16px;color:var(--mid);font-size:.875rem;line-height:1.45;}
+.schedule-form{display:grid;grid-template-columns:1.2fr .9fr .7fr 1.4fr auto;gap:9px;align-items:end;}
+.schedule-form label{display:grid;gap:5px;min-width:0;color:var(--ink);font-size:.75rem;font-weight:800;}
+.schedule-form input,.schedule-form select{
+  width:100%;min-height:42px;padding:8px 9px;border:2px solid var(--line);
+  border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;
+}
+.schedule-form input:focus,.schedule-form select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft);}
+.schedule-add{min-height:42px;padding:8px 12px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:800;white-space:nowrap;}
+.schedule-add:hover{background:var(--navy);}
+.schedule-list{display:grid;gap:8px;margin-top:16px;}
+.schedule-empty{margin:0;padding:18px;border:1px dashed var(--line-strong);border-radius:12px;color:var(--mid);text-align:center;}
+.schedule-entry{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);}
+.schedule-entry div{display:grid;gap:3px;min-width:0;}
+.schedule-entry strong{font-size:.9rem;overflow-wrap:anywhere;}
+.schedule-entry small{color:var(--mid);font-size:.75rem;overflow-wrap:anywhere;}
+.schedule-entry button{flex-shrink:0;padding:7px 9px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface);color:var(--ink);font-weight:700;}
+.schedule-entry button:hover{border-color:#d92d20;color:#b42318;}
+.schedule-reminder{position:fixed;z-index:6000;inset:auto 18px 18px auto;max-width:min(470px,calc(100vw - 36px));}
+.schedule-reminder[hidden]{display:none;}
+.schedule-reminder-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:15px;border:2px solid var(--primary);border-radius:16px;background:var(--surface);color:var(--ink);box-shadow:0 18px 46px rgba(6,18,43,.25);}
+.schedule-reminder-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--primary-soft);font-size:1.1rem;}
+.schedule-reminder-card strong{display:block;margin:1px 0 4px;font-size:.95rem;}
+.schedule-reminder-card p{margin:0;color:var(--mid);font-size:.8rem;line-height:1.4;}
+.schedule-reminder-actions{display:flex;align-items:center;gap:7px;}
+.schedule-reminder-actions button{min-height:36px;padding:7px 10px;border-radius:9px;font-weight:800;white-space:nowrap;}
+.schedule-reminder-dismiss{border:1px solid var(--line);background:var(--surface);color:var(--mid);}
+.schedule-reminder-route{border:0;background:var(--primary);color:#fff;}
+.schedule-reminder-route:hover{background:var(--navy);}
 .profile-choice-list--settings{grid-template-columns:1fr;margin-top:8px;}
 body.modal-open{overflow:hidden;}
 
@@ -827,6 +864,11 @@ body.hc .settings-text-size{background:#000;border-color:#FFD400;}
 body.hc .settings-text-size-copy small{color:#FFD400;}
 body.hc .settings-text-size-options button{background:#000;color:#fff;border-color:#FFD400;}
 body.hc .settings-text-size-options button.selected{background:#FFD400;color:#000;border-color:#fff;}
+body.hc .settings-manage-schedule,body.hc .schedule-add,body.hc .schedule-reminder-route{background:#FFD400;color:#000;border-color:#FFD400;}
+body.hc .schedule-intro,body.hc .schedule-entry small,body.hc .schedule-reminder-card p{color:#FFD400;}
+body.hc .schedule-form input,body.hc .schedule-form select,body.hc .schedule-entry,body.hc .schedule-entry button,
+body.hc .schedule-reminder-card,body.hc .schedule-reminder-dismiss{background:#000;color:#fff;border-color:#FFD400;}
+body.hc .schedule-reminder-icon{background:#FFD400;color:#000;}
 body.hc .leaflet-popup-content-wrapper,body.hc .leaflet-popup-tip,
 body.hc .leaflet-tooltip,body.hc .leaflet-control-attribution{
   background:#000!important;color:#fff!important;border-color:#FFD400!important;
@@ -863,6 +905,8 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
   .settings-card{width:100%;max-height:90dvh;padding:18px;border-radius:20px 20px 12px 12px;}
   .settings-text-size{align-items:stretch;flex-direction:column;}
   .settings-text-size-options{width:100%;}
+  .schedule-form{grid-template-columns:1fr 1fr;}
+  .schedule-destination-field,.schedule-form label:first-child,.schedule-add{grid-column:span 2;}
 }
 @media (max-width:420px){
   .brand-text span{display:none;}

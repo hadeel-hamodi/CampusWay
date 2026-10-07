@@ -355,6 +355,54 @@
       <p id="settingsProfileHint">Your profile changes how routes are calculated.</p>
       <div class="profile-choice-list profile-choice-list--settings" id="settingsProfileList" role="radiogroup" aria-labelledby="settingsProfileTitle"></div>
     </section>
+
+    <section class="settings-section" aria-labelledby="settingsScheduleTitle">
+      <h3 id="settingsScheduleTitle">Schedule reminders</h3>
+      <p id="settingsScheduleHint">Keep optional class reminders on this device.</p>
+      <button class="settings-toggle" id="scheduleRemindersBtn" type="button" role="switch" aria-checked="false" onclick="toggleScheduleReminders()">
+        <span class="settings-toggle-icon" aria-hidden="true">🗓️</span>
+        <span class="settings-toggle-copy">
+          <strong id="settingsScheduleToggleLabel">Schedule reminders</strong>
+          <small id="settingsScheduleToggleHint">Get a reminder 15 minutes before a saved class.</small>
+        </span>
+        <span class="settings-switch-track" aria-hidden="true"><span></span></span>
+      </button>
+      <button class="settings-manage-schedule" id="manageScheduleBtn" type="button" onclick="openScheduleManager()" hidden>
+        <span aria-hidden="true">✎</span> <span id="settingsManageSchedule">Manage my schedule</span>
+      </button>
+    </section>
+  </div>
+</div>
+
+<div class="settings-dialog" id="scheduleDialog" role="dialog" aria-modal="true" aria-labelledby="scheduleDialogTitle" hidden>
+  <div class="settings-card schedule-card" role="document">
+    <div class="settings-head">
+      <h2 id="scheduleDialogTitle">My schedule</h2>
+      <button class="settings-close" id="scheduleCloseBtn" type="button" onclick="closeScheduleManager()" aria-label="Close schedule">✕</button>
+    </div>
+    <p class="schedule-intro" id="scheduleDialogHint">Add classes to receive a reminder 15 minutes before they start.</p>
+    <form class="schedule-form" id="scheduleForm">
+      <label><span id="scheduleClassLabel">Class name</span><input id="scheduleClassName" maxlength="70" required autocomplete="off"></label>
+      <label><span id="scheduleDayLabel">Day</span><select id="scheduleDay" required></select></label>
+      <label><span id="scheduleTimeLabel">Time</span><input id="scheduleTime" type="time" required></label>
+      <label class="schedule-destination-field"><span id="scheduleDestinationLabel">Room or building</span><select id="scheduleDestination" required></select></label>
+      <button class="schedule-add" id="scheduleAddBtn" type="submit"><span aria-hidden="true">＋</span> <span id="scheduleAddLabel">Add class</span></button>
+    </form>
+    <div class="schedule-list" id="scheduleList" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="schedule-reminder" id="scheduleReminder" role="alertdialog" aria-modal="true" aria-labelledby="scheduleReminderTitle" hidden>
+  <div class="schedule-reminder-card">
+    <span class="schedule-reminder-icon" aria-hidden="true">🗓️</span>
+    <div>
+      <strong id="scheduleReminderTitle">Class soon</strong>
+      <p id="scheduleReminderText"></p>
+    </div>
+    <div class="schedule-reminder-actions">
+      <button type="button" class="schedule-reminder-dismiss" id="scheduleReminderDismiss" onclick="dismissScheduleReminder()">✕</button>
+      <button type="button" class="schedule-reminder-route" id="scheduleReminderRoute" onclick="startReminderRoute()">Start route</button>
+    </div>
   </div>
 </div>
 
@@ -747,6 +795,43 @@ Object.assign(T.ru, {
   searchNearMe:'Рядом с начальной точкой', searchElevator:'Лифт'
 });
 
+Object.assign(T.en, {
+  settingsSchedule:'Schedule reminders', settingsScheduleHint:'Keep optional class reminders on this device.',
+  settingsScheduleToggleHint:'Get a reminder 15 minutes before a saved class.', settingsManageSchedule:'Manage my schedule',
+  scheduleTitle:'My schedule', closeSchedule:'Close schedule', scheduleDialogHint:'Add classes to receive a reminder 15 minutes before they start.',
+  scheduleClass:'Class name', scheduleDay:'Day', scheduleTime:'Time', scheduleDestination:'Room or building', scheduleAdd:'Add class',
+  scheduleEmpty:'No classes saved yet.', scheduleDelete:'Remove', scheduleReminder:'Class soon', scheduleStartRoute:'Start route',
+  scheduleAt:'at', scheduleLocation:'Location', scheduleInvalid:'Choose a room or building from the list.',
+  days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+});
+Object.assign(T.he, {
+  settingsSchedule:'תזכורות מערכת שעות', settingsScheduleHint:'שמירת תזכורות אופציונליות לשיעורים במכשיר זה.',
+  settingsScheduleToggleHint:'קבלת תזכורת 15 דקות לפני שיעור שמור.', settingsManageSchedule:'ניהול מערכת השעות שלי',
+  scheduleTitle:'מערכת השעות שלי', closeSchedule:'סגירת מערכת השעות', scheduleDialogHint:'הוסף שיעורים כדי לקבל תזכורת 15 דקות לפני תחילתם.',
+  scheduleClass:'שם השיעור', scheduleDay:'יום', scheduleTime:'שעה', scheduleDestination:'חדר או בניין', scheduleAdd:'הוספת שיעור',
+  scheduleEmpty:'עדיין לא נשמרו שיעורים.', scheduleDelete:'הסרה', scheduleReminder:'שיעור בקרוב', scheduleStartRoute:'התחלת מסלול',
+  scheduleAt:'בשעה', scheduleLocation:'מיקום', scheduleInvalid:'יש לבחור חדר או בניין מהרשימה.',
+  days:['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת']
+});
+Object.assign(T.ar, {
+  settingsSchedule:'تذكيرات الجدول', settingsScheduleHint:'احتفظ بتذكيرات المحاضرات الاختيارية على هذا الجهاز.',
+  settingsScheduleToggleHint:'احصل على تذكير قبل 15 دقيقة من المحاضرة المحفوظة.', settingsManageSchedule:'إدارة جدولي',
+  scheduleTitle:'جدولي', closeSchedule:'إغلاق الجدول', scheduleDialogHint:'أضف محاضرات لتحصل على تذكير قبل 15 دقيقة من بدايتها.',
+  scheduleClass:'اسم المحاضرة', scheduleDay:'اليوم', scheduleTime:'الوقت', scheduleDestination:'الغرفة أو المبنى', scheduleAdd:'إضافة محاضرة',
+  scheduleEmpty:'لا توجد محاضرات محفوظة بعد.', scheduleDelete:'إزالة', scheduleReminder:'محاضرة قريبًا', scheduleStartRoute:'بدء المسار',
+  scheduleAt:'الساعة', scheduleLocation:'الموقع', scheduleInvalid:'اختر غرفة أو مبنى من القائمة.',
+  days:['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']
+});
+Object.assign(T.ru, {
+  settingsSchedule:'Напоминания о занятиях', settingsScheduleHint:'Храните необязательные напоминания о занятиях на этом устройстве.',
+  settingsScheduleToggleHint:'Напомнить за 15 минут до сохранённого занятия.', settingsManageSchedule:'Управление расписанием',
+  scheduleTitle:'Моё расписание', closeSchedule:'Закрыть расписание', scheduleDialogHint:'Добавьте занятия, чтобы получать напоминание за 15 минут до начала.',
+  scheduleClass:'Название занятия', scheduleDay:'День', scheduleTime:'Время', scheduleDestination:'Аудитория или здание', scheduleAdd:'Добавить занятие',
+  scheduleEmpty:'Занятий пока нет.', scheduleDelete:'Удалить', scheduleReminder:'Скоро занятие', scheduleStartRoute:'Начать маршрут',
+  scheduleAt:'в', scheduleLocation:'Место', scheduleInvalid:'Выберите аудиторию или здание из списка.',
+  days:['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота']
+});
+
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
@@ -779,7 +864,9 @@ const PREFERENCE_KEYS = {
   onboarding: 'campuswayOnboardingComplete',
   audio: 'campusway.audioEnabled',
   contrast: 'campusway.highContrastEnabled',
-  textSize: 'campusway.textSize'
+  textSize: 'campusway.textSize',
+  scheduleEnabled: 'campusway.scheduleRemindersEnabled',
+  scheduleEntries: 'campusway.scheduleEntries'
 };
 
 function storageValue(storage, key){
@@ -857,6 +944,13 @@ let settingsReturnFocus = null;
 let appRevealHandled = false;
 let highContrastOn = false;
 let currentTextSize = 'normal';
+let scheduleRemindersOn = false;
+let scheduleEntries = [];
+let scheduleReminderTimer = null;
+let scheduleReminderEntry = null;
+let scheduleReturnFocus = null;
+const scheduleReminderSeen = new Set();
+const scheduleTargets = new Map();
 // Search and navigation share the canonical indoor graph files.
 let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
@@ -1224,6 +1318,219 @@ function closeSettings(){
   }
 }
 
+function readScheduleEntries(){
+  const raw = readStoredPreference(PREFERENCE_KEYS.scheduleEntries);
+  if(!raw) return [];
+  try{
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(entry =>
+      entry && typeof entry.id === 'string' && typeof entry.title === 'string' &&
+      Number.isInteger(entry.day) && entry.day >= 0 && entry.day <= 6 &&
+      /^\d{2}:\d{2}$/.test(entry.time) && entry.target
+    ).slice(0, 80) : [];
+  }catch(error){
+    return [];
+  }
+}
+
+function saveScheduleEntries(){
+  writeStoredPreference(PREFERENCE_KEYS.scheduleEntries, JSON.stringify(scheduleEntries));
+}
+
+function scheduleTargetLabel(target){
+  if(!target) return '';
+  const building = CAMPUS_DATA.buildings.find(item => item.name === target.buildingName);
+  const buildingLabel = building ? localizedBuildingName(building) : target.buildingName;
+  return target.kind === 'room'
+    ? `${target.label} — ${buildingLabel}`
+    : buildingLabel;
+}
+
+function scheduleEntryLabel(entry){
+  return `${entry.title} · ${t.days[entry.day]} ${t.scheduleAt} ${entry.time}`;
+}
+
+function renderScheduleSettings(){
+  const toggle = document.getElementById('scheduleRemindersBtn');
+  const manage = document.getElementById('manageScheduleBtn');
+  if(toggle){
+    toggle.classList.toggle('active', scheduleRemindersOn);
+    toggle.setAttribute('aria-checked', String(scheduleRemindersOn));
+  }
+  if(manage) manage.hidden = !scheduleRemindersOn;
+}
+
+function setScheduleRemindersEnabled(enabled, {persist = true} = {}){
+  scheduleRemindersOn = Boolean(enabled);
+  if(persist) writeStoredPreference(PREFERENCE_KEYS.scheduleEnabled, String(scheduleRemindersOn));
+  if(scheduleReminderTimer){
+    clearInterval(scheduleReminderTimer);
+    scheduleReminderTimer = null;
+  }
+  if(scheduleRemindersOn){
+    checkScheduleReminders();
+    scheduleReminderTimer = setInterval(checkScheduleReminders, 30000);
+  }
+  renderScheduleSettings();
+}
+
+function toggleScheduleReminders(){
+  setScheduleRemindersEnabled(!scheduleRemindersOn);
+}
+
+function restoreSchedulePreferences(){
+  scheduleEntries = readScheduleEntries();
+  setScheduleRemindersEnabled(
+    readStoredPreference(PREFERENCE_KEYS.scheduleEnabled) === 'true',
+    {persist:false}
+  );
+}
+
+async function buildScheduleTargets(){
+  await indoorSearchGraphsReady;
+  scheduleTargets.clear();
+  CAMPUS_DATA.buildings.forEach(building => {
+    scheduleTargets.set(`building:${building.name}`, {
+      id:`building:${building.name}`, kind:'building', buildingName:building.name,
+      name:building.name, lat:building.lat, lng:building.lng
+    });
+  });
+  const graphs = [
+    ['main', 'Main Building', MAIN_GRAPH], ['rabin', 'Rabin Building', RABIN_GRAPH],
+    ['student', 'Student House', STUDENT_GRAPH], ['education', 'Education and Science', EDUCATION_GRAPH]
+  ];
+  graphs.forEach(([buildingKey, buildingName, graph]) => {
+    Object.values(graph?.floors || {}).forEach(floor => {
+      (floor.nodes || []).filter(node => node.type === 'room').forEach(node => {
+        const id = `room:${buildingKey}:${node.id}`;
+        scheduleTargets.set(id, {id, kind:'room', buildingKey, buildingName, nodeId:node.id, label:String(node.label || node.id)});
+      });
+    });
+  });
+}
+
+function renderScheduleForm(){
+  const day = document.getElementById('scheduleDay');
+  const destination = document.getElementById('scheduleDestination');
+  if(!day || !destination) return;
+  const selectedDay = day.value;
+  day.innerHTML = t.days.map((name, index) => `<option value="${index}">${name}</option>`).join('');
+  day.value = selectedDay || String(new Date().getDay());
+  const selectedTarget = destination.value;
+  const options = [...scheduleTargets.values()].sort((a, b) =>
+    scheduleTargetLabel(a).localeCompare(scheduleTargetLabel(b), undefined, {numeric:true})
+  );
+  destination.innerHTML = `<option value="">${t.scheduleDestination}</option>` + options.map(target =>
+    `<option value="${target.id.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${scheduleTargetLabel(target).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</option>`
+  ).join('');
+  if(scheduleTargets.has(selectedTarget)) destination.value = selectedTarget;
+}
+
+function renderScheduleList(){
+  const list = document.getElementById('scheduleList');
+  if(!list) return;
+  if(!scheduleEntries.length){
+    list.innerHTML = `<p class="schedule-empty">${t.scheduleEmpty}</p>`;
+    return;
+  }
+  list.innerHTML = [...scheduleEntries]
+    .sort((a, b) => a.day - b.day || a.time.localeCompare(b.time) || a.title.localeCompare(b.title))
+    .map(entry => `<article class="schedule-entry">
+      <div><strong>${escapeHtml(entry.title)}</strong><small>${escapeHtml(scheduleEntryLabel(entry))}</small><small>${escapeHtml(scheduleTargetLabel(entry.target))}</small></div>
+      <button type="button" onclick="removeScheduleEntry('${entry.id}')" aria-label="${t.scheduleDelete}: ${escapeHtml(entry.title)}">✕ <span>${t.scheduleDelete}</span></button>
+    </article>`).join('');
+}
+
+function escapeHtml(value){
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+async function openScheduleManager(){
+  scheduleReturnFocus = document.activeElement;
+  const dialog = document.getElementById('scheduleDialog');
+  await buildScheduleTargets();
+  renderScheduleForm();
+  renderScheduleList();
+  dialog.hidden = false;
+  document.body.classList.add('modal-open');
+  document.getElementById('scheduleClassName').focus();
+}
+
+function closeScheduleManager(){
+  const dialog = document.getElementById('scheduleDialog');
+  if(dialog.hidden) return;
+  dialog.hidden = true;
+  document.body.classList.remove('modal-open');
+  if(scheduleReturnFocus && typeof scheduleReturnFocus.focus === 'function') scheduleReturnFocus.focus();
+}
+
+function addScheduleEntry(event){
+  event.preventDefault();
+  const title = document.getElementById('scheduleClassName').value.trim();
+  const day = Number(document.getElementById('scheduleDay').value);
+  const time = document.getElementById('scheduleTime').value;
+  const target = scheduleTargets.get(document.getElementById('scheduleDestination').value);
+  if(!title || !Number.isInteger(day) || !/^\d{2}:\d{2}$/.test(time) || !target){
+    notify(t.scheduleInvalid);
+    return;
+  }
+  scheduleEntries.push({
+    id:`schedule-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title, day, time, target
+  });
+  saveScheduleEntries();
+  document.getElementById('scheduleForm').reset();
+  renderScheduleForm();
+  renderScheduleList();
+}
+
+function removeScheduleEntry(id){
+  scheduleEntries = scheduleEntries.filter(entry => entry.id !== id);
+  saveScheduleEntries();
+  renderScheduleList();
+}
+
+function reminderKey(entry, date){
+  return `${entry.id}:${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function checkScheduleReminders(){
+  if(!scheduleRemindersOn || !scheduleEntries.length || scheduleReminderEntry) return;
+  const now = new Date();
+  const currentDay = now.getDay();
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const entry = scheduleEntries.find(item => {
+    const [hours, mins] = item.time.split(':').map(Number);
+    const difference = hours * 60 + mins - minutes;
+    return item.day === currentDay && difference >= 0 && difference <= 15 && !scheduleReminderSeen.has(reminderKey(item, now));
+  });
+  if(!entry) return;
+  scheduleReminderSeen.add(reminderKey(entry, now));
+  scheduleReminderEntry = entry;
+  document.getElementById('scheduleReminderTitle').textContent = t.scheduleReminder;
+  document.getElementById('scheduleReminderText').textContent = `${scheduleEntryLabel(entry)} · ${scheduleTargetLabel(entry.target)}`;
+  document.getElementById('scheduleReminderRoute').textContent = t.scheduleStartRoute;
+  document.getElementById('scheduleReminder').hidden = false;
+  document.getElementById('scheduleReminderRoute').focus();
+}
+
+function dismissScheduleReminder(){
+  scheduleReminderEntry = null;
+  document.getElementById('scheduleReminder').hidden = true;
+}
+
+async function startReminderRoute(){
+  const entry = scheduleReminderEntry;
+  dismissScheduleReminder();
+  if(!entry?.target) return;
+  const target = entry.target;
+  if(target.kind === 'room'){
+    await pickIndoorDestination(target.nodeId, target.label, target.buildingKey, target.label);
+  }else{
+    await pickDestination(target.name, target.lat, target.lng);
+  }
+}
+
 function setupPreferenceUI(){
   const dialog = document.getElementById('settingsDialog');
   dialog.addEventListener('click', event => {
@@ -1250,6 +1557,11 @@ function setupPreferenceUI(){
   });
   restoreDisplayPreferences();
   restoreTextSizePreference();
+  restoreSchedulePreferences();
+  document.getElementById('scheduleForm').addEventListener('submit', addScheduleEntry);
+  document.getElementById('scheduleDialog').addEventListener('click', event => {
+    if(event.target === event.currentTarget) closeScheduleManager();
+  });
   restoreSavedLanguage();
 }
 
@@ -1480,8 +1792,22 @@ if(voiceArea){
   setText('settingsTextSizeHint', t.settingsTextSizeHint);
   setText('textSizeNormal', t.textSizeNormal);
   setText('textSizeLarge', t.textSizeLarge);
+  setText('settingsScheduleTitle', t.settingsSchedule);
+  setText('settingsScheduleHint', t.settingsScheduleHint);
+  setText('settingsScheduleToggleLabel', t.settingsSchedule);
+  setText('settingsScheduleToggleHint', t.settingsScheduleToggleHint);
+  setText('settingsManageSchedule', t.settingsManageSchedule);
   setText('settingsProfileTitle', t.settingsProfile);
   setText('settingsProfileHint', t.profileRouteHint);
+  setText('scheduleDialogTitle', t.scheduleTitle);
+  setText('scheduleDialogHint', t.scheduleDialogHint);
+  setText('scheduleClassLabel', t.scheduleClass);
+  setText('scheduleDayLabel', t.scheduleDay);
+  setText('scheduleTimeLabel', t.scheduleTime);
+  setText('scheduleDestinationLabel', t.scheduleDestination);
+  setText('scheduleAddLabel', t.scheduleAdd);
+  setText('scheduleReminderTitle', t.scheduleReminder);
+  setText('scheduleReminderRoute', t.scheduleStartRoute);
   setText('onboardingLanguageProgress', t.onboardingStepLanguage);
   setText('langTitle', t.onboardingLanguageTitle);
   setText('onboardingProfileProgress', t.onboardingStepProfile);
@@ -1529,6 +1855,16 @@ if(voiceArea){
   if(settingsCloseButton){
     settingsCloseButton.title = t.closeSettings;
     settingsCloseButton.setAttribute('aria-label', t.closeSettings);
+  }
+  const scheduleCloseButton = document.getElementById('scheduleCloseBtn');
+  if(scheduleCloseButton){
+    scheduleCloseButton.title = t.closeSchedule;
+    scheduleCloseButton.setAttribute('aria-label', t.closeSchedule);
+  }
+  renderScheduleSettings();
+  if(!document.getElementById('scheduleDialog').hidden){
+    renderScheduleForm();
+    renderScheduleList();
   }
   const closeButton = document.querySelector('.route-close');
   if(closeButton){

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v50-location-sharing';
+const CACHE_NAME = 'campusway-v51-schedule-reminders';
 
 const APP_FILES = [
 './',
