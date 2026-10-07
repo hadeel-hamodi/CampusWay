@@ -10241,10 +10241,38 @@ function storedJourneyFallback(){
     searchInput:
       destinationContext?.destinationLabel ||
       destinationBuilding.name,
-    hasIndoorDestination
+    hasIndoorDestination,
+    journeyPlan: buildJourneyPlan()
   };
 }
 
+function buildJourneyPlan(){
+  const read = key => {
+    try{return JSON.parse(sessionStorage.getItem(key) || 'null');}
+    catch(error){return null;}
+  };
+  const start = read('indoorStartContext');
+  const destination = read('indoorContext');
+  const transfer = read('sharedIndoorTransfer');
+  const intermediate = read('intermediateIndoorTransfer');
+  const legs = [];
+
+  if(start?.startNodeId && start?.exitEntranceId && start.startNodeId !== start.exitEntranceId){
+    legs.push({kind:'indoor', building:start.buildingKey, from:start.startNodeId, to:start.exitEntranceId});
+  }
+  if(transfer?.originBuilding && transfer?.destinationBuilding){
+    legs.push({kind:'transfer', fromBuilding:transfer.originBuilding, toBuilding:transfer.destinationBuilding, method:transfer.method || 'connection'});
+  }
+  if(intermediate?.building && intermediate?.startNodeId && intermediate?.destinationNodeId){
+    legs.push({kind:'indoor', building:intermediate.building, from:intermediate.startNodeId, to:intermediate.destinationNodeId});
+  }
+  legs.push({kind:'outdoor'});
+  if(destination?.buildingKey && destination?.startNodeId && destination?.destinationNodeId && destination.startNodeId !== destination.destinationNodeId){
+    legs.push({kind:'indoor', building:destination.buildingKey, from:destination.startNodeId, to:destination.destinationNodeId});
+  }
+
+  return {version:1, legs};
+}
 function saveOutdoorJourneyForTransition(stage){
   if(stage === 'destination'){
     sessionStorage.removeItem(
@@ -10280,7 +10308,8 @@ function saveOutdoorJourneyForTransition(stage){
     hasIndoorDestination: Boolean(
       indoorContext?.destinationNodeId ||
       indoorContext?.destinationLabel
-    )
+    ),
+    journeyPlan: buildJourneyPlan()
   };
 
   sessionStorage.setItem(
