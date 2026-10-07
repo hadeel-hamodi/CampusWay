@@ -166,16 +166,6 @@
         <div id="alertArea" aria-live="polite"></div>
       </section>
 
-      <section class="panel location-share-panel" aria-labelledby="lbl-share-my-location">
-        <div class="panel-head">
-          <h2 class="panel-title" id="lbl-share-my-location">Share my current location</h2>
-        </div>
-        <p class="panel-hint" id="share-location-hint">Create a one-time link so someone on campus can find you.</p>
-        <button class="btn btn-primary location-share-btn" id="shareMyLocationBtn" type="button" onclick="shareMyLocation()">
-          <span aria-hidden="true">📍</span> <span id="lbl-share-my-location-btn">Share my location</span>
-        </button>
-      </section>
-
       <!-- Route result -->
       <section class="route-card" id="routeCard" aria-live="polite" aria-label="Route">
         <div class="route-card-head">
@@ -287,6 +277,28 @@
           <div class="empty-state" id="favEmpty">No saved places yet. Click "Save" on any building.</div>
         </div>
       </section>
+
+<section class="panel location-share-panel" aria-labelledby="lbl-share-my-location">
+  <div class="panel-head">
+    <h2 class="panel-title" id="lbl-share-my-location">
+      Share my current location
+    </h2>
+  </div>
+
+  <button
+    class="btn btn-primary location-share-btn"
+    id="shareMyLocationBtn"
+    type="button"
+    onclick="shareMyLocation()"
+    aria-describedby="share-location-hint">
+    <span aria-hidden="true">📍</span>
+    <span id="lbl-share-my-location-btn">Share my location</span>
+  </button>
+
+  <p class="panel-hint" id="share-location-hint" style="margin-top:8px">
+    Create a one-time link so someone on campus can find you.
+  </p>
+</section>
     </aside>
 
     <main class="map-wrap" aria-label="Campus map">
