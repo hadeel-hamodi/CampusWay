@@ -150,6 +150,16 @@
         <div id="alertArea" aria-live="polite"></div>
       </section>
 
+      <section class="panel location-share-panel" aria-labelledby="lbl-share-my-location">
+        <div class="panel-head">
+          <h2 class="panel-title" id="lbl-share-my-location">Share my current location</h2>
+        </div>
+        <p class="panel-hint" id="share-location-hint">Create a one-time link so someone on campus can find you.</p>
+        <button class="btn btn-primary location-share-btn" id="shareMyLocationBtn" type="button" onclick="shareMyLocation()">
+          <span aria-hidden="true">📍</span> <span id="lbl-share-my-location-btn">Share my location</span>
+        </button>
+      </section>
+
       <!-- Route result -->
       <section class="route-card" id="routeCard" aria-live="polite" aria-label="Route">
         <div class="route-card-head">
@@ -639,6 +649,10 @@ const T = {
 
 Object.assign(T.en, {
   directions:'Directions', readAloud:'Read aloud', stopReading:'Stop reading', shareLabel:'Share',
+  shareMyLocation:'Share my current location', shareMyLocationHint:'Create a one-time link so someone on campus can find you.',
+  shareLocationButton:'Share my location', gettingLocation:'Getting your location…',
+  locationShareError:'Could not get your location. Allow location access and try again.',
+  sharedLocation:'Shared location', sharedLocationHint:'Showing a shared location on campus. Change “From” to get directions from where you are.',
   reportProblem:'Report a problem', emergencyShelter:'Nearest shelter', emergencyFinding:'Finding the nearest shelter…',
   emergencyRoute:'Nearest shelter', emergencyNoShelter:'No mapped shelter could be reached from here. Follow Home Front Command instructions and the nearest staff.',
   emergencyIndoorUnmapped:'The shelter is inside this building; its indoor map is not connected yet, so follow the signs.',
@@ -650,6 +664,10 @@ Object.assign(T.en, {
 });
 Object.assign(T.he, {
   directions:'הוראות הגעה', readAloud:'הקראה', stopReading:'עצירת ההקראה', shareLabel:'שיתוף',
+  shareMyLocation:'שיתוף המיקום הנוכחי שלי', shareMyLocationHint:'יוצר קישור חד-פעמי כדי שאדם בקמפוס יוכל למצוא אותך.',
+  shareLocationButton:'שיתוף המיקום שלי', gettingLocation:'מאתרים את המיקום שלך…',
+  locationShareError:'לא הצלחנו לאתר את המיקום שלך. יש לאפשר גישה למיקום ולנסות שוב.',
+  sharedLocation:'מיקום ששותף', sharedLocationHint:'מוצג מיקום ששותף בקמפוס. שנה את „מאיפה” כדי לקבל הוראות מהמקום שלך.',
   reportProblem:'דיווח על תקלה', emergencyShelter:'מרחב מוגן קרוב', emergencyFinding:'מחפש את המרחב המוגן הקרוב…',
   emergencyRoute:'המרחב המוגן הקרוב ביותר', emergencyNoShelter:'לא נמצא מרחב מוגן ממופה שאפשר להגיע אליו מכאן. פעלו לפי הנחיות פיקוד העורף והצוות הקרוב.',
   emergencyIndoorUnmapped:'המרחב המוגן נמצא בבניין הזה; המפה הפנימית שלו עדיין לא מחוברת, לכן יש ללכת לפי השילוט.',
@@ -661,6 +679,10 @@ Object.assign(T.he, {
 });
 Object.assign(T.ar, {
   directions:'الاتجاهات', readAloud:'قراءة بصوت عالٍ', stopReading:'إيقاف القراءة', shareLabel:'مشاركة',
+  shareMyLocation:'مشاركة موقعي الحالي', shareMyLocationHint:'أنشئ رابطًا لمرة واحدة ليتمكن شخص في الحرم من العثور عليك.',
+  shareLocationButton:'مشاركة موقعي', gettingLocation:'جارٍ تحديد موقعك…',
+  locationShareError:'تعذّر تحديد موقعك. اسمح بالوصول إلى الموقع ثم حاول مرة أخرى.',
+  sharedLocation:'موقع مُشارك', sharedLocationHint:'يُعرض موقع تمت مشاركته داخل الحرم. غيّر „من“ للحصول على اتجاهات من مكانك.',
   reportProblem:'الإبلاغ عن مشكلة', emergencyShelter:'أقرب ملجأ', emergencyFinding:'جارٍ البحث عن أقرب ملجأ…',
   emergencyRoute:'أقرب ملجأ', emergencyNoShelter:'لم يتم العثور على ملجأ مرسوم يمكن الوصول إليه من هنا. اتبع تعليمات الجبهة الداخلية وأقرب موظف.',
   emergencyIndoorUnmapped:'الملجأ داخل هذا المبنى؛ خريطته الداخلية غير مربوطة بعد، لذا اتبع اللافتات.',
@@ -672,6 +694,10 @@ Object.assign(T.ar, {
 });
 Object.assign(T.ru, {
   directions:'Маршрут', readAloud:'Озвучить', stopReading:'Остановить озвучивание', shareLabel:'Поделиться',
+  shareMyLocation:'Поделиться текущим местоположением', shareMyLocationHint:'Создайте одноразовую ссылку, чтобы человек на кампусе мог вас найти.',
+  shareLocationButton:'Поделиться местоположением', gettingLocation:'Определяем ваше местоположение…',
+  locationShareError:'Не удалось определить местоположение. Разрешите доступ к геолокации и попробуйте снова.',
+  sharedLocation:'Общее местоположение', sharedLocationHint:'Показано местоположение, которым поделились на кампусе. Измените поле «Откуда», чтобы построить маршрут от вашего местоположения.',
   reportProblem:'Сообщить о проблеме', emergencyShelter:'Ближайшее укрытие', emergencyFinding:'Ищем ближайшее укрытие…',
   emergencyRoute:'Ближайшее укрытие', emergencyNoShelter:'Поблизости не найдено доступное укрытие на карте. Следуйте указаниям Командования тыла и сотрудников университета.',
   emergencyIndoorUnmapped:'Укрытие находится в этом здании, но внутренняя карта пока не подключена. Следуйте указателям.',
@@ -1384,6 +1410,9 @@ function applyTranslations(){
   document.getElementById('lbl-emergency').textContent = t.emergencyShelter;
   document.getElementById('lbl-directions').textContent = t.directions;
   document.getElementById('lbl-share-route').textContent = t.shareLabel;
+  setText('lbl-share-my-location', t.shareMyLocation);
+  setText('share-location-hint', t.shareMyLocationHint);
+  setText('lbl-share-my-location-btn', t.shareLocationButton);
   document.getElementById('lbl-read-aloud').textContent =
     typeof readingSteps !== 'undefined' && readingSteps ? t.stopReading : t.readAloud;
   document.getElementById('lbl-favourites').textContent = '⭐ ' + t.favourites;
@@ -2012,11 +2041,10 @@ CAMPUS_DATA.buildings.forEach(b=>{
       ${t.saveToFav}
     </button>
 
-    <div class="popup-row">
-      <button class="building-popup-btn secondary" onclick="shareBuilding('${b.name.replace(/'/g,"\\'")}')">↗ ${t.shareLabel}</button>
-      ${INDOOR_NAVIGATION_BUILDINGS[b.name] ? `
-      <button class="building-popup-btn secondary" onclick="map.closePopup();openBuildingReport('${INDOOR_NAVIGATION_BUILDINGS[b.name]}')">⚠ ${t.reportProblem}</button>` : ''}
-    </div>
+    ${INDOOR_NAVIGATION_BUILDINGS[b.name] ? `
+      <div class="popup-row">
+        <button class="building-popup-btn secondary" onclick="map.closePopup();openBuildingReport('${INDOOR_NAVIGATION_BUILDINGS[b.name]}')">⚠ ${t.reportProblem}</button>
+      </div>` : ''}
   `);
 
   buildingMarkers[b.name] = m;
@@ -6707,11 +6735,56 @@ function openShareDialog(title, to, from){
   });
 }
 
-function shareBuilding(name){
-  const building = CAMPUS_DATA.buildings.find(item => item.name === name);
-  if(!building) return;
-  map.closePopup();
-  openShareDialog(localizedBuildingName(building), {kind:'building', name});
+function sharedLocationLink(lat, lng){
+  const url = new URL('index.html', window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('meet', `${Number(lat).toFixed(6)},${Number(lng).toFixed(6)}`);
+  return url.toString();
+}
+
+function parseSharedMeetLocation(value){
+  const [rawLat, rawLng] = String(value || '').split(',');
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+
+  // Shared locations are intentionally limited to the University of Haifa area.
+  // This prevents a malformed link from being used as an arbitrary map target.
+  if(!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if(lat < 32.735 || lat > 32.790 || lng < 34.980 || lng > 35.070) return null;
+  return {lat, lng};
+}
+
+function shareMyLocation(){
+  const button = document.getElementById('shareMyLocationBtn');
+  const label = document.getElementById('lbl-share-my-location-btn');
+  if(!('geolocation' in navigator)){
+    notify(t.locationShareError);
+    return;
+  }
+
+  button?.setAttribute('aria-busy', 'true');
+  if(label) label.textContent = t.gettingLocation;
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      button?.removeAttribute('aria-busy');
+      if(label) label.textContent = t.shareLocationButton;
+      if(!window.CampusShare) return;
+      CampusShare.open({
+        lang,
+        title:t.sharedLocation,
+        url:sharedLocationLink(position.coords.latitude, position.coords.longitude),
+        text:`${t.sharedLocation} — CampusWay`,
+        onToast:notify
+      });
+    },
+    () => {
+      button?.removeAttribute('aria-busy');
+      if(label) label.textContent = t.shareLocationButton;
+      notify(t.locationShareError);
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:30000}
+  );
 }
 
 function sharePlace(name){
@@ -6794,14 +6867,17 @@ function findSharedTarget(code){
 
 async function openSharedLink(){
   const params = new URLSearchParams(window.location.search);
-  if(!params.has('to') && !params.has('emergency')) return;
+  const sharedLocation = params.has('meet')
+    ? parseSharedMeetLocation(params.get('meet'))
+    : null;
+  if(!params.has('to') && !params.has('emergency') && !sharedLocation) return;
   await indoorSearchGraphsReady;
 
   const emergency = params.has('emergency');
   const to = params.has('to') ? findSharedTarget(params.get('to')) : null;
   const from = params.has('from') ? findSharedTarget(params.get('from')) : null;
   history.replaceState(null, '', window.location.pathname);
-  if(!to && !emergency){
+  if(!to && !emergency && !sharedLocation){
     notify(t.sharedLinkMissing);
     return;
   }
@@ -6817,6 +6893,27 @@ async function openSharedLink(){
   // From the indoor page's emergency button: nearest shelter from that building.
   if(emergency){
     startEmergencyShelterRoute();
+    return;
+  }
+
+  if(sharedLocation){
+    if(sharedLocationMarker) map.removeLayer(sharedLocationMarker);
+    sharedLocationMarker = L.circleMarker([sharedLocation.lat, sharedLocation.lng], {
+      radius:11,
+      color:'#0D1B3E',
+      fillColor:'#00B09B',
+      fillOpacity:0.88,
+      weight:3
+    }).addTo(map);
+    sharedLocationMarker.bindPopup(`📍 ${t.sharedLocation}`);
+    document.getElementById('searchInput').value = t.sharedLocation;
+    selectedSearchDestination = {
+      kind:'shared-location', lat:sharedLocation.lat, lng:sharedLocation.lng,
+      displayValue:t.sharedLocation
+    };
+    await routeTo(t.sharedLocation, sharedLocation.lat, sharedLocation.lng);
+    sharedLocationMarker.openPopup();
+    notify(t.sharedLocationHint);
     return;
   }
 
@@ -6954,6 +7051,7 @@ async function startEmergencyShelterRoute(){
 // GPS / STARTING POINT
 // ═══════════════════════════════════════════
 let gpsMarker = null;
+let sharedLocationMarker = null;
 
 
 function clearIndoorStartJourney(){

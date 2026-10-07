@@ -371,6 +371,12 @@ body.modal-open{overflow:hidden;}
 html[lang="he"] .panel-title,html[lang="ar"] .panel-title{letter-spacing:0;text-transform:none;font-size:.875rem;}
 .panel-hint{margin:0;font-size:.78125rem;color:var(--mid);}
 
+/* A one-time location snapshot for meeting someone on campus. */
+.location-share-panel{padding:14px 16px;}
+.location-share-panel .panel-head{margin-bottom:5px;}
+.location-share-btn{width:100%;margin-top:12px;}
+.location-share-btn[aria-busy="true"]{opacity:.72;cursor:progress;}
+
 /* Route planner: From / To with a connector line */
 .planner-fields{position:relative;display:flex;flex-direction:column;gap:12px;}
 .field{position:relative;}

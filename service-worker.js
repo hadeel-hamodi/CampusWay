@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v49-multiform-search';
+const CACHE_NAME = 'campusway-v50-location-sharing';
 
 const APP_FILES = [
 './',
