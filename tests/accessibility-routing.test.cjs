@@ -449,7 +449,7 @@ test('changing the start retries a saved destination even when no route line was
   vm.runInContext("pickStart('New Start',1,2)", context);
   assert.equal(typeof scheduled, 'function');
   scheduled();
-  assert.equal(JSON.stringify(calls), JSON.stringify([['Main Building',3,4,{keepIndoorContext:true}]]));
+  assert.equal(JSON.stringify(calls), JSON.stringify([['Main Building',3,4,{keepIndoorContext:true, emergency:false}]]));
 
   calls.length = 0;
   vm.runInContext("currentOutdoorDestination={name:'Main Building',lat:3,lng:4,keepIndoorContext:true}; pickStart('Later Start',5,6)", context);

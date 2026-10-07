@@ -2531,9 +2531,42 @@ function closestNodesBetweenComponents(componentA, componentB){
   }
 
 function shortestPath(start, end, options = {}) {
+  const noisyNodeIds = new Set();
+
+if(
+  options.avoidNoise === true &&
+  typeof CampusStatus !== 'undefined'
+){
+  for(const area of CampusStatus.noiseAreas){
+    if(!area.noisy && !area.crowded) continue;
+
+    if(area.until){
+      const expires = Date.parse(area.until);
+      if(!Number.isFinite(expires) || expires <= Date.now()) continue;
+    }
+
+    for(const id of (area.outdoorNodeIds || [])){
+      noisyNodeIds.add(String(id));
+    }
+  }
+}
     const result = CampusRoutePlanner.findPath({
       nodeIds: () => graph.keys(),
-      neighbors: nodeId => graph.get(nodeId) || [],
+      neighbors: nodeId => {
+  const edges = graph.get(nodeId) || [];
+
+  if(!noisyNodeIds.size) return edges;
+
+  return edges.map(edge => {
+    const passesNoisyArea =
+      noisyNodeIds.has(String(nodeId)) ||
+      noisyNodeIds.has(String(edge.node));
+
+    return passesNoisyArea
+      ? {...edge, weight: edge.weight * 5}
+      : edge;
+  });
+},
       edgeTarget: edge => edge.node,
       edgeWeight: edge => edge.weight,
       edgeAllowed: (edge, fromId) => !(
@@ -2698,11 +2731,11 @@ async function route(
 ){
   await load();
 
-  const routeOptions = {
-    avoidSteps: options.avoidSteps === true,
-    preferFewerTurns:
-      options.preferFewerTurns === true
-  };
+const routeOptions = {
+  avoidSteps: options.avoidSteps === true,
+  preferFewerTurns: options.preferFewerTurns === true,
+  avoidNoise: options.avoidNoise === true
+};
 
   const startNode =
     nearestNode(

@@ -197,7 +197,7 @@ test('changing profile in Settings preserves the destination and recalculates on
     'Rabin Building',
     32.7619,
     35.0204,
-    {keepIndoorContext:true}
+    {keepIndoorContext:true, emergency:false}
   ]);
 });
 

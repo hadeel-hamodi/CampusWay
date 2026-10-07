@@ -1327,7 +1327,8 @@ function changeSettingsLanguage(language, direction){
   if(currentOutdoorDestination){
     const destination = currentOutdoorDestination;
     routeTo(destination.name, destination.lat, destination.lng, {
-      keepIndoorContext: destination.keepIndoorContext
+      keepIndoorContext: destination.keepIndoorContext,
+      emergency: destination.emergency === true
     });
   }
 }
@@ -2318,7 +2319,8 @@ if(changed){
   if(recalculate && changed && currentOutdoorDestination && !startVoicePlanning){
     const destination = currentOutdoorDestination;
     routeTo(destination.name, destination.lat, destination.lng, {
-      keepIndoorContext: destination.keepIndoorContext
+      keepIndoorContext: destination.keepIndoorContext,
+      emergency: destination.emergency === true
     });
   }
 
@@ -5273,9 +5275,17 @@ async function getJourneyEtaSeconds({
 }
 
 async function routeTo(name, lat, lng, options={}){
+  const avoidNoise =
+  currentProfile === 'mental' && options.emergency !== true;
   const keepIndoorContext = options.keepIndoorContext === true;
   keepIndoorContextForCurrentRoute = keepIndoorContext;
-  currentOutdoorDestination = {name, lat, lng, keepIndoorContext};
+  currentOutdoorDestination = {
+  name,
+  lat,
+  lng,
+  keepIndoorContext,
+  emergency: options.emergency === true
+};
   if(!keepIndoorContext) sessionStorage.removeItem('indoorContext');
   if(typeof renderRouteSteps === 'function') renderRouteSteps(null);
   if(typeof emergencyRouteActive !== 'undefined') emergencyRouteActive = options.emergency === true;
@@ -5731,7 +5741,8 @@ if(
             destinationEntrance.lat,
             destinationEntrance.lng,
             {
-              avoidSteps: currentProfile === 'mobility'
+              avoidSteps: currentProfile === 'mobility',
+              avoidNoise
             }
           );
 
@@ -5858,7 +5869,8 @@ if(
           destinationEntrance.lat,
           destinationEntrance.lng,
           {
-            avoidSteps: currentProfile === 'mobility'
+            avoidSteps: currentProfile === 'mobility',
+            avoidNoise
           }
         );
 
@@ -6074,7 +6086,8 @@ const transferSeconds =
                   destinationEntrance.lng,
                   {
                     avoidSteps:
-                      currentProfile === 'mobility'
+                      currentProfile === 'mobility',
+                      avoidNoise
                   }
                 );
 
@@ -6426,7 +6439,8 @@ if(
             selectedEntrance.lat,
             selectedEntrance.lng,
             {
-              avoidSteps: currentProfile === 'mobility'
+              avoidSteps: currentProfile === 'mobility',
+              avoidNoise
             }
           );
       }catch(error){
@@ -6602,7 +6616,8 @@ if(outdoorLegRequired){
       start.lat, start.lng, lat, lng,
       {
         avoidSteps: currentProfile === 'mobility',
-        preferFewerTurns: currentProfile === 'spatial'
+        preferFewerTurns: currentProfile === 'spatial',
+        avoidNoise
       }
     );
   }catch(error){
@@ -6753,7 +6768,8 @@ if(
       outdoorDestinationLng,
       {
         avoidSteps: currentProfile === 'mobility',
-        preferFewerTurns: currentProfile === 'spatial'
+        preferFewerTurns: currentProfile === 'spatial',
+        avoidNoise
       }
     );
 
@@ -7805,15 +7821,7 @@ function shelterBuildings(){
 }
 
 async function emergencyStartPoint(){
-  if(customStart) return customStart;
-  if(!navigator.geolocation) return getStart();
-  return new Promise(resolve => {
-    navigator.geolocation.getCurrentPosition(
-      position => resolve({lat:position.coords.latitude, lng:position.coords.longitude, label:'📍 GPS'}),
-      () => resolve(getStart()),
-      {enableHighAccuracy:true, timeout:4000, maximumAge:60000}
-    );
-  });
+  return getStart();
 }
 
 async function nearestShelterPlan(start){
@@ -7833,7 +7841,16 @@ async function nearestShelterPlan(start){
       for(const entrance of entrances){
         let outdoor = null;
         try{
-          outdoor = await CampusOutdoorRouting.route(start.lat, start.lng, entrance.lat, entrance.lng, {avoidSteps:accessible});
+          outdoor = await CampusOutdoorRouting.route(
+          start.lat,
+          start.lng,
+          entrance.lat,
+          entrance.lng,
+          {
+            avoidSteps: accessible,
+            avoidNoise: false
+          }
+        );
         }catch(error){
           outdoor = null;
         }
@@ -8571,7 +8588,8 @@ function pickStart(name, lat, lng, displayLabel = ''){
     setTimeout(()=>{
       if(currentOutdoorDestination !== destination) return;
       routeTo(destination.name, destination.lat, destination.lng, {
-        keepIndoorContext: destination.keepIndoorContext
+        keepIndoorContext: destination.keepIndoorContext,
+emergency: destination.emergency === true
       });
     }, 700);
   }
@@ -10706,7 +10724,10 @@ async function resumeOutdoorJourneyAfterOrigin(){
     destination.name,
     Number(destination.lat),
     Number(destination.lng),
-    {keepIndoorContext: destination.keepIndoorContext === true}
+    {
+      keepIndoorContext: destination.keepIndoorContext === true,
+      emergency: destination.emergency === true
+    }
   );
 
   return {

@@ -43,15 +43,16 @@
     }
   }
 
-  function normalizeStatus(data){
-    return {
-      elevators: Array.isArray(data && data.elevators) ? data.elevators : [],
-      closures: Array.isArray(data && data.closures) ? data.closures : [],
-      openingHours: data && data.openingHours && typeof data.openingHours === 'object' ? data.openingHours : {},
-      reportEmail: data && typeof data.reportEmail === 'string' ? data.reportEmail.trim() : '',
-      updated: data && data.updated || ''
-    };
-  }
+function normalizeStatus(data){
+  return {
+    elevators: Array.isArray(data && data.elevators) ? data.elevators : [],
+    closures: Array.isArray(data && data.closures) ? data.closures : [],
+    noiseAreas: Array.isArray(data && data.noiseAreas) ? data.noiseAreas : [],
+    openingHours: data && data.openingHours && typeof data.openingHours === 'object' ? data.openingHours : {},
+    reportEmail: data && typeof data.reportEmail === 'string' ? data.reportEmail.trim() : '',
+    updated: data && data.updated || ''
+  };
+}
 
   function load(url){
     readyPromise = fetch(url, {cache:'no-store'})
@@ -530,6 +531,7 @@ const PROBLEMS = {
     closedNodes, closures, noGoAreas,
     hours, hoursText,
     reports, addReport, removeReport, openReportDialog,
+    get noiseAreas(){ return official.noiseAreas || []; },
     get reportEmail(){ return official.reportEmail; }
   };
 })(typeof self !== 'undefined' ? self : this);
