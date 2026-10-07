@@ -259,14 +259,26 @@ body{overflow:hidden;}
 .settings-manage-schedule:hover{background:var(--primary);color:#fff;}
 .schedule-card{width:min(680px,100%);}
 .schedule-intro{margin:0 0 16px;color:var(--mid);font-size:.875rem;line-height:1.45;}
-.schedule-form{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(112px,.9fr) minmax(128px,.9fr) minmax(170px,1.4fr) auto;gap:9px;align-items:end;}
+.schedule-form{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 46px;
+  grid-template-areas:
+    "class destination destination"
+    "day time add";
+  gap:10px;
+  align-items:end;
+}
+.schedule-form label:first-child{grid-area:class;}
+.schedule-form label:nth-child(2){grid-area:day;}
+.schedule-form label:nth-child(3){grid-area:time;}
+.schedule-destination-field{grid-area:destination;}
 .schedule-form label{display:grid;gap:5px;min-width:0;color:var(--ink);font-size:.75rem;font-weight:800;}
 .schedule-form input,.schedule-form select{
   width:100%;min-width:0;min-height:42px;padding:8px 9px;border:2px solid var(--line);
   border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;
 }
 .schedule-form input:focus,.schedule-form select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft);}
-.schedule-add{min-height:42px;padding:8px 12px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:800;white-space:nowrap;}
+.schedule-add{grid-area:add;min-width:46px;min-height:42px;padding:8px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-size:1.35rem;font-weight:800;line-height:1;}
 .schedule-add:hover{background:var(--navy);}
 .schedule-destination-picker{position:relative;display:block;min-width:0;}
 .schedule-destination-suggestions{
@@ -894,8 +906,6 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
   .toolbar-btn .btn-label{display:none;}
   .toolbar-btn .lang-code{display:inline;}
   .toolbar-btn{padding:8px 10px;}
-  .schedule-form{grid-template-columns:1fr 1fr;}
-  .schedule-destination-field,.schedule-form label:first-child,.schedule-add{grid-column:span 2;}
 }
 
 /* ── PHONE ── */
@@ -920,6 +930,13 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
   .settings-card{width:100%;max-height:90dvh;padding:18px;border-radius:20px 20px 12px 12px;}
   .settings-text-size{align-items:stretch;flex-direction:column;}
   .settings-text-size-options{width:100%;}
+  .schedule-form{
+    grid-template-columns:1fr 1fr 46px;
+    grid-template-areas:
+      "class class class"
+      "destination destination destination"
+      "day time add";
+  }
 }
 @media (max-width:420px){
   .brand-text span{display:none;}

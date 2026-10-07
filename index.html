@@ -391,7 +391,7 @@
           <span class="schedule-destination-suggestions" id="scheduleDestinationSuggestions" role="listbox" hidden></span>
         </span>
       </label>
-      <button class="schedule-add" id="scheduleAddBtn" type="submit"><span aria-hidden="true">＋</span> <span id="scheduleAddLabel">Add class</span></button>
+      <button class="schedule-add" id="scheduleAddBtn" type="submit" aria-label="Add class" title="Add class"><span aria-hidden="true">＋</span></button>
     </form>
     <div class="schedule-list" id="scheduleList" aria-live="polite"></div>
   </div>
@@ -1872,7 +1872,11 @@ if(voiceArea){
   setText('scheduleDayLabel', t.scheduleDay);
   setText('scheduleTimeLabel', t.scheduleTime);
   setText('scheduleDestinationLabel', t.scheduleDestination);
-  setText('scheduleAddLabel', t.scheduleAdd);
+  const scheduleAddButton = document.getElementById('scheduleAddBtn');
+  if(scheduleAddButton){
+    scheduleAddButton.title = t.scheduleAdd;
+    scheduleAddButton.setAttribute('aria-label', t.scheduleAdd);
+  }
   setText('scheduleReminderTitle', t.scheduleReminder);
   setText('scheduleReminderRoute', t.scheduleStartRoute);
   setText('onboardingLanguageProgress', t.onboardingStepLanguage);
