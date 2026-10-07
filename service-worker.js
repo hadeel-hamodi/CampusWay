@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v49';
+const CACHE_NAME = 'campusway-v51-schedule-reminders';
 
 const APP_FILES = [
 './',
@@ -38,7 +38,6 @@ const APP_FILES = [
   './wayframe/mic-test.html',
 
   './buildings/education/education-indoor-graph.json',
-  './buildings/education/floors/floor0.svg',
   './buildings/education/floors/floor1.svg',
   './buildings/education/floors/floor2.svg',
   './buildings/education/floors/floor3.svg',
@@ -60,10 +59,7 @@ const APP_FILES = [
   './buildings/main/floors/700-Model.svg',
 
   './buildings/multi-purpose/multi-purpose-indoor-graph.json',
-  './buildings/multi-purpose/floors/floorminus1.svg',
-  './buildings/multi-purpose/floors/floor0.svg',
   './buildings/multi-purpose/floors/floor1.svg',
-  './buildings/multi-purpose/floors/floor2.svg',
 
   './buildings/rabin/rabin-indoor-graph.json',
   './buildings/rabin/floors/floor5.svg',

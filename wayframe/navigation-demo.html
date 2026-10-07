@@ -257,9 +257,9 @@ const ORDER = [
 
 const FLOOR_PLAN_FLOORS={
   madriga:['floorminus1','floor0','floor1','floor2','floor3','floor4'],
-  education:['floor0','floor1','floor2','floor3','floor4','floor5','floor6'],
+  education:['floor1','floor2','floor3','floor4','floor5','floor6'],
   main:['floor500','floor600','floor700'],
-  'multi-purpose':['floorminus1','floor0','floor1','floor2'],
+  'multi-purpose':['floor1'],
   rabin:['floor5','floor6','floor7'],
   student:['floor0','floor1','floor2','floor3','floor4']
 };
@@ -3138,6 +3138,7 @@ function upcomingRouteLabel(){
 
 function updateProgressUI(){
   if(!routeNodes.length){$('livePos').textContent=it('notStarted');$('progressBar').style.width='0%';return}
+  syncIndoorStepListPosition();
   const total=Math.max(1,routeNodes.length-1);
   const pct=navMode==='wheelchair'
     ? CampusWheelchairNavigation.progressFraction(routeNodes,{index:progressIndex,t:progressT})*100
@@ -3175,6 +3176,16 @@ function updateProgressUI(){
     const upcoming=upcomingRouteLabel();
     $('livePos').textContent=localizedInstruction(`Floor ${floorLabel(cur.floor)} — moving toward ${upcoming}`,`${localizedFloor(cur.floor)} — متجه نحو ${localizedNodeLabel(upcoming)}`,`${localizedFloor(cur.floor)} — מתקדם לכיוון ${localizedNodeLabel(upcoming)}`,`Этаж ${floorLabel(cur.floor)} — движение к ${localizedNodeLabel(upcoming)}`);
   }
+}
+
+// The complete indoor guide stays in the sidebar. Highlight the next relevant
+// step there instead of repeating the same instruction in a second map banner.
+function syncIndoorStepListPosition(){
+  if(typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+  const items=[...document.querySelectorAll('#steps [data-step-node]')];
+  if(!items.length) return;
+  const current=items.find(item=>Number(item.dataset.stepNode)>=progressIndex) || items.at(-1);
+  items.forEach(item=>item.classList.toggle('current-step',item===current));
 }
 
 

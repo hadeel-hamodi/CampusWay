@@ -237,6 +237,27 @@ test('persistent preferences prefer local storage and mirror new values to the s
   assert.equal(session.values.get('campuswayLanguage'), 'he');
 });
 
+test('outdoor directions wait until an origin indoor leg has reached the exit', () => {
+  assert.match(index, /const awaitingOriginIndoorExit[\s\S]*?originIndoorComplete/);
+  assert.match(index, /if\(awaitingOriginIndoorExit\)\{[\s\S]*?renderRouteSteps\(null\)/);
+  assert.match(index, /routeSub'\)\.textContent = t\.startIndoorFirst/);
+  assert.doesNotMatch(index, /localizedInstruction\(/);
+
+  for(const language of ['en', 'he', 'ar', 'ru']){
+    const table = between(index, `  ${language}:{`, language === 'ru' ? '\n  }\n};' : '\n  },');
+    assert.match(table, /startIndoorFirst:/, `${language} includes the indoor-first route message`);
+  }
+});
+
+test('indoor screen keeps current guidance visible and highlights the sidebar step', () => {
+  const banner = navigation.match(/<div\b[^>]*class="navBanner"[^>]*>/);
+
+  assert.ok(banner, 'Indoor guidance banner exists');
+  assert.doesNotMatch(banner[0], /\bhidden\b/);
+  assert.doesNotMatch(banner[0], /aria-hidden="true"/);
+  assert.match(navigation, /function syncIndoorStepListPosition\(\)/);
+});
+
 test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {
   const session = storage({
     journeyStage: 'origin',

@@ -299,6 +299,9 @@ select:disabled{background-color:var(--surface-2);color:#94A3B8;cursor:not-allow
   border-inline-start:2px solid var(--line);
 }
 .stepList li:last-child::before{background:var(--danger);color:#fff;}
+.stepList li.current-step{margin-inline:-8px;padding-inline:44px 8px;border-radius:10px;background:var(--primary-soft);font-weight:700;}
+.stepList li.current-step::before{inset-inline-start:8px;background:var(--primary);color:#fff;}
+.stepList li.current-step:not(:last-child)::after{inset-inline-start:19px;}
 
 /* ── FLOOR PLAN ── */
 .mapwrap{position:relative;min-width:0;min-height:0;overflow:hidden;}

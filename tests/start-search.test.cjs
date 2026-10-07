@@ -65,6 +65,45 @@ test('Starting From finds a connected Main room with bare and translated prefixe
   }
 });
 
+test('room search accepts a number and building name in either order and language', () => {
+  const rabinGraph = {
+    floors:{floor5:{
+      nodes:[
+        {id:'rabin_5013', label:'5013', type:'room'},
+        {id:'rabin_corridor', label:'Corridor', type:'corridor'}
+      ],
+      connections:[{from:'rabin_5013', to:'rabin_corridor'}]
+    }}
+  };
+  const h = searchHarness({
+    CAMPUS_DATA:{buildings:[
+      {name:'Main Building', name_he:'בניין ראשי', lat:1, lng:2},
+      {name:'Rabin Building', name_he:'בניין רבין', lat:3, lng:4}
+    ]},
+    RABIN_GRAPH:rabinGraph
+  });
+
+  assert.equal(vm.runInContext("foldSearchText('٥٠١٣')", h.context), '5013');
+
+  for(const query of [
+    '5013 Rabin',
+    'Rabin room 5013',
+    'רבין ٥٠١٣',
+    'مبنى رابين غرفة ٥٠١٣',
+    'здание рабина аудитория ۵۰۱۳'
+  ]){
+    const result = vm.runInContext(
+      `getStartMatches(${JSON.stringify(query)})`,
+      h.context
+    );
+    assert.equal(
+      result.roomMatches.filter(match => match.node.id === 'rabin_5013').length,
+      1,
+      query
+    );
+  }
+});
+
 test('Enter selects one exact mapped starting room', () => {
   const h = searchHarness();
   assert.equal(vm.runInContext("doStartSearch('Room 513')", h.context), true);

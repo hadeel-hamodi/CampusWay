@@ -3,16 +3,6 @@
   "building": "education",
   "coordinateSystem": "normalized_0_to_1",
   "floors": {
-    "floorminus1": {
-      "nodes": [],
-      "connections": [],
-      "nextNodeId": 0
-    },
-    "floor0": {
-      "nodes": [],
-      "connections": [],
-      "nextNodeId": 5
-    },
     "floor4": {
       "nodes": [
         {
