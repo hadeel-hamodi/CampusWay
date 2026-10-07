@@ -10373,17 +10373,25 @@ function renderOutdoorJourneyProgress(){
   const hasIndoorStart = Boolean(sessionStorage.getItem('indoorStartContext'));
   const hasIndoorDestination = Boolean(sessionStorage.getItem('indoorContext'));
   const stage = sessionStorage.getItem('journeyStage');
-  const show = hasIndoorStart || hasIndoorDestination || Boolean(sessionStorage.getItem(OUTDOOR_JOURNEY_STORAGE_KEY));
-  if(!show){ progress.hidden = true; return; }
+  if(!hasIndoorStart && !hasIndoorDestination){
+    progress.hidden = true;
+    return;
+  }
 
-  const current = stage === 'origin' || (!sessionStorage.getItem('originIndoorComplete') && hasIndoorStart)
-    ? 1 : 2;
   const labels = {
-    en:['Inside','Outdoors','Inside'], he:['בפנים','בחוץ','בפנים'],
-    ar:['داخل المبنى','خارج المباني','داخل المبنى'], ru:['Внутри','Снаружи','Внутри']
-  }[lang] || ['Inside','Outdoors','Inside'];
+    en:{inside:'Inside',outdoors:'Outdoors'}, he:{inside:'בפנים',outdoors:'בחוץ'},
+    ar:{inside:'داخل المبنى',outdoors:'خارج المباني'}, ru:{inside:'Внутри',outdoors:'Снаружи'}
+  }[lang] || {inside:'Inside',outdoors:'Outdoors'};
+  const steps = [
+    ...(hasIndoorStart ? [labels.inside] : []),
+    labels.outdoors,
+    ...(hasIndoorDestination ? [labels.inside] : [])
+  ];
+  const current = stage === 'origin' || (!sessionStorage.getItem('originIndoorComplete') && hasIndoorStart)
+    ? 1 : hasIndoorStart ? 2 : 1;
+
   progress.hidden = false;
-  progress.innerHTML = labels.map((label, index) => {
+  progress.innerHTML = steps.map((label, index) => {
     const step = index + 1;
     const state = step < current ? 'done' : step === current ? 'current' : '';
     return `<span class="journey-step ${state}"><b>${step < current ? '✓' : step}</b>${label}</span>`;
