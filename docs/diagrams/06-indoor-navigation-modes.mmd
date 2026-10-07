@@ -1,0 +1,37 @@
+stateDiagram-v2
+    [*] --> RouteReady: graph loaded, route planned
+
+    state "Auto mode (preview)" as Auto {
+        [*] --> Moving
+        Moving --> FloorPause: floor change<br/>(2 s pause)
+        FloorPause --> Moving
+        Moving --> [*]: end of route
+    }
+
+    state "Phone Sensors mode" as Sensors {
+        [*] --> Calibrating: Start pressed,<br/>sensor permission
+        Calibrating --> Tracking: heading aligned<br/>with route
+        Calibrating --> NeedsRetry: unstable heading
+        NeedsRetry --> Calibrating: Retry direction setup
+        Tracking --> Tracking: step detected →<br/>move 0.65 m along route
+        Tracking --> Paused: direction unclear /<br/>motion unavailable
+        Paused --> Tracking: readings recover
+        Tracking --> FloorConfirm: reached stairs /<br/>elevator
+        FloorConfirm --> Calibrating: user confirms floor
+        Tracking --> EstimatedArrival: last node
+    }
+
+    state "Manual / Wheelchair mode" as Wheel {
+        [*] --> Checkpoint
+        Checkpoint --> Checkpoint: "I reached the next point"
+        Checkpoint --> FloorStep: elevator checkpoint
+        FloorStep --> Checkpoint: "Reached floor X"
+        Checkpoint --> [*]: final checkpoint
+    }
+
+    RouteReady --> Auto: Auto selected
+    RouteReady --> Sensors: Phone Sensors selected
+    RouteReady --> Wheel: Wheelchair selected<br/>(pre-selected for Mobility profile)
+    Auto --> Arrived
+    Wheel --> Arrived
+    Arrived --> [*]: Done / continue journey

@@ -109,10 +109,15 @@ self.addEventListener('fetch', event => {
 
   const requestUrl = new URL(event.request.url);
 
+  // External map tiles are handled directly by the browser.
+  if(requestUrl.origin !== self.location.origin){
+    return;
+  }
+
   function networkFirst({ignoreSearch = false} = {}){
     return fetch(event.request)
       .then(response => {
-        if(response.ok && requestUrl.origin === self.location.origin){
+        if(response.ok){
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         }

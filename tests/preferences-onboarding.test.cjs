@@ -172,6 +172,9 @@ test('changing profile in Settings preserves the destination and recalculates on
     showAlert(){},
     speak(){},
     buildProfiles(){},
+    updateVisualVoiceControls(){},
+    stopVisualVoiceFlow(){},
+    startVisualVoiceFlow(){},
     window:{CampusUI:{refresh(){}}},
     showRestSpacePreview(){},
     clearRestSpacePreview(){},
@@ -198,11 +201,14 @@ test('changing profile in Settings preserves the destination and recalculates on
   ]);
 });
 
-test('choosing Visual enables its recommended display settings without disabling them later', () => {
+test('choosing Visual enables audio and contrast, then leaving Visual disables both', () => {
   const displayCalls = [];
   const context = vm.createContext({
     PROFILE_IDS:new Set(['general','mobility','visual','spatial','mental']),
-    PREFERENCE_KEYS:{profile:'accessibilityProfile'},
+    PREFERENCE_KEYS:{
+  profile:'accessibilityProfile',
+  contrast:'campusway.highContrastEnabled'
+},
     currentProfile:'general',
     currentOutdoorDestination:null,
     t:{profiles:[
@@ -210,12 +216,16 @@ test('choosing Visual enables its recommended display settings without disabling
       {id:'general',label:'General',sub:'Fastest route'}
     ]},
     writeStoredPreference(){},
+    readStoredPreference(){ return null; },
     setAudioEnabled(value, options){ displayCalls.push(['audio',value,options]); },
     setContrastEnabled(value, options){ displayCalls.push(['contrast',value,options]); },
     updateRestSpaceServiceButton(){},
     showAlert(){},
     speak(){},
     buildProfiles(){},
+    updateVisualVoiceControls(){},
+    stopVisualVoiceFlow(){},
+    startVisualVoiceFlow(){},
     window:{CampusUI:null},
     showRestSpacePreview(){},
     clearRestSpacePreview(){},
@@ -231,10 +241,12 @@ test('choosing Visual enables its recommended display settings without disabling
   vm.runInContext("setAccessibilityProfile('visual')", context);
   vm.runInContext("setAccessibilityProfile('general')", context);
 
-  assert.deepEqual(JSON.parse(JSON.stringify(displayCalls)), [
-    ['audio',true,{announce:false}],
-    ['contrast',true,{announce:false}]
-  ]);
+assert.deepEqual(JSON.parse(JSON.stringify(displayCalls)), [
+  ['audio',true,{announce:false}],
+  ['contrast',true,{persist:false,announce:false}],
+  ['audio',false,{announce:false}],
+  ['contrast',false,{persist:false,announce:false}]
+]);
 });
 
 test('saved manual display choices override the Visual defaults on reload', () => {
@@ -286,7 +298,7 @@ test('an existing Visual profile receives display defaults once when no choices 
 
   assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
     ['audio',true,{persist:true,announce:false}],
-    ['contrast',true,{persist:true,announce:false}]
+    ['contrast',true,{persist:false,announce:false}]
   ]);
 });
 
