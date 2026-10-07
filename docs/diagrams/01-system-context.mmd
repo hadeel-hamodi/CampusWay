@@ -1,0 +1,32 @@
+flowchart LR
+    user(["Student / visitor<br/>on phone or laptop"])
+
+    subgraph browser["Web browser (installable PWA)"]
+        main["Campus map<br/><i>index.html</i>"]
+        indoor["Indoor navigation<br/><i>wayframe/navigation-demo.html</i>"]
+        sw["Service worker<br/><i>offline cache</i>"]
+        storage[("sessionStorage /<br/>localStorage")]
+    end
+
+    subgraph device["Device capabilities"]
+        sensors["Motion + orientation sensors"]
+        speech["Speech synthesis /<br/>speech recognition"]
+        gps["Geolocation"]
+        mic["Microphone"]
+    end
+
+    pages["GitHub Pages<br/>(static hosting)"]
+    osm["OpenStreetMap<br/>tile server"]
+
+    user --> main
+    main <-->|"journey hand-off"| indoor
+    main --- storage
+    indoor --- storage
+    sw -.->|"caches app files,<br/>graphs, floor plans"| main
+    pages -->|"HTML, JS, JSON, SVG"| sw
+    main -->|"base map tiles"| osm
+    indoor --> sensors
+    main --> speech
+    indoor --> speech
+    main --> gps
+    main --> mic

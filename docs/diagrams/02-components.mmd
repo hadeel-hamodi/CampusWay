@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph pages["Pages"]
+        direction TB
+        main["<b>index.html</b><br/>campus map, search, profiles,<br/>services, journey planner"]
+        indoor["<b>wayframe/navigation-demo.html</b><br/>indoor floor plans and<br/>turn-by-turn navigation"]
+        tools["<b>wayframe/wayframe.html</b> + test pages<br/>graph editor, sensor / audio / mic tests"]
+    end
+
+    subgraph routing["Routing and guidance"]
+        direction LR
+        rp["route-planner.js<br/><i>Dijkstra + fewer-turns search</i>"]
+        out["outdoor-routing.js<br/><i>campus path graph</i>"]
+        instr["route-instructions.js<br/><i>outdoor directions</i>"]
+        wc["wheelchair-navigation.js<br/><i>checkpoints</i>"]
+    end
+
+    subgraph sensing["Phone-sensor navigation"]
+        direction LR
+        step["step-detector.js"]
+        head["heading-tracker.js"]
+        prog["route-progress.js"]
+        audio["audio-guide.js<br/><i>(audio test page)</i>"]
+    end
+
+    subgraph uimods["UI and services"]
+        direction LR
+        cui["campus-ui.js<br/><i>toasts, menus, ARIA</i>"]
+        status["campus-status.js<br/><i>outages, closures, reports</i>"]
+        qr["qr-code.js + share.js"]
+        leaflet["Leaflet 1.9.4<br/><i>map library</i>"]
+    end
+
+    subgraph data["Data"]
+        direction TB
+        cdata["app/prototype/data.js<br/><i>buildings, places, entrances</i>"]
+        osmjson["campus-osm.json<br/><i>OSM path extract</i>"]
+        graphs["buildings/*/*-indoor-graph.json"]
+        svgs["buildings/*/floors/*.svg"]
+        sjson["app/data/campus-status.json"]
+    end
+
+    sw[["service-worker.js<br/>offline cache"]]
+
+    pages --> routing
+    pages --> sensing
+    pages --> uimods
+    routing --> data
+    uimods --> data
+    sw -.-> pages

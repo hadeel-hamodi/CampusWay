@@ -4,6 +4,12 @@ CampusWay is a University of Haifa student project for indoor and outdoor campus
 
 [Open the live app](https://ja4smin.github.io/CampusWay/)
 
+![CampusWay campus map with a planned route and directions](docs/images/screenshots/main-03-outdoor-route.png)
+
+| Indoor navigation | Phone layout | Hebrew interface |
+|---|---|---|
+| ![Indoor route on a floor plan](docs/images/screenshots/indoor-02-route-floor-plan.png) | ![CampusWay on a phone](docs/images/screenshots/mobile-03-route-directions.png) | ![Hebrew right-to-left interface](docs/images/screenshots/main-12-hebrew-rtl.png) |
+
 ## Features
 
 - Outdoor routing along the mapped campus path network.
@@ -83,6 +89,7 @@ Automated tests cover routing, search, sensor logic and journey transitions. The
 - `wayframe/` — route planning, sensor and checkpoint helpers.
 - `tests/` — automated tests.
 - `service-worker.js` — offline caching and app updates.
+- `docs/` — project documentation, diagrams and screenshots.
 
 ## Development notes
 
@@ -94,6 +101,39 @@ Offline app files are managed in `service-worker.js` through `CACHE_NAME` and `A
 
 The interface supports English, Hebrew and Arabic.
 
+## Documentation
+
+Full project documentation is in the [`docs/`](docs/README.md) folder:
+
+| Topic | Document |
+|---|---|
+| Overview, goals and coverage | [Project overview](docs/01-project-overview.md) |
+| What the app can do | [Features](docs/02-features.md) |
+| How to use it | [User guide](docs/03-user-guide.md) |
+| Functional and non-functional requirements | [Requirements](docs/04-requirements.md) |
+| How it is built | [Architecture](docs/05-architecture.md) |
+| Flow diagrams | [User flows](docs/06-user-flows.md) |
+| Routing, sensors and instructions | [Routing and navigation algorithms](docs/07-routing-and-navigation-algorithms.md) |
+| Data formats and statistics | [Data model](docs/08-data-model.md) |
+| Technologies | [Technology stack](docs/09-technology-stack.md) |
+| Tests and manual checklist | [Testing](docs/10-testing.md) |
+| Running, publishing and updating | [Installation and deployment](docs/11-installation-and-deployment.md) |
+| Accessibility design | [Accessibility](docs/12-accessibility.md) |
+| WayFrame and mapping a building | [Developer tools and indoor mapping](docs/13-developer-tools-and-mapping.md) |
+| What is missing and what is next | [Limitations and future work](docs/14-limitations-and-future-work.md) |
+| Terms | [Glossary](docs/15-glossary.md) |
+| People and third-party credits | [Team and credits](docs/16-team-and-credits.md) |
+
+See also [`CHANGELOG.md`](CHANGELOG.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Project status
 
 CampusWay is a student project under active development. Mapping coverage, device testing and guidance continue to be refined.
+
+## Team
+
+- Yasmin ([@ja4smin](https://github.com/ja4smin))
+- Hadeel Hamodi ([@hadeel-hamodi](https://github.com/hadeel-hamodi))
+- Naseem Muhammad
+
+Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. Map library: [Leaflet](https://leafletjs.com/).

@@ -1,0 +1,66 @@
+erDiagram
+    BUILDING ||--o{ ENTRANCE : "has (BUILDING_ENTRANCES)"
+    BUILDING ||--o| INDOOR_GRAPH : "mapped by"
+    INDOOR_GRAPH ||--|{ FLOOR : contains
+    FLOOR ||--|{ NODE : has
+    FLOOR ||--o{ CONNECTION : has
+    CONNECTION }o--|| NODE : "from / to"
+    FLOOR ||--o| FLOOR_PLAN_SVG : "drawn on"
+    ENTRANCE }o--|| NODE : "nodeId = indoor entrance"
+    PLACE }o--o| BUILDING : "indoor.buildingKey"
+    PLACE }o--o{ NODE : "indoor.nodeIds"
+    CAMPUS_STATUS ||--o{ ELEVATOR_OUTAGE : lists
+    CAMPUS_STATUS ||--o{ CLOSURE : lists
+    CAMPUS_STATUS ||--o{ OPENING_HOURS : lists
+
+    BUILDING {
+        string name
+        string name_he
+        float lat
+        float lng
+        array polygon
+    }
+    ENTRANCE {
+        string nodeId
+        float lat
+        float lng
+        bool primary
+        bool requiresStairs
+        bool avoidForMobility
+        string onlyForService
+    }
+    PLACE {
+        string name
+        string type "food | shop | gate | clinic | restroom"
+        float lat
+        float lng
+    }
+    INDOOR_GRAPH {
+        int version "2"
+        string building
+        string coordinateSystem "normalized_0_to_1"
+    }
+    NODE {
+        string id "floor5_n104"
+        string label
+        string type "room | corridor | elevator | stairs | ..."
+        string connectorId "links floors"
+        float x "0..1"
+        float y "0..1"
+        string floor
+    }
+    CONNECTION {
+        string from
+        string to
+    }
+    ELEVATOR_OUTAGE {
+        string building
+        string elevator
+        date from
+        date until
+    }
+    CLOSURE {
+        string building
+        array nodeIds
+        array area "outdoor polygon"
+    }

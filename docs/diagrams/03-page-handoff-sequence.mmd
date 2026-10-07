@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant M as Campus map (index.html)
+    participant S as sessionStorage
+    participant I as Indoor page (navigation-demo.html)
+
+    U->>M: Choose start room and destination room
+    M->>M: routeTo() picks best exit + entrance,<br/>draws outdoor route, computes ETA
+    M->>S: indoorStartContext, indoorContext,<br/>sharedIndoorTransfer / intermediateIndoorTransfer
+    U->>M: Press "Start indoor route"
+    M->>S: outdoorJourneyContext (snapshot),<br/>journeyStage = origin, indoorBuilding
+    M->>I: open ?building=<origin building>
+    I->>S: read contexts, restore route room → exit
+    U->>I: Navigate (Auto / Sensors / Wheelchair)
+    I->>S: originIndoorComplete = true,<br/>journeyStage = destination
+    I->>M: location.replace(index.html?resumeJourney=1)
+    M->>S: read outdoorJourneyContext
+    M->>M: redraw outdoor leg, show "Continue indoors"
+    U->>M: Walk outdoors, press "Continue indoors"
+    M->>I: open ?building=<destination building>
+    I->>S: read indoorContext (entrance → room)
+    U->>I: Navigate to the room
+    I-->>U: "You have arrived!"

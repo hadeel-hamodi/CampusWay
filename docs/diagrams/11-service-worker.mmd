@@ -1,0 +1,9 @@
+flowchart TD
+    I(["install"]) --> I1["Open cache CACHE_NAME<br/>(e.g. campusway-v41)"]
+    I1 --> I2["Pre-cache APP_FILES:<br/>pages, JS, CSS, data,<br/>indoor graphs, floor SVGs"]
+    I2 --> I3[skipWaiting]
+    A(["activate"]) --> A1[Delete caches with<br/>other names] --> A2[clients.claim]
+    F(["fetch (GET)"]) --> F1{campus-status.json?}
+    F1 -- Yes --> N1["Network first<br/>→ update cache<br/>→ fall back to cache"]
+    F1 -- No --> C1["Cache first<br/>(ignoreSearch)<br/>→ fall back to network"]
+    C1 -.-> T["OSM map tiles are not cached:<br/>offline the map shows overlays only"]
