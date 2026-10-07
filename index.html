@@ -385,7 +385,12 @@
       <label><span id="scheduleClassLabel">Class name</span><input id="scheduleClassName" maxlength="70" required autocomplete="off"></label>
       <label><span id="scheduleDayLabel">Day</span><select id="scheduleDay" required></select></label>
       <label><span id="scheduleTimeLabel">Time</span><input id="scheduleTime" type="time" required></label>
-      <label class="schedule-destination-field"><span id="scheduleDestinationLabel">Room or building</span><select id="scheduleDestination" required></select></label>
+      <label class="schedule-destination-field"><span id="scheduleDestinationLabel">Room or building</span>
+        <span class="schedule-destination-picker">
+          <input id="scheduleDestination" type="text" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="scheduleDestinationSuggestions" required>
+          <span class="schedule-destination-suggestions" id="scheduleDestinationSuggestions" role="listbox" hidden></span>
+        </span>
+      </label>
       <button class="schedule-add" id="scheduleAddBtn" type="submit"><span aria-hidden="true">＋</span> <span id="scheduleAddLabel">Add class</span></button>
     </form>
     <div class="schedule-list" id="scheduleList" aria-live="polite"></div>
@@ -951,6 +956,7 @@ let scheduleReminderEntry = null;
 let scheduleReturnFocus = null;
 const scheduleReminderSeen = new Set();
 const scheduleTargets = new Map();
+let selectedScheduleTargetId = null;
 // Search and navigation share the canonical indoor graph files.
 let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
@@ -1416,14 +1422,60 @@ function renderScheduleForm(){
   const selectedDay = day.value;
   day.innerHTML = t.days.map((name, index) => `<option value="${index}">${name}</option>`).join('');
   day.value = selectedDay || String(new Date().getDay());
-  const selectedTarget = destination.value;
-  const options = [...scheduleTargets.values()].sort((a, b) =>
-    scheduleTargetLabel(a).localeCompare(scheduleTargetLabel(b), undefined, {numeric:true})
-  );
-  destination.innerHTML = `<option value="">${t.scheduleDestination}</option>` + options.map(target =>
-    `<option value="${target.id.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${scheduleTargetLabel(target).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</option>`
-  ).join('');
-  if(scheduleTargets.has(selectedTarget)) destination.value = selectedTarget;
+  if(selectedScheduleTargetId && scheduleTargets.has(selectedScheduleTargetId)){
+    destination.value = scheduleTargetLabel(scheduleTargets.get(selectedScheduleTargetId));
+  }
+}
+
+function hideScheduleDestinationSuggestions(){
+  const box = document.getElementById('scheduleDestinationSuggestions');
+  const input = document.getElementById('scheduleDestination');
+  if(box) box.hidden = true;
+  if(input) input.setAttribute('aria-expanded', 'false');
+}
+
+function scheduleTargetMatches(target, query){
+  const building = CAMPUS_DATA.buildings.find(item => item.name === target.buildingName);
+  const names = [
+    scheduleTargetLabel(target), target.label, target.buildingName,
+    ...(building ? buildingSearchNames(building) : [])
+  ].filter(Boolean);
+  return searchNamesMatch(names, query);
+}
+
+function showScheduleDestinationSuggestions(value){
+  const box = document.getElementById('scheduleDestinationSuggestions');
+  const input = document.getElementById('scheduleDestination');
+  const query = String(value || '').trim();
+  if(!box || !input || !query){
+    hideScheduleDestinationSuggestions();
+    return;
+  }
+  const matches = [...scheduleTargets.values()]
+    .filter(target => scheduleTargetMatches(target, query))
+    .sort((a, b) => scheduleTargetLabel(a).localeCompare(scheduleTargetLabel(b), undefined, {numeric:true}))
+    .slice(0, 7);
+  box.innerHTML = '';
+  matches.forEach(target => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'schedule-destination-option';
+    option.setAttribute('role', 'option');
+    option.textContent = scheduleTargetLabel(target);
+    option.addEventListener('mousedown', event => event.preventDefault());
+    option.addEventListener('click', () => selectScheduleTarget(target.id));
+    box.appendChild(option);
+  });
+  box.hidden = !matches.length;
+  input.setAttribute('aria-expanded', String(matches.length > 0));
+}
+
+function selectScheduleTarget(id){
+  const target = scheduleTargets.get(id);
+  if(!target) return;
+  selectedScheduleTargetId = id;
+  document.getElementById('scheduleDestination').value = scheduleTargetLabel(target);
+  hideScheduleDestinationSuggestions();
 }
 
 function renderScheduleList(){
@@ -1449,6 +1501,8 @@ async function openScheduleManager(){
   scheduleReturnFocus = document.activeElement;
   const dialog = document.getElementById('scheduleDialog');
   await buildScheduleTargets();
+  selectedScheduleTargetId = null;
+  document.getElementById('scheduleForm').reset();
   renderScheduleForm();
   renderScheduleList();
   dialog.hidden = false;
@@ -1469,7 +1523,7 @@ function addScheduleEntry(event){
   const title = document.getElementById('scheduleClassName').value.trim();
   const day = Number(document.getElementById('scheduleDay').value);
   const time = document.getElementById('scheduleTime').value;
-  const target = scheduleTargets.get(document.getElementById('scheduleDestination').value);
+  const target = scheduleTargets.get(selectedScheduleTargetId);
   if(!title || !Number.isInteger(day) || !/^\d{2}:\d{2}$/.test(time) || !target){
     notify(t.scheduleInvalid);
     return;
@@ -1480,6 +1534,8 @@ function addScheduleEntry(event){
   });
   saveScheduleEntries();
   document.getElementById('scheduleForm').reset();
+  selectedScheduleTargetId = null;
+  hideScheduleDestinationSuggestions();
   renderScheduleForm();
   renderScheduleList();
 }
@@ -1559,6 +1615,17 @@ function setupPreferenceUI(){
   restoreTextSizePreference();
   restoreSchedulePreferences();
   document.getElementById('scheduleForm').addEventListener('submit', addScheduleEntry);
+  const scheduleDestinationInput = document.getElementById('scheduleDestination');
+  scheduleDestinationInput.addEventListener('input', event => {
+    selectedScheduleTargetId = null;
+    showScheduleDestinationSuggestions(event.target.value);
+  });
+  scheduleDestinationInput.addEventListener('focus', event => {
+    showScheduleDestinationSuggestions(event.target.value);
+  });
+  scheduleDestinationInput.addEventListener('blur', () => {
+    setTimeout(hideScheduleDestinationSuggestions, 120);
+  });
   document.getElementById('scheduleDialog').addEventListener('click', event => {
     if(event.target === event.currentTarget) closeScheduleManager();
   });

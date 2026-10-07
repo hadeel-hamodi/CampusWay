@@ -24,6 +24,10 @@ test('schedule reminders are an optional Settings-only feature with translated m
   assert.match(settings, /id="manageScheduleBtn"[^>]+hidden/);
   assert.match(index, /id="scheduleDialog"[^>]+aria-modal="true"/);
   assert.match(index, /id="scheduleReminder"[^>]+role="alertdialog"/);
+  assert.match(index, /id="scheduleDestination"[^>]+role="combobox"/);
+  assert.match(index, /id="scheduleDestinationSuggestions"[^>]+role="listbox"/);
+  assert.match(index, /function showScheduleDestinationSuggestions\(value\)/);
+  assert.match(index, /\.slice\(0, 7\)/);
   for(const label of [
     'Schedule reminders', 'תזכורות מערכת שעות', 'تذكيرات الجدول', 'Напоминания о занятиях'
   ]) assert.ok(index.includes(label), label);
