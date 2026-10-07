@@ -1,0 +1,9 @@
+flowchart TD
+    A["Floor plan SVG<br/>buildings/&lt;b&gt;/floors/"] --> B["WayFrame node plotter<br/>wayframe/wayframe.html"]
+    B --> C["Place nodes: rooms at doors,<br/>corridor junctions at turns,<br/>stairs / elevators with<br/>the same connector ID"]
+    C --> D["Connect nodes<br/>(walkable corridors)"]
+    D --> E["▶ Test Route<br/>inside the editor"]
+    E --> F["Export All →<br/>&lt;b&gt;-indoor-graph.json"]
+    F --> G["Commit to<br/>buildings/&lt;b&gt;/"]
+    G --> H["Bump CACHE_NAME in<br/>service-worker.js"]
+    H --> I(["Indoor navigation and<br/>campus search use it"])

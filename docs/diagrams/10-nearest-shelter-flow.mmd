@@ -1,0 +1,11 @@
+flowchart TD
+    A(["Press 'Nearest shelter'"]) --> B{Start point set?}
+    B -- Yes --> D
+    B -- No --> C{"Geolocation<br/>within 4 s?"}
+    C -- Yes --> D[Use position]
+    C -- No --> C2[Use default start<br/>Carmel Gate]
+    C2 --> D
+    D --> E["For every mapped shelter node:<br/>outdoor route time + indoor path time"]
+    E --> F{"Shelter with indoor guidance<br/>vs. any shelter ≥ 60 s faster"}
+    F --> G["Draw red emergency route card<br/>🛡️ From X → Nearest shelter"]
+    G --> H(["'Continue indoors' to the<br/>shelter room on the floor plan"])
