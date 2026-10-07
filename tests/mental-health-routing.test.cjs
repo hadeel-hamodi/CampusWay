@@ -150,7 +150,7 @@ test('same-building rest-space title is not presented as a room', () => {
   assert.equal(context.result, 'Suggested rest space');
 });
 
-test('Mental profile puts Rest Spaces first and other profiles restore the original order', () => {
+test('all profiles keep the service order and leaf icon, with Rest Spaces for Mental', () => {
   const originalOrder = [
     'serviceRestroomBtn',
     'serviceFoodBtn',
@@ -159,7 +159,7 @@ test('Mental profile puts Rest Spaces first and other profiles restore the origi
     'serviceGymBtn',
     'serviceLibraryBtn',
     'landmarkServiceBtn',
-    'serviceShelterBtn'
+    'serviceSmokingBtn'
   ];
 
   const grid = {
@@ -184,10 +184,12 @@ test('Mental profile puts Rest Spaces first and other profiles restore the origi
 
   const context = vm.createContext({
     currentProfile:'mental',
+    lang:'en',
     t:{
       serviceRestSpaces:'Rest Spaces',
-      serviceLandmarks:'Landmarks'
+      serviceLandmarks:'Quiet Spaces'
     },
+    updateMentalBreakControls(){},
     document:{
       getElementById(id){return elements[id];}
     }
@@ -202,30 +204,22 @@ test('Mental profile puts Rest Spaces first and other profiles restore the origi
     context
   );
 
-  vm.runInContext('updateRestSpaceServiceButton()', context);
+  for(const profile of ['mental', 'general', 'mobility', 'visual', 'spatial']){
+    context.currentProfile = profile;
+    vm.runInContext('updateRestSpaceServiceButton()', context);
 
-  assert.equal(elements.landmarkServiceIcon.textContent, '🌿');
-  assert.equal(elements['lbl-service-landmarks'].textContent, 'Rest Spaces');
-  assert.deepEqual(grid.children.map(button => button.id), [
-    'landmarkServiceBtn',
-    'serviceRestroomBtn',
-    'serviceFoodBtn',
-    'serviceShopBtn',
-    'serviceClinicBtn',
-    'serviceGymBtn',
-    'serviceLibraryBtn',
-    'serviceShelterBtn'
-  ]);
+      const expectedLabel =
+      profile === 'mental' ? 'Rest Spaces' : 'Quiet spaces';
 
-  vm.runInContext(
-    "currentProfile='general';updateRestSpaceServiceButton()",
-    context
-  );
-
-  assert.equal(elements.landmarkServiceIcon.textContent, '📍');
-  assert.equal(elements['lbl-service-landmarks'].textContent, 'Landmarks');
-  assert.deepEqual(
-    grid.children.map(button => button.id),
-    originalOrder
-  );
+    assert.equal(elements.landmarkServiceIcon.textContent, '🌿');
+    assert.equal(
+      elements['lbl-service-landmarks'].textContent,
+      expectedLabel
+    );
+    assert.equal(elements.landmarkServiceBtn.title, expectedLabel);
+    assert.deepEqual(
+      grid.children.map(button => button.id),
+      originalOrder
+    );
+  }
 });

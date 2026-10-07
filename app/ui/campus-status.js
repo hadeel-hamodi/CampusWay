@@ -249,66 +249,139 @@
   }
 
   // ── Report dialog ──
-  const TEXT = {
-    en:{
-      title:'Report a problem', what:'What is not working?', problem:'What is wrong?', note:'Details (optional)',
-      notePlaceholder:'For example: the door does not open on floor 6', save:'Save report', cancel:'Cancel', done:'Done',
-      thanks:'Thank you — your report is saved on this device.',
-      avoid:'CampusWay will route you around this elevator for the next 24 hours.',
-      shareHint:'To let the campus team and other students know, send it on:', email:'Email the campus team', copy:'Copy report', copied:'Copied',
-      yours:'Your recent reports', fixed:'It works again', none:'No reports yet.',
-      problems:{
-        'out-of-service':'Out of service', doors:'Doors or buttons not working',
-        'closed':'Closed or locked', 'accessible-stall':'Accessible stall not usable', cleaning:'Needs cleaning or supplies',
-        blocked:'Path blocked or construction', other:'Something else'
-      }
-    },
-    he:{
-      title:'דיווח על תקלה', what:'מה לא עובד?', problem:'מה הבעיה?', note:'פרטים (לא חובה)',
-      notePlaceholder:'לדוגמה: הדלת לא נפתחת בקומה 6', save:'שמירת הדיווח', cancel:'ביטול', done:'סיום',
-      thanks:'תודה — הדיווח נשמר במכשיר הזה.',
-      avoid:'ב-24 השעות הקרובות CampusWay ינתב אותך בלי המעלית הזו.',
-      shareHint:'כדי שצוות הקמפוס וסטודנטים אחרים יידעו, אפשר לשלוח אותו:', email:'שליחה במייל לצוות הקמפוס', copy:'העתקת הדיווח', copied:'הועתק',
-      yours:'הדיווחים האחרונים שלך', fixed:'זה עובד שוב', none:'אין עדיין דיווחים.',
-      problems:{
-        'out-of-service':'לא פועלת', doors:'דלתות או כפתורים לא עובדים',
-        'closed':'סגור או נעול', 'accessible-stall':'תא הנגישות לא שמיש', cleaning:'צריך ניקיון או ציוד',
-        blocked:'דרך חסומה או עבודות', other:'משהו אחר'
-      }
-    },
-    ar:{
-      title:'الإبلاغ عن مشكلة', what:'ما الذي لا يعمل؟', problem:'ما المشكلة؟', note:'تفاصيل (اختياري)',
-      notePlaceholder:'مثلًا: الباب لا يفتح في الطابق 6', save:'حفظ البلاغ', cancel:'إلغاء', done:'تم',
-      thanks:'شكرًا — تم حفظ بلاغك على هذا الجهاز.',
-      avoid:'سيتجنب CampusWay هذا المصعد في مساراتك خلال الـ24 ساعة القادمة.',
-      shareHint:'ليعرف طاقم الحرم والطلاب الآخرون، يمكنك إرساله:', email:'إرسال بريد إلى طاقم الحرم', copy:'نسخ البلاغ', copied:'تم النسخ',
-      yours:'بلاغاتك الأخيرة', fixed:'يعمل مجددًا', none:'لا توجد بلاغات بعد.',
-      problems:{
-        'out-of-service':'معطّل', doors:'الأبواب أو الأزرار لا تعمل',
-        'closed':'مغلق أو مقفل', 'accessible-stall':'حمام ذوي الإعاقة غير صالح', cleaning:'يحتاج تنظيفًا أو مستلزمات',
-        blocked:'الطريق مسدود أو أعمال بناء', other:'شيء آخر'
-      }
-    },
-    ru:{
-      title:'Сообщить о проблеме', what:'Что не работает?', problem:'В чём проблема?', note:'Подробности (необязательно)',
-      notePlaceholder:'Например: дверь не открывается на 6-м этаже', save:'Сохранить сообщение', cancel:'Отмена', done:'Готово',
-      thanks:'Спасибо — сообщение сохранено на этом устройстве.',
-      avoid:'В течение следующих 24 часов CampusWay будет строить маршруты в обход этого лифта.',
-      shareHint:'Чтобы сообщить сотрудникам кампуса и другим студентам, отправьте это через:', email:'Отправить сотрудникам кампуса по электронной почте', copy:'Копировать сообщение', copied:'Скопировано',
-      yours:'Ваши недавние сообщения', fixed:'Снова работает', none:'Сообщений пока нет.',
-      problems:{
-        'out-of-service':'Не работает', doors:'Двери или кнопки не работают',
-        'closed':'Закрыто или заперто', 'accessible-stall':'Доступная кабина не работает', cleaning:'Требуется уборка или расходные материалы',
-        blocked:'Путь перекрыт или ведутся работы', other:'Другая проблема'
-      }
+const TEXT = {
+  en:{
+    title:'Report a problem',
+    what:'What is not working?',
+    problem:'What is wrong?',
+    note:'Details (optional)',
+    notePlaceholder:'For example: the door does not open on floor 6',
+    save:'Save report',
+    cancel:'Cancel',
+    done:'Done',
+    thanks:'Thank you — your report is saved on this device.',
+    avoid:'CampusWay will route you around this elevator for the next 24 hours.',
+    shareHint:'To let the campus team and other students know, send it on:',
+    email:'Email the campus team',
+    copy:'Copy report',
+    copied:'Copied',
+    yours:'Your recent reports',
+    fixed:'It works again',
+    none:'No reports yet.',
+    problems:{
+      quiet:'Quiet right now',
+      noisy:'Noisy right now',
+      crowded:'Crowded right now',
+      'out-of-service':'Out of service',
+      doors:'Doors or buttons not working',
+      closed:'Closed or locked',
+      'accessible-stall':'Accessible stall not usable',
+      cleaning:'Needs cleaning or supplies',
+      blocked:'Path blocked or construction',
+      other:'Something else'
     }
-  };
-
-  const PROBLEMS = {
-    elevator:['out-of-service', 'doors', 'other'],
-    restroom:['closed', 'accessible-stall', 'cleaning', 'other'],
-    other:['blocked', 'closed', 'other']
-  };
+  },
+  he:{
+    title:'דיווח על תקלה',
+    what:'מה לא עובד?',
+    problem:'מה הבעיה?',
+    note:'פרטים (לא חובה)',
+    notePlaceholder:'לדוגמה: הדלת לא נפתחת בקומה 6',
+    save:'שמירת הדיווח',
+    cancel:'ביטול',
+    done:'סיום',
+    thanks:'תודה — הדיווח נשמר במכשיר הזה.',
+    avoid:'ב-24 השעות הקרובות CampusWay ינתב אותך בלי המעלית הזו.',
+    shareHint:'כדי שצוות הקמפוס וסטודנטים אחרים יידעו, אפשר לשלוח אותו:',
+    email:'שליחה במייל לצוות הקמפוס',
+    copy:'העתקת הדיווח',
+    copied:'הועתק',
+    yours:'הדיווחים האחרונים שלך',
+    fixed:'זה עובד שוב',
+    none:'אין עדיין דיווחים.',
+    problems:{
+      quiet:'שקט כרגע',
+      noisy:'רועש כרגע',
+      crowded:'צפוף כרגע',
+      'out-of-service':'לא פועלת',
+      doors:'דלתות או כפתורים לא עובדים',
+      closed:'סגור או נעול',
+      'accessible-stall':'תא הנגישות לא שמיש',
+      cleaning:'צריך ניקיון או ציוד',
+      blocked:'דרך חסומה או עבודות',
+      other:'משהו אחר'
+    }
+  },
+  ar:{
+    title:'الإبلاغ عن مشكلة',
+    what:'ما الذي لا يعمل؟',
+    problem:'ما المشكلة؟',
+    note:'تفاصيل (اختياري)',
+    notePlaceholder:'مثلًا: الباب لا يفتح في الطابق 6',
+    save:'حفظ البلاغ',
+    cancel:'إلغاء',
+    done:'تم',
+    thanks:'شكرًا — تم حفظ بلاغك على هذا الجهاز.',
+    avoid:'سيتجنب CampusWay هذا المصعد في مساراتك خلال الـ24 ساعة القادمة.',
+    shareHint:'ليعرف طاقم الحرم والطلاب الآخرون، يمكنك إرساله:',
+    email:'إرسال بريد إلى طاقم الحرم',
+    copy:'نسخ البلاغ',
+    copied:'تم النسخ',
+    yours:'بلاغاتك الأخيرة',
+    fixed:'يعمل مجددًا',
+    none:'لا توجد بلاغات بعد.',
+    problems:{
+      quiet:'هادئ الآن',
+      noisy:'صاخب الآن',
+      crowded:'مزدحم الآن',
+      'out-of-service':'معطّل',
+      doors:'الأبواب أو الأزرار لا تعمل',
+      closed:'مغلق أو مقفل',
+      'accessible-stall':'حمام ذوي الإعاقة غير صالح',
+      cleaning:'يحتاج تنظيفًا أو مستلزمات',
+      blocked:'الطريق مسدود أو أعمال بناء',
+      other:'شيء آخر'
+    }
+  },
+  ru:{
+    title:'Сообщить о проблеме',
+    what:'Что не работает?',
+    problem:'В чём проблема?',
+    note:'Подробности (необязательно)',
+    notePlaceholder:'Например: дверь не открывается на 6-м этаже',
+    save:'Сохранить сообщение',
+    cancel:'Отмена',
+    done:'Готово',
+    thanks:'Спасибо — сообщение сохранено на этом устройстве.',
+    avoid:'В течение следующих 24 часов CampusWay будет строить маршруты в обход этого лифта.',
+    shareHint:'Чтобы сообщить сотрудникам кампуса и другим студентам, отправьте это через:',
+    email:'Отправить сотрудникам кампуса по электронной почте',
+    copy:'Копировать сообщение',
+    copied:'Скопировано',
+    yours:'Ваши недавние сообщения',
+    fixed:'Снова работает',
+    none:'Сообщений пока нет.',
+    problems:{
+      quiet:'Сейчас тихо',
+      noisy:'Сейчас шумно',
+      crowded:'Сейчас многолюдно',
+      'out-of-service':'Не работает',
+      doors:'Двери или кнопки не работают',
+      closed:'Закрыто или заперто',
+      'accessible-stall':'Доступная кабина не работает',
+      cleaning:'Требуется уборка или расходные материалы',
+      blocked:'Путь перекрыт или ведутся работы',
+      other:'Другая проблема'
+    }
+  }
+};
+const PROBLEMS = {
+  elevator:['out-of-service', 'doors', 'other'],
+  restroom:['closed', 'accessible-stall', 'cleaning', 'other'],
+  'rest-space':['quiet', 'noisy', 'crowded', 'closed', 'other'],
+  landmark:['quiet', 'noisy', 'crowded', 'closed', 'other'],
+  other:['blocked', 'closed', 'other']
+};
 
   function el(tag, attributes = {}, children = []){
     const node = document.createElement(tag);
