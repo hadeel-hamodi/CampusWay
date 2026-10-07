@@ -217,7 +217,6 @@
     <button id="arrivalPrimary" class="btn btn-primary" type="button">Done</button>
     <button id="arrivalSecondary" class="btn btn-secondary" type="button">New route from here</button>
   </div>
-  <a id="arrivalCampusLink" class="arrivalLink" href="../index.html">Back to campus map</a>
 </dialog>
 
 <script src="../app/ui/qr-code.js"></script>
@@ -4925,12 +4924,31 @@ function indoorBuildingName(key){
   return option ? option.textContent : key;
 }
 
+function clearCompletedJourneyState(){
+  [
+    'journeyStage','indoorContext','indoorStartContext',
+    'sharedIndoorTransfer','intermediateIndoorTransfer',
+    'originIndoorComplete','sharedNavigationResume',
+    'madrigaTransferEntrance','campusTransitionDirection',
+    'outdoorJourneyContext'
+  ].forEach(key=>sessionStorage.removeItem(key));
+}
+
+function returnToCampusMap(){
+  try{
+    clearCompletedJourneyState();
+  }catch(error){
+    console.warn('Could not clear the completed journey:',error);
+  }
+  window.location.replace('../index.html');
+}
+
 function setRouteFromArrival(){
   const destination=routeNodes.at(-1);
   if(!destination) return;
 
   // A finished indoor route is a useful starting point for the next journey,
-  // but the campus page owns planning between buildings.  Keep only a small,
+  // but the campus page owns planning between buildings. Keep only a small,
   // validated snapshot and let that page rebuild its normal route state.
   const buildingKey=BUILDING;
   const start={
@@ -4943,20 +4961,13 @@ function setRouteFromArrival(){
 
   try{
     sessionStorage.setItem('newRouteStartContext',JSON.stringify(start));
-    [
-      'journeyStage','indoorContext','indoorStartContext',
-      'sharedIndoorTransfer','intermediateIndoorTransfer',
-      'originIndoorComplete','sharedNavigationResume',
-      'madrigaTransferEntrance','campusTransitionDirection',
-      'outdoorJourneyContext'
-    ].forEach(key=>sessionStorage.removeItem(key));
+    clearCompletedJourneyState();
   }catch(error){
     console.warn('Could not save the next-route starting point:',error);
   }
 
   window.location.replace('../index.html?newRouteFromHere=1');
 }
-
 function showArrivalDialog(next){
   const dialog=$('arrivalDialog');
   if(!dialog || typeof dialog.showModal!=='function') return;
@@ -4967,20 +4978,17 @@ function showArrivalDialog(next){
     : '';
   const primary=$('arrivalPrimary');
   const secondary=$('arrivalSecondary');
-  const campusLink=$('arrivalCampusLink');
   const close=()=>{ if(dialog.open) dialog.close(); };
 
   dialog.dataset.kind=next ? next.kind : 'arrived';
-  campusLink.textContent=localizedInstruction('Back to campus map','العودة إلى خريطة الحرم','חזרה למפת הקמפוס','Вернуться к карте кампуса');
 
   if(!next){
     $('arrivalTitle').textContent=localizedInstruction('You have arrived!','لقد وصلت!','הגעת ליעד!','Вы прибыли!');
     $('arrivalText').textContent=place;
     primary.textContent=localizedInstruction('Done','تم','סיום','Готово');
     secondary.textContent=localizedInstruction('New route from here','مسار جديد من هنا','מסלול חדש מכאן','Новый маршрут отсюда');
-    primary.onclick=close;
+    primary.onclick=()=>{ close(); returnToCampusMap(); };
     secondary.onclick=()=>{ close(); setRouteFromArrival(); };
-    campusLink.hidden=false;
   }else{
     const target=next.kind==='outdoor'
       ? outdoorJourneyTargetName()
@@ -4997,7 +5005,6 @@ function showArrivalDialog(next){
     secondary.textContent=localizedInstruction('Stay here','ابقَ هنا','הישאר כאן','Остаться здесь');
     primary.onclick=()=>{ close(); next.run(); };
     secondary.onclick=close;
-    campusLink.hidden=true;
   }
 
   if(dialog.open) dialog.close();

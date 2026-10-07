@@ -362,7 +362,7 @@ test('New route from here returns to the campus planner with the arrived node', 
   });
 
   vm.runInContext(
-    between(navigation, 'function setRouteFromArrival()', 'function showArrivalDialog(next)'),
+    between(navigation, 'function clearCompletedJourneyState()', 'function showArrivalDialog(next)'),
     context
   );
   vm.runInContext('setRouteFromArrival()', context);
@@ -376,6 +376,32 @@ test('New route from here returns to the campus planner with the arrived node', 
   assert.equal(session.values.has('outdoorJourneyContext'), false);
 });
 
+test('Done returns to the campus map and clears completed journey state', () => {
+  const session = storage({
+    journeyStage: 'destination',
+    indoorContext: '{}',
+    outdoorJourneyContext: '{}',
+    sharedNavigationResume: '{}'
+  });
+  let replaced = null;
+  const context = vm.createContext({
+    sessionStorage: session.api,
+    window: {location: {replace(url) { replaced = url; }}},
+    console: {warn() {}}
+  });
+
+  vm.runInContext(
+    between(navigation, 'function clearCompletedJourneyState()', 'function setRouteFromArrival()'),
+    context
+  );
+  vm.runInContext('returnToCampusMap()', context);
+
+  assert.equal(replaced, '../index.html');
+  assert.equal(session.values.has('journeyStage'), false);
+  assert.equal(session.values.has('indoorContext'), false);
+  assert.equal(session.values.has('outdoorJourneyContext'), false);
+  assert.equal(session.values.has('sharedNavigationResume'), false);
+});
 test('campus planner restores a new route start from the arrived indoor node', async () => {
   const session = storage({
     newRouteStartContext: JSON.stringify({
