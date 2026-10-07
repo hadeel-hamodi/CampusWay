@@ -1,0 +1,27 @@
+flowchart TD
+    dm["devicemotion<br/>accelerationIncludingGravity"] --> sd
+    do["deviceorientation<br/>alpha / beta / gamma /<br/>webkitCompassHeading"] --> ht
+
+    subgraph sd["step-detector.js"]
+        g["Gravity low-pass<br/>τ = 500 ms"] --> f["Linear accel. smoothing<br/>τ = 45 ms"]
+        f --> pk["Peak > 0.8 → dip < −0.4<br/>→ recovery > −0.1"]
+        pk --> rj["Reject: cadence < 350 ms,<br/>phone handling ≥ 35°"]
+        rj --> cf["Confirm after 2 steps"]
+    end
+
+    subgraph ht["heading-tracker.js"]
+        cal["Calibrate: 300 ms window,<br/>spread ≤ 15°,<br/>offset = route bearing − heading"]
+        cls["Classify step direction<br/>±45° vs route candidates"]
+        cal --> cls
+    end
+
+    subgraph rp["route-progress.js"]
+        cand["Candidate bearings<br/>(segment, next segment<br/>within 0.75 m, reverse)"]
+        mv["Move cursor ±0.65 m<br/>stop at floor boundary"]
+    end
+
+    cf -->|"step time"| cls
+    cand --> cls
+    cls -->|"forward / backward"| mv
+    mv --> ui["Animate marker,<br/>update banner + voice"]
+    mv -->|"blocked: floor"| fc["Ask user to confirm<br/>stairs / elevator"]

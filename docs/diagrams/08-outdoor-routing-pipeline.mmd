@@ -1,0 +1,15 @@
+flowchart TD
+    osm["campus-osm.json<br/>OpenStreetMap extract<br/>947 nodes · 157 ways"] --> build["Build undirected graph<br/>haversine length ×<br/>path-type cost"]
+    build --> corr["Apply hand-mapped campus<br/>corrections: paths, crossings,<br/>bridge, stairs, elevators"]
+    corr --> restr{"Live restrictions<br/>(campus-status.json +<br/>user reports)"}
+    restr -->|"no-go polygons,<br/>elevator outages"| filt["Skip blocked edges"]
+    restr -->|none| snap
+    filt --> snap["Snap start/end to<br/>nearest graph node"]
+    snap --> prof{Profile}
+    prof -->|"General / Visual / Mental"| dij["Dijkstra<br/>shortest weighted path"]
+    prof -->|Mobility| dijm["Dijkstra without<br/>steps edges"]
+    prof -->|Spatial| turn["Dijkstra on edge states<br/>+6 m per turn ≥ 35°"]
+    dij & dijm & turn --> poly["Route polyline + distance"]
+    poly --> eta["ETA: 1.2 m/s<br/>(0.8 m/s Mobility)<br/>+ indoor legs"]
+    poly --> ins["route-instructions.js<br/>turns, stairs, landmarks"]
+    eta & ins --> card["Route card on map"]

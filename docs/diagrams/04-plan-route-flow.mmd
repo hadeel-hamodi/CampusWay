@@ -1,0 +1,21 @@
+flowchart TD
+    A([Open CampusWay]) --> B{Language chosen<br/>this session?}
+    B -- No --> C[Language screen:<br/>English / עברית / العربية]
+    C --> D
+    B -- Yes --> D[Campus map]
+    D --> E["Optional: set From<br/>(type, voice, GPS or room)<br/>default = Carmel Gate"]
+    E --> F["Set To: building, room,<br/>food, shop or service"]
+    F --> G{Accessibility profile}
+    G -- General --> H[Shortest weighted route]
+    G -- Mobility --> I[Exclude stairs and<br/>stair-only entrances]
+    G -- Spatial --> J[Prefer fewer turns]
+    G -- Visual --> K[Turn voice guidance on]
+    G -- Mental health --> L[Show suggested rest spaces]
+    H & I & J & K & L --> M[Compare every allowed exit ×<br/>entrance pair, pick the fastest]
+    M --> N{Route found?}
+    N -- No, Mobility --> O["Explain: no step-free<br/>route is mapped"]
+    N -- Yes --> P[Draw route, ETA,<br/>turn-by-turn directions]
+    P --> Q{Start or destination<br/>is an indoor room?}
+    Q -- Yes --> R["Show 'Start indoor route' /<br/>'Continue indoors' button"]
+    Q -- No --> S([Walk with directions,<br/>optionally read aloud])
+    R --> T([Indoor navigation page])

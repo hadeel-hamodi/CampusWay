@@ -4,10 +4,7 @@
    Pure presentation helpers for index.html. Routing, search and journey logic
    stay in the main page script; this file only adds:
      • toasts (non-blocking replacement for alert())
-     • the language menu in the top bar
-     • the collapsible accessibility-profile selector
      • the collapsible map key
-     • Saved / Buildings tabs
      • keyboard navigation + ARIA for the search suggestion lists
      • a short hint while Food / Shops are highlighted on the map
      • the "Indoor navigation" entry for people already inside a building
@@ -18,15 +15,6 @@
   'use strict';
 
   const $ = id => document.getElementById(id);
-
-  const LANGUAGES = {
-    en: {name: 'English', code: 'EN', dir: 'ltr'},
-    he: {name: 'עברית', code: 'HE', dir: 'rtl'},
-    ar: {name: 'العربية', code: 'AR', dir: 'rtl'}
-  };
-
-  const GLOBE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>';
-  const CHEVRON_ICON = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
   function readPref(key){
     try{ return localStorage.getItem(key); }catch(error){ return null; }
@@ -62,126 +50,6 @@
     if(timeout) setTimeout(() => item.remove(), timeout);
   }
 
-  // ── Language menu ─────────────────────────────────────────────────────
-  function setupLanguageMenu(){
-    const button = $('langSwitchBtn');
-    const menu = $('langMenu');
-    if(!button || !menu) return;
-
-    const items = () => [...menu.querySelectorAll('.menu-item')];
-
-    function open(){
-      menu.hidden = false;
-      button.setAttribute('aria-expanded', 'true');
-      const current = items().find(item => item.getAttribute('aria-checked') === 'true') || items()[0];
-      current && current.focus();
-    }
-    function close(returnFocus){
-      if(menu.hidden) return;
-      menu.hidden = true;
-      button.setAttribute('aria-expanded', 'false');
-      if(returnFocus) button.focus();
-    }
-
-    button.addEventListener('click', event => {
-      event.stopPropagation();
-      menu.hidden ? open() : close(false);
-    });
-
-    menu.addEventListener('click', event => {
-      const item = event.target.closest('.menu-item');
-      if(!item) return;
-      close(true);
-      if(item.dataset.lang !== lang) pickLang(item.dataset.lang, item.dataset.dir);
-    });
-
-    menu.addEventListener('keydown', event => {
-      const list = items();
-      const index = list.indexOf(document.activeElement);
-      if(event.key === 'ArrowDown'){ event.preventDefault(); list[(index + 1) % list.length].focus(); }
-      if(event.key === 'ArrowUp'){ event.preventDefault(); list[(index - 1 + list.length) % list.length].focus(); }
-      if(event.key === 'Escape'){ event.preventDefault(); close(true); }
-      if(event.key === 'Tab') close(false);
-    });
-
-    document.addEventListener('click', event => {
-      if(!event.target.closest('.lang-menu')) close(false);
-    });
-  }
-
-  function refreshLanguageButton(){
-    const button = $('langSwitchBtn');
-    const current = LANGUAGES[lang] || LANGUAGES.en;
-    if(button){
-      button.innerHTML = `${GLOBE_ICON}<span class="btn-label">${current.name}</span><span class="lang-code" aria-hidden="true">${current.code}</span>${CHEVRON_ICON}`;
-      button.setAttribute('aria-label', `${t.languageLabel || 'Language'}: ${current.name}`);
-    }
-    document.querySelectorAll('#langMenu .menu-item').forEach(item => {
-      item.setAttribute('aria-checked', String(item.dataset.lang === lang));
-    });
-  }
-
-  // ── Accessibility profile selector ────────────────────────────────────
-  function setProfileListOpen(openList, {focus = false} = {}){
-    const toggle = $('profileToggle');
-    const list = $('profileList');
-    if(!toggle || !list) return;
-    list.hidden = !openList;
-    toggle.setAttribute('aria-expanded', String(openList));
-    if(openList && focus){
-      const active = list.querySelector('.profile-btn.active') || list.querySelector('.profile-btn');
-      active && active.focus();
-    }
-  }
-
-  function renderProfileSummary(){
-    const toggle = $('profileToggle');
-    if(!toggle || typeof t === 'undefined') return;
-
-    const index = Math.max(0, t.profiles.findIndex(profile => profile.id === currentProfile));
-    const profile = t.profiles[index];
-    const icon = ICONS[ICON_KEYS[index]] || '';
-
-    toggle.innerHTML = `
-      <span class="profile-icon" aria-hidden="true">${icon}</span>
-      <span class="profile-summary-text">
-        <strong>${profile.label}</strong>
-        <small>${profile.sub}</small>
-      </span>
-      <span class="profile-summary-action">${t.changeProfile || 'Change'}${CHEVRON_ICON}</span>`;
-
-    document.querySelectorAll('#profileList .profile-btn').forEach(button => {
-      button.type = 'button';
-      button.setAttribute('aria-pressed', String(button.dataset.id === currentProfile));
-    });
-  }
-
-  function setupProfileSelector(){
-    const toggle = $('profileToggle');
-    const list = $('profileList');
-    if(!toggle || !list) return;
-
-    toggle.addEventListener('click', () => {
-      setProfileListOpen(list.hidden, {focus: list.hidden});
-    });
-
-    // Runs after each profile button's own onclick (which re-routes).
-    list.addEventListener('click', event => {
-      if(!event.target.closest('.profile-btn')) return;
-      renderProfileSummary();
-      setProfileListOpen(false);
-      toggle.focus();
-    });
-
-    list.addEventListener('keydown', event => {
-      const buttons = [...list.querySelectorAll('.profile-btn')];
-      const index = buttons.indexOf(document.activeElement);
-      if(event.key === 'Escape'){ event.preventDefault(); setProfileListOpen(false); toggle.focus(); }
-      if(event.key === 'ArrowDown' && index >= 0){ event.preventDefault(); buttons[(index + 1) % buttons.length].focus(); }
-      if(event.key === 'ArrowUp' && index >= 0){ event.preventDefault(); buttons[(index - 1 + buttons.length) % buttons.length].focus(); }
-    });
-  }
-
   // ── Map key ───────────────────────────────────────────────────────────
   function setupLegend(){
     const toggle = $('legendToggle');
@@ -202,42 +70,6 @@
       apply(openLegend);
       writePref('campusway.legendOpen', String(openLegend));
     });
-  }
-
-  // ── Saved / Buildings tabs ────────────────────────────────────────────
-  function selectPlacesTab(which){
-    const savedTab = $('tabFavourites');
-    const buildingsTab = $('lbl-buildings');
-    const savedPanel = $('favouriteList');
-    const buildingsPanel = $('buildingList');
-    if(!savedTab || !buildingsTab || !savedPanel || !buildingsPanel) return;
-
-    const showSaved = which === 'saved';
-    savedTab.setAttribute('aria-selected', String(showSaved));
-    buildingsTab.setAttribute('aria-selected', String(!showSaved));
-    savedTab.tabIndex = showSaved ? 0 : -1;
-    buildingsTab.tabIndex = showSaved ? -1 : 0;
-    savedPanel.style.display = showSaved ? 'flex' : 'none';
-    buildingsPanel.style.display = showSaved ? 'none' : 'flex';
-  }
-
-  function setupPlacesTabs(){
-    const savedTab = $('tabFavourites');
-    const buildingsTab = $('lbl-buildings');
-    if(!savedTab || !buildingsTab) return;
-
-    savedTab.addEventListener('click', () => selectPlacesTab('saved'));
-    buildingsTab.addEventListener('click', () => selectPlacesTab('buildings'));
-    [savedTab, buildingsTab].forEach(tab => tab.addEventListener('keydown', event => {
-      if(event.key === 'ArrowRight' || event.key === 'ArrowLeft'){
-        event.preventDefault();
-        const next = tab === savedTab ? buildingsTab : savedTab;
-        next.click();
-        next.focus();
-      }
-    }));
-
-    selectPlacesTab('saved');
   }
 
   // ── Search suggestions: ARIA + keyboard ───────────────────────────────
@@ -393,9 +225,6 @@
 
   // ── Language-dependent refresh (called from pickLang) ─────────────────
   function refresh(){
-    refreshLanguageButton();
-    renderProfileSummary();
-
     if(typeof buildingMarkers !== 'undefined'){
       Object.values(buildingMarkers).forEach(marker => {
         if(marker.getTooltip && marker.getTooltip() && marker.buildingData){
@@ -412,18 +241,14 @@
   }
 
   function init(){
-    setupLanguageMenu();
-    setupProfileSelector();
     setupLegend();
-    setupPlacesTabs();
     setupSuggestionList('startInput', 'startSuggestions');
     setupSuggestionList('searchInput', 'searchSuggestions');
     setupServiceStatus();
     setupIndoorEntry();
-    renderProfileSummary();
   }
 
-  window.CampusUI = {toast, refresh, selectPlacesTab, setProfileListOpen};
+  window.CampusUI = {toast, refresh};
 
   // Loaded at the end of <body>, so the elements already exist.
   init();
