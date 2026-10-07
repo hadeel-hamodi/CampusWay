@@ -21,6 +21,18 @@ const restoreSource = between(
   'function selectOnboardingProfile('
 );
 
+test('the wellbeing profile keeps its saved id while using non-clinical labels', () => {
+  for(const label of [
+    'Sensory & Wellbeing Support',
+    'תמיכה חושית ורווחה',
+    'الدعم الحسي والراحة النفسية',
+    'Сенсорная поддержка и благополучие'
+  ]){
+    assert.ok(index.includes(label), label);
+  }
+  assert.match(index, /\{id:'mental',\s+label:'Sensory & Wellbeing Support'/);
+});
+
 test('saved language and profile skip setup only after onboarding is complete', () => {
   const stored = new Map([
     ['campuswayLanguage', 'ar'],
