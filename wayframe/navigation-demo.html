@@ -300,6 +300,11 @@ const headingTracker=new CampusHeadingTracker();
 let lastTravelDirection=1;
 let sensorFloorBoundary=false;
 let sensorElevatorRide=null;
+// Phone Sensors: true while the estimated position is at the end of the route
+// and the user can confirm arrival (sensor positions are only estimates).
+let sensorArrivalReady=false;
+// Walking time for the current route, shown in the navigation banner.
+let routeEtaText='';
 
 let pendingSharedElevatorRide = null;
 
@@ -700,6 +705,15 @@ if(journeyStage === 'same-building'){
         node => node.type === 'shelter'
       );
 
+    }else if(
+      Array.isArray(destinationContext.destinationNodeIds) &&
+      destinationContext.destinationNodeIds.length
+    ){
+      // Food places and shops list the node(s) of the place itself.
+      destinations = destinationContext.destinationNodeIds
+        .map(id => nodeById(id))
+        .filter(Boolean);
+
     }else if(destinationContext.destinationLabel){
           const wantedLabel =
             String(destinationContext.destinationLabel)
@@ -926,6 +940,15 @@ if(context.destinationType === 'rest-space'){
         matchingDestinations = allNodes().filter(
           node => node.type === 'shelter'
         );
+
+      }else if(
+        Array.isArray(context.destinationNodeIds) &&
+        context.destinationNodeIds.length
+      ){
+        // Food places and shops list the node(s) of the place itself.
+        matchingDestinations = context.destinationNodeIds
+          .map(id => nodeById(id))
+          .filter(Boolean);
 
       }else if(context.destinationLabel){
         matchingDestinations = allNodes().filter(
@@ -2173,11 +2196,12 @@ const walkingMinutes = Math.max(
   Math.ceil(totalSeconds / 60)
 );
 
-$('eta').textContent = localizedInstruction(
+routeEtaText = localizedInstruction(
   `${walkingMinutes} min`,
   `${walkingMinutes} د`,
   `${walkingMinutes} דק׳`
 );
+$('eta').textContent = routeEtaText;
 }
 
 // ── Detailed indoor steps ──
@@ -2314,6 +2338,7 @@ function clearRouteState(title=it('noRoute'), help=it('noRouteHelp')){
   $('instruction').textContent=title;
   $('subInstruction').textContent=help;
   $('livePos').textContent=it('notStarted');
+  routeEtaText='';
   $('eta').textContent='--';
   $('status').textContent=title;
   updateDirectionControls();
@@ -2404,7 +2429,8 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
   $('status').textContent=localizedInstruction('Route ready.','المسار جاهز.','המסלול מוכן.');
     describeRoute(routeMeters, verticalSeconds);
 
-  $('eta').textContent = '--';
+  // Show this route's walking time (and clear stale banner text from an earlier route).
+  $('eta').textContent = routeEtaText || '--';
   updateTurnInstruction();
 
   floorButtons();
@@ -3216,6 +3242,56 @@ function showFloorBoundary(direction=lastTravelDirection){
   $('sensorConfirmBtn').hidden=false;
 }
 
+function sensorArrivalIsExit(){
+  const stage = sessionStorage.getItem('journeyStage');
+  return stage === 'origin' || stage === 'intermediate';
+}
+
+// Phone Sensors mode only estimates the position, so arrival is confirmed by
+// the user. Confirming runs completeNavigation(), which shows the arrival
+// dialog or hands the journey on to the outdoor route or the next building.
+function showSensorArrivalConfirmation(){
+  if(
+    navMode !== 'sensor' ||
+    !navigationActive ||
+    sensorElevatorRide ||
+    pendingSharedElevatorRide ||
+    sharedElevatorDeparture()
+  ){
+    return;
+  }
+
+  sensorArrivalReady = true;
+  const exit = sensorArrivalIsExit();
+
+  $('instruction').textContent = exit
+    ? localizedInstruction('Estimated exit','مخرج تقديري','יציאה משוערת')
+    : localizedInstruction('Estimated arrival','وصول تقديري','הגעה משוערת');
+  $('subInstruction').textContent = exit
+    ? localizedInstruction(
+        'Confirm when you reach the exit.',
+        'أكّد عندما تصل إلى المخرج.',
+        'אשר כשתגיע ליציאה.'
+      )
+    : localizedInstruction(
+        'Check the room sign, then confirm your arrival.',
+        'تحقق من رقم الغرفة، ثم أكّد وصولك.',
+        'בדוק את שלט החדר, ואז אשר את ההגעה.'
+      );
+  $('sensorConfirmBtn').textContent = exit
+    ? localizedInstruction('✓ I reached the exit','✓ وصلت إلى المخرج','✓ הגעתי ליציאה')
+    : localizedInstruction('✓ I have arrived','✓ لقد وصلت','✓ הגעתי');
+  $('sensorConfirmBtn').hidden = false;
+}
+
+function hideSensorArrivalConfirmation(){
+  if(!sensorArrivalReady) return;
+  sensorArrivalReady = false;
+  if(!sensorElevatorRide && !pendingSharedElevatorRide){
+    $('sensorConfirmBtn').hidden = true;
+  }
+}
+
 function advanceAlongRoute(distanceMeters){
   if(!navigationActive || routeNodes.length<2) return;
   if(navMode === 'auto') return advanceAutoAlongRoute(distanceMeters);
@@ -3237,9 +3313,11 @@ function advanceAlongRoute(distanceMeters){
   updateProgressUI();
   drawBaseMap();
   if(progressIndex === routeNodes.length-1){
-    // Keep sensor tracking active so a later turnaround can retreat from the end.
-    $('instruction').textContent=localizedInstruction('Estimated arrival','وصول تقديري','הגעה משוערת');
-    $('subInstruction').textContent=localizedInstruction('Check the room sign to confirm.','تحقق من رقم الغرفة لتأكيد الوصول.','בדוק את שלט החדר לאישור.');
+    // Keep sensor tracking active so a later turnaround can retreat from the
+    // end, and let the user confirm arrival.
+    showSensorArrivalConfirmation();
+  }else{
+    hideSensorArrivalConfirmation();
   }
 }
 
@@ -3938,7 +4016,7 @@ function updateDirectionControls(){
     if(showPendingSharedElevatorRide()) return;
   $('directionCard').hidden=navMode !== 'sensor' || navigationActive;
   $('calibrateBtn').disabled=navMode !== 'sensor' || !sensorsEnabled || routeNodes.length<2 || navigationActive;
-  if(navMode!=='sensor' || !navigationActive || !sensorElevatorRide){
+  if(navMode!=='sensor' || !navigationActive || (!sensorElevatorRide && !sensorArrivalReady)){
     $('sensorConfirmBtn').hidden=true;
   }
   const wheelchairMode=navMode==='wheelchair';
@@ -4241,6 +4319,7 @@ function stopNavigationMotion(resetHeading = true){
   motionUnavailable=false;
   sensorFloorBoundary=false;
   sensorElevatorRide=null;
+  sensorArrivalReady=false;
   $('sensorConfirmBtn').hidden=true;
   sensorHeadingPaused=false;
   if(resetHeading){
@@ -4405,7 +4484,7 @@ function setNavigationMode(mode){
     return;
   }
   if(routeNodes.length){
-    $('eta').textContent = '--';
+    $('eta').textContent = routeEtaText || '--';
     updateTurnInstruction();
     updateProgressUI();
   }
@@ -4429,6 +4508,17 @@ $('sensorConfirmBtn').onclick=async()=>{
     navigationActive &&
     beginSharedElevatorRide()
   ){
+    return;
+  }
+  if(
+    navMode === 'sensor' &&
+    navigationActive &&
+    sensorArrivalReady &&
+    !sensorElevatorRide &&
+    progressIndex === routeNodes.length-1
+  ){
+    sensorArrivalReady=false;
+    completeNavigation();
     return;
   }
   const ride=sensorElevatorRide;

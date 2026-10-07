@@ -260,6 +260,29 @@ test('failed accessible route clears an older stair route and disables Start', (
   assert.match(h.element('routeCard').innerHTML, /No step-free route found/);
 });
 
+test('indoor route shows its walking time in the navigation banner', () => {
+  const graph = {floors:{
+    floor1:{nodes:[
+      {id:'a',label:'Entrance',type:'entrance',floor:'floor1',x:0,y:0},
+      {id:'e1',label:'Elevator',type:'elevator',connectorId:'E',floor:'floor1',x:.5,y:0}
+    ],connections:[{from:'a',to:'e1'}]},
+    floor2:{nodes:[
+      {id:'e2',label:'Elevator',type:'elevator',connectorId:'E',floor:'floor2',x:.5,y:0},
+      {id:'b',label:'Room',type:'room',floor:'floor2',x:.5,y:.5}
+    ],connections:[{from:'e2',to:'b'}]}
+  }};
+  const h = indoorHarness(graph, true);
+  h.run('this').URLSearchParams = URLSearchParams;
+  h.run('this').window = {location:{search:'?building=main'}};
+  h.run('function updateTurnInstruction(){}');
+  h.run('route()');
+  assert.equal(h.run('routeNodes.length') > 0, true);
+  // 66.3 m + 50.6 m walking at 1.2 m/s plus a one-floor elevator ride (30 s + 10 s) ≈ 2.3 min.
+  assert.equal(h.element('eta').textContent, '3 min');
+  h.run('clearRouteState()');
+  assert.equal(h.element('eta').textContent, '--');
+});
+
 test('accessible indoor route uses elevators and never stair nodes', () => {
   const graph = {floors:{
     floor1:{nodes:[

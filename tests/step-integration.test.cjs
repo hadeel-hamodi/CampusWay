@@ -231,6 +231,41 @@ test('start/end bounds clamp steps and estimated arrival still permits turnaroun
   h.stable(3600,4000,180);h.injectSteps(4000,[3800,3950]);h.drain();near(travelled(h),0);
 });
 
+test('Phone Sensors arrival is confirmed by the user and then completes navigation',async()=>{
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-1.3/101.2}]);await startSensor(h);
+  h.stable(450,1600,0);h.injectSteps(1600,[1200,1400,1550]);h.drain();near(travelled(h),1.3);
+  assert.equal(h.run('navigationActive'),true);
+  assert.match(h.element('instruction').textContent,/Estimated arrival/);
+  assert.equal(h.element('sensorConfirmBtn').hidden,false);
+  assert.match(h.element('sensorConfirmBtn').textContent,/I have arrived/);
+  // Walking back from the estimated end withdraws the confirmation.
+  h.stable(2800,3200,180);h.injectSteps(3200,[3150]);h.drain();near(travelled(h),0.65);
+  assert.equal(h.element('sensorConfirmBtn').hidden,true);
+  assert.equal(h.run('sensorArrivalReady'),false);
+  // Reaching the end again offers it again; confirming finishes the route.
+  h.stable(3600,4400,0);h.injectSteps(4400,[4300]);h.drain();near(travelled(h),1.3);
+  assert.equal(h.element('sensorConfirmBtn').hidden,false);
+  await h.run("$('sensorConfirmBtn').onclick()");
+  assert.equal(h.run('navigationActive'),false);
+  assert.equal(h.element('sensorConfirmBtn').hidden,true);
+  assert.match(h.element('instruction').textContent,/You have arrived/);
+});
+
+test('Phone Sensors exit confirmation on the origin leg hands the journey back outdoors',async()=>{
+  const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'Exit',floor:'floor500',x:0,y:1-1.3/101.2}]);
+  h.run('this').URLSearchParams=URLSearchParams;
+  h.run("sessionStorage.setItem('journeyStage','origin');window.location={search:'?building=main',replace(url){window.replacedWith=url;}};");
+  await startSensor(h);
+  h.stable(450,1600,0);h.injectSteps(1600,[1200,1400,1550]);h.drain();near(travelled(h),1.3);
+  assert.match(h.element('instruction').textContent,/Estimated exit/);
+  assert.match(h.element('sensorConfirmBtn').textContent,/I reached the exit/);
+  await h.run("$('sensorConfirmBtn').onclick()");
+  assert.equal(h.run("sessionStorage.getItem('originIndoorComplete')"),'true');
+  assert.equal(h.run("sessionStorage.getItem('journeyStage')"),'destination');
+  await h.advanceTime(500);
+  assert.equal(h.run('window.replacedWith'),'../index.html?resumeJourney=1');
+});
+
 test('endpoint pause and automatic recalibration facing start allows backtracking',async()=>{
   const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-0.65/101.2}]);await startSensor(h);
   h.stable(450,850,0);h.injectSteps(850,[800]);h.drain();near(travelled(h),0.65);
