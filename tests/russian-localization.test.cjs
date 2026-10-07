@@ -167,7 +167,7 @@ test('Russian search supports buildings, services, rooms and indoor place types'
   ]) {
     assert.ok(index.toLowerCase().includes(phrase), `missing Russian search phrase: ${phrase}`);
   }
-  assert.match(index, /room\|غرفة\|חדר\|комната\|аудитория\|кабинет/);
+  assert.match(index, /'room', 'غرفه', 'חדר', 'комната', 'аудитория', 'кабинет'/);
   assert.match(navigation, /room\|غرفة\|חדר\|комната\|аудитория\|кабинет/);
 });
 
@@ -247,5 +247,5 @@ test('indoor Russian dictionaries match English and every dynamic instruction ha
 test('four language choices fit the UI and the new release refreshes cached files', () => {
   assert.match(campusMapCss, /\.lang-options\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(campusMapCss, /\.settings-language-options\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(serviceWorker, /campusway-v48-russian-localization/);
+  assert.match(serviceWorker, /campusway-v49-multiform-search/);
 });

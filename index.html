@@ -6985,12 +6985,17 @@ function useGPS_do(){
 const startSuggestions = document.getElementById('startSuggestions');
 
 function normalizeLocationQuery(value){
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^(?:room|غرفة|חדר|комната|аудитория|кабинет)\s+/i, '')
-    .trim();
+  return foldSearchText(value)
+    .split(' ')
+    .filter(word => !ROOM_SEARCH_WORDS.has(word))
+    .join(' ');
 }
+
+// Room words are optional wherever they appear: "Room 5013 Rabin",
+// "رابين غرفة ٥٠١٣", and "5013 רבין" all describe the same search.
+const ROOM_SEARCH_WORDS = new Set([
+  'room', 'غرفه', 'חדר', 'комната', 'аудитория', 'кабинет'
+]);
 
 // ── Search helpers: spelling variants, synonyms and small typos ──
 // Text is folded so that "Café", "cafe", "קפה" spelled with or without
@@ -7007,9 +7012,17 @@ function foldSearchText(value){
     .replace(/ף/g, 'פ').replace(/ץ/g, 'צ')
     .replace(/יי/g, 'י').replace(/וו/g, 'ו')
     .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+    .replace(/[ؤ]/g, 'و').replace(/[ئ]/g, 'ي').replace(/ـ/g, '')
+    .replace(/[ک]/g, 'ك').replace(/[ی]/g, 'ي').replace(/ё/g, 'е')
+    .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
     .replace(/[-_.,/()]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function searchQueryWords(query){
+  return foldSearchText(query).split(' ').filter(Boolean);
 }
 
 function searchEditDistance(a, b, limit){
@@ -7056,6 +7069,18 @@ function searchTextMatches(candidate, query){
   });
 }
 
+// A multi-part query can match different fields of the same result. For
+// example, "5013 Rabin" matches the room number and the building name, in
+// either order and in any supported language.
+function searchNamesMatch(names, query){
+  const words = searchQueryWords(query);
+  if(!words.length) return false;
+
+  return words.every(word =>
+    names.some(name => searchTextMatches(name, word))
+  );
+}
+
 // Other names people use for campus buildings (English, Hebrew, Arabic, Russian).
 const BUILDING_SEARCH_ALIASES = {
   'Main Building':['main','ראשי','הבניין הראשי','المبنى الرئيسي','главное здание','главный корпус'],
@@ -7080,7 +7105,7 @@ function buildingSearchNames(building){
 }
 
 function buildingMatchesSearch(building, query){
-  return buildingSearchNames(building).some(name => searchTextMatches(name, query));
+  return searchNamesMatch(buildingSearchNames(building), query);
 }
 
 function buildingIsExactSearch(building, query){
@@ -7236,12 +7261,17 @@ function localizedPlaceName(place){
 }
 
 function placeMatchesSearch(place, query){
-  return [
+  return searchNamesMatch([
     place.name,
     place.name_en,
     place.name_he,
-    localizedPlaceName(place)
-  ].some(name => searchTextMatches(name, query));
+    localizedPlaceName(place),
+    ...(typeof PLACE_NAMES_RU !== 'undefined' && PLACE_NAMES_RU[place.name]
+      ? [PLACE_NAMES_RU[place.name]] : []),
+    ...(typeof PLACE_NAMES_HE !== 'undefined' && PLACE_NAMES_HE[place.name]
+      ? [PLACE_NAMES_HE[place.name]] : []),
+    ...(SEARCH_SERVICE_WORDS[place.type] || [])
+  ].filter(Boolean), query);
 }
 
 // Places whose name matches; otherwise places of the kind the words
@@ -7256,17 +7286,28 @@ function searchPlaces(query){
 
 const SEARCH_NODE_TYPES = ['room', 'gym', 'library', 'landmark', 'museum', 'parking'];
 
-function indoorNodeMatchesSearch(node, query, kindTypes){
+function indoorNodeMatchesSearch(node, query, kindTypes, building = null){
   const nodeLabel = String(node.label || '').trim();
   if(/^node\s*\d+$/i.test(nodeLabel)) return false;
-  if(kindTypes.includes(node.type)) return true;
   if(!SEARCH_NODE_TYPES.includes(node.type)) return false;
-  if(/\d/.test(query)){
-    return nodeLabel.toLowerCase().includes(query) ||
-      indoorSearchName(node).toLowerCase().includes(query);
-  }
-  return searchTextMatches(nodeLabel, query) ||
-    searchTextMatches(indoorSearchName(node), query);
+
+  const nodeNames = [
+    nodeLabel,
+    indoorSearchName(node),
+    ...(SEARCH_NODE_TYPE_WORDS[node.type] || []),
+    ...(SEARCH_SERVICE_WORDS[node.type] || [])
+  ].filter(Boolean);
+  const buildingNames = building ? buildingSearchNames(building) : [];
+  const words = searchQueryWords(query);
+  let matchedNode = false;
+
+  return words.length > 0 && words.every(word => {
+    if(nodeNames.some(name => searchTextMatches(name, word))){
+      matchedNode = true;
+      return true;
+    }
+    return buildingNames.some(name => searchTextMatches(name, word));
+  }) && matchedNode;
 }
 
 function getStartMatches(filter){
@@ -7320,9 +7361,12 @@ function getStartMatches(filter){
       }
 
       for(const [floorKey, floor] of Object.entries(item.graph.floors)){
+        const building = CAMPUS_DATA.buildings.find(
+          candidate => candidate.name === item.buildingName
+        );
         for(const node of (floor.nodes || [])){
           if(
-            indoorNodeMatchesSearch(node, query, kindTypes) &&
+            indoorNodeMatchesSearch(node, query, kindTypes, building) &&
             connectedNodeIds.has(node.id)
           ){
             roomMatches.push({
@@ -7812,10 +7856,13 @@ function getDestinationMatches(filter){
   if(query){
     for(const item of searchableGraphs){
       if(!item.graph) continue;
+      const building = CAMPUS_DATA.buildings.find(
+        candidate => candidate.name === item.buildingName
+      );
       for(const [floorKey, floor] of Object.entries(item.graph.floors)){
         for(const node of (floor.nodes || [])){
           const label = foldSearchText(node.label);
-          if(!indoorNodeMatchesSearch(node, query, kindTypes)) continue;
+          if(!indoorNodeMatchesSearch(node, query, kindTypes, building)) continue;
 
           // Multiple doors to the same destination remain one result.
           // Equal room numbers in different buildings remain separate choices.

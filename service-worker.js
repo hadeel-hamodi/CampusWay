@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v48-russian-localization';
+const CACHE_NAME = 'campusway-v49-multiform-search';
 
 const APP_FILES = [
 './',
