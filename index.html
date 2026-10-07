@@ -1961,7 +1961,10 @@ function routeToFoodPlace(food){
       entranceId: null,
       startNodeId: null,
       destinationLabel: food.name,
-      destinationNodeIds: food.indoor.nodeIds
+      destinationDisplayLabel: localizedPlaceName(food),
+      destinationNodeIds: food.indoor.nodeIds,
+      destinationType: 'food',
+      buildingKey: food.indoor.buildingKey
     })
   );
 
@@ -1988,10 +1991,12 @@ function routeToFoodPlace(food){
 
   if(!building) return;
 
+  // Keep the indoor destination so "Continue indoors" leads to the place itself.
   routeTo(
     building.name,
     building.lat,
-    building.lng
+    building.lng,
+    {keepIndoorContext:true}
   );
 }
 
@@ -2044,7 +2049,10 @@ function routeToShopPlace(shop){
       entranceId: null,
       startNodeId: null,
       destinationLabel: shop.name,
-      destinationNodeIds: shop.indoor.nodeIds
+      destinationDisplayLabel: localizedPlaceName(shop),
+      destinationNodeIds: shop.indoor.nodeIds,
+      destinationType: 'shop',
+      buildingKey: shop.indoor.buildingKey
     })
   );
 
@@ -2071,10 +2079,12 @@ function routeToShopPlace(shop){
 
   if(!building) return;
 
+  // Keep the indoor destination so "Continue indoors" leads to the place itself.
   routeTo(
     building.name,
     building.lat,
-    building.lng
+    building.lng,
+    {keepIndoorContext:true}
   );
 }
 
@@ -3264,7 +3274,14 @@ if(type === 'shop'){
       JSON.stringify({
         entranceId: null,
         startNodeId: null,
-        destinationLabel: 'Restroom'
+        destinationLabel: 'Restroom',
+        destinationDisplayLabel: {
+          en: 'Nearest restroom',
+          he: 'השירותים הקרובים ביותר',
+          ar: 'أقرب مرحاض'
+        }[lang] || 'Nearest restroom',
+        destinationType: 'restroom',
+        buildingKey: nearest.buildingKey
       })
     );
 
@@ -3273,34 +3290,16 @@ if(type === 'shop'){
       nearest.buildingKey
     );
 
-routeTo(
-  nearest.buildingName,
-  nearest.lat,
-  nearest.lng
-);
+    // Keep the indoor destination so "Continue indoors" leads to the restroom.
+    // routeTo() titles the route from destinationDisplayLabel.
+    routeTo(
+      nearest.buildingName,
+      nearest.lat,
+      nearest.lng,
+      {keepIndoorContext:true}
+    );
 
-setTimeout(() => {
-  const title = document.getElementById('routeTitle');
-  if(title){
-    const startLabel =
-      customStart && customStart.label === '📍 GPS'
-        ? t.currentLocation
-        : getStart().label;
-
-    title.textContent =
-      `${t.routeFrom}${lang === 'he' ? '' : ' '}${localizedBuildingNameByEnglishName(startLabel)} ${
-  lang === 'en' ? '→' : '←'
-} ${
-  {
-    en: 'Nearest restroom',
-    he: 'השירותים הקרובים ביותר',
-    ar: 'أقرب مرحاض'
-  }[lang] || 'Nearest restroom'
-}`;
-  }
-}, 100);
-
-return;
+    return;
   }
 
   if(type === 'shelter'){
@@ -3309,7 +3308,10 @@ return;
       JSON.stringify({
         entranceId: null,
         startNodeId: null,
-        destinationLabel: 'Shelter'
+        destinationLabel: 'Shelter',
+        destinationDisplayLabel: t.nearestShelter,
+        destinationType: 'shelter',
+        buildingKey: nearest.buildingKey
       })
     );
 
@@ -3318,27 +3320,14 @@ return;
       nearest.buildingKey
     );
 
+    // Keep the indoor destination so "Continue indoors" leads to the shelter.
+    // routeTo() titles the route from destinationDisplayLabel.
     routeTo(
       nearest.buildingName,
       nearest.lat,
-      nearest.lng
+      nearest.lng,
+      {keepIndoorContext:true}
     );
-
-    setTimeout(() => {
-      const title = document.getElementById('routeTitle');
-
-      if(title){
-        const startLabel =
-          customStart && customStart.label === '📍 GPS'
-            ? t.currentLocation
-            : getStart().label;
-
-        title.textContent =
-          `${t.routeFrom}${lang === 'he' ? '' : ' '}${localizedBuildingNameByEnglishName(startLabel)} ${
-            lang === 'en' ? '→' : '←'
-          } ${t.nearestShelter}`;
-      }
-    }, 100);
 
     return;
   }
