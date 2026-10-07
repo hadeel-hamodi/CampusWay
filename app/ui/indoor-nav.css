@@ -472,6 +472,7 @@ select:disabled{background-color:var(--surface-2);color:#94A3B8;cursor:not-allow
   border:1px solid var(--line);
   box-shadow:var(--shadow-lg);
 }
+.navBanner[hidden]{display:none !important;}
 .turnIcon{
   width:46px;height:46px;
   display:grid;place-items:center;

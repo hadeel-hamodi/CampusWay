@@ -11,6 +11,10 @@ const navigation = fs.readFileSync(
   path.join(root, 'wayframe', 'navigation-demo.html'),
   'utf8'
 ).replace(/\r\n/g, '\n');
+const indoorCss = fs.readFileSync(
+  path.join(root, 'app', 'ui', 'indoor-nav.css'),
+  'utf8'
+).replace(/\r\n/g, '\n');
 
 function between(source, start, end) {
   const a = source.indexOf(start);
@@ -251,7 +255,10 @@ test('outdoor directions wait until an origin indoor leg has reached the exit', 
 
 test('indoor screen keeps the route guide in the sidebar instead of duplicating it on the map', () => {
   assert.match(navigation, /class="navBanner" aria-hidden="true" hidden/);
+  assert.match(indoorCss, /\.navBanner\[hidden\]\{display:none !important;\}/);
   assert.match(navigation, /function syncIndoorStepListPosition\(\)/);
+  assert.doesNotMatch(navigation, /indoorShareBtn/);
+  assert.doesNotMatch(navigation, /shareIndoorDestination/);
 });
 
 test('finishing the origin indoor leg automatically opens the saved outdoor journey', () => {

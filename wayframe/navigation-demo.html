@@ -142,9 +142,6 @@
           <button id="voiceGuideBtn" class="toolBtn" type="button" aria-pressed="false">
             <span aria-hidden="true">🔊</span> <span id="lbl-voice-guide">Voice guidance</span>
           </button>
-          <button id="indoorShareBtn" class="toolBtn" type="button" disabled>
-            <span aria-hidden="true">↗</span> <span id="lbl-indoor-share">Share</span>
-          </button>
           <button id="indoorReportBtn" class="toolBtn" type="button">
             <span aria-hidden="true">⚠</span> <span id="lbl-indoor-report">Report a problem</span>
           </button>
@@ -224,7 +221,6 @@
 </dialog>
 
 <script src="../app/ui/qr-code.js"></script>
-<script src="../app/ui/share.js"></script>
 <script src="../app/ui/campus-status.js"></script>
 <script src="step-detector.js"></script>
 <script src="heading-tracker.js"></script>
@@ -5303,27 +5299,6 @@ function openIndoorReport(){
   });
 }
 
-// ── Share the destination (opens the full campus journey for others) ──
-function shareIndoorDestination(){
-  const raw=$('to').value;
-  if(!raw || typeof CampusShare==='undefined'){
-    indoorToast(it('chooseDestinationFirst'));
-    return;
-  }
-  const nodeId=resolveSelection(raw);
-  const label=selectionLabel(raw);
-  const node=nodeById(nodeId);
-  const placeName=node?.type==='room'
-    ? localizedInstruction(`Room ${String(node.label).trim()}`,`غرفة ${String(node.label).trim()}`,`חדר ${String(node.label).trim()}`,`Комната ${String(node.label).trim()}`)
-    : label;
-  const title=`${placeName} — ${indoorBuildingDisplayName()}`;
-  const url=new URL('../index.html',window.location.href);
-  url.search='';
-  url.hash='';
-  url.searchParams.set('to',`room:${BUILDING}:${nodeId}`);
-  CampusShare.open({lang:indoorLang,title,url:url.toString(),text:title,onToast:indoorToast});
-}
-
 // Opening a direct indoor link: ?building=main&to=<node>&from=<node>
 let sharedIndoorLinkApplied=false;
 function applySharedIndoorLink(){
@@ -5377,10 +5352,8 @@ function setupIndoorExtras(){
   setupLocationSearch('to');
 
   $('lbl-voice-guide').textContent=it('voiceGuide');
-  $('lbl-indoor-share').textContent=it('share');
   $('lbl-indoor-report').textContent=it('report');
   $('lbl-indoor-emergency').textContent=it('emergency');
-  $('indoorShareBtn').disabled=false;
 
   const sharedVoice=indoorStoredPreference(
     SHARED_AUDIO_KEY,
@@ -5396,7 +5369,6 @@ function setupIndoorExtras(){
   setIndoorVoice(initialVoice, false);
 
   $('voiceGuideBtn').addEventListener('click',()=>setIndoorVoice(!indoorVoiceOn));
-  $('indoorShareBtn').addEventListener('click',shareIndoorDestination);
   $('indoorReportBtn').addEventListener('click',openIndoorReport);
   $('indoorEmergencyBtn').addEventListener('click',routeToIndoorShelter);
   $('to').addEventListener('change',()=>document.body.classList.remove('emergency-route'));
