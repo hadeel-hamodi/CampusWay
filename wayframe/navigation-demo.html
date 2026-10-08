@@ -3627,7 +3627,6 @@ function handleDetectedStep(stepTime){
   }
 }
 
-
 function setJourneyPlanLegByKind(kind){
   try{
     const plan=JSON.parse(sessionStorage.getItem('journeyPlan') || 'null');
@@ -3648,28 +3647,24 @@ function advanceJourneyPlanLeg(){
   }catch(error){
     console.warn('Could not advance the journey plan:',error);
   }
-}
-function returnToOutdoorJourney(){
+}function returnToOutdoorJourney(){
   sessionStorage.setItem(
     'campusTransitionDirection',
     'outdoor'
   );
 
-  if(
-    typeof window.location?.replace === 'function'
-  ){
-    window.location.replace(
-      '../index.html?resumeJourney=1'
-    );
-    return;
-  }
+  const demo =
+    sessionStorage.getItem('campusway.outdoorDemo') === 'true';
 
-  if(window.history?.length > 1){
-    window.history.back();
-    return;
-  }
+  const url =
+    '../index.html?resumeJourney=1' +
+    (demo ? '&demo=1' : '');
 
-  window.location.href = '../index.html';
+  if(typeof window.location?.replace === 'function'){
+    window.location.replace(url);
+  }else{
+    window.location.href = url;
+  }
 }
 
 // What the arrival message's main button does next (null = journey finished).

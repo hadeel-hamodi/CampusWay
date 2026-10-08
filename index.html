@@ -7194,6 +7194,9 @@ if(awaitingOriginIndoorExit){
   document.getElementById('routeSub').textContent = t.startIndoorFirst;
 }
 
+document.getElementById('indoorArrivalHint')?.remove();
+delete indoorBtn.dataset.gated;
+
 if(hasOriginIndoorJourney){
   indoorBtn.style.display = 'block';
 
@@ -7214,7 +7217,15 @@ if(hasOriginIndoorJourney){
     t.startIndoorRoute;
 
 }else if(hasDestinationIndoorJourney){
-  indoorBtn.style.display = 'block';
+  const gate = Boolean(lastRouteStepsInput);
+
+  indoorBtn.style.display = gate ? 'none' : 'block';
+
+  if(gate){
+    indoorBtn.dataset.gated = '1';
+  }else{
+    delete indoorBtn.dataset.gated;
+  }
 
   indoorBtn.dataset.stage = 'destination';
   indoorBtn.dataset.building = INDOOR_BUILDINGS[name];
@@ -7243,27 +7254,43 @@ if(currentProfile === 'visual' && visualVoiceActive){
 }else{
   speak(`${t.routeFrom}${lang === 'he' ? '' : ' '}${startLabel} ${t.routeTo} ${displayDestination}.${sameBuilding ? '' : ` ${etaNum} ${seconds < 3600 ? t.minWalk : t.hours}.`}`);
 
-  if(
-    audioOn &&
-    currentProfile !== 'visual' &&
-    routeStepTexts.length
-  ){
-    speakRouteSteps(0, {queue:true});
-  }
 }
 
-
+if(
+  !awaitingOriginIndoorExit &&
+  lastRouteStepsInput &&
+  !(currentProfile === 'visual' && visualVoiceActive)
+){
+  startOutdoorGuidance();
+}
   return {
   ok:true,
   minutes:seconds > 0 ? Math.ceil(seconds / 60) : null,
-  nextAction:indoorBtn.style.display === 'block'
-    ? document.getElementById('lbl-continue-indoor').textContent
-    : null
+nextAction: indoorBtn.dataset.building
+  ? document.getElementById('lbl-continue-indoor').textContent
+  : null,
+
+nextActionReady:
+  Boolean(indoorBtn.dataset.building) &&
+  indoorBtn.dataset.gated !== '1'
 };
 
 }
 
 function closeRoute(){
+  document.getElementById('startInput').value = '';
+document.getElementById('searchInput').value = '';
+selectedStartLocation = null;
+selectedSearchDestination = null;
+customStart = null;
+
+document.getElementById('gpsBtn').classList.remove('active');
+
+if(gpsMarker){
+  map.removeLayer(gpsMarker);
+  gpsMarker = null;
+}
+  stopOutdoorGuidance();
   clearOutdoorEndpointMarkers();
   outdoorRouteRequestId++;
   currentOutdoorDestination = null;
@@ -7281,9 +7308,6 @@ function closeRoute(){
   renderRouteSteps(null);
 }
 
-// ═══════════════════════════════════════════
-// WRITTEN AND SPOKEN DIRECTIONS (outdoor leg)
-// ═══════════════════════════════════════════
 var routeStepTexts = [];
 var routeStepShortTexts = [];
 var readingSteps = false;
@@ -7334,18 +7358,714 @@ function setMobileOutdoorGuideOpen(open){
   document.getElementById('mobileOutdoorGuide')?.classList.toggle('is-open',open);
 }
 
+var outdoorGuidance = null;
+var outdoorSpeechToken = 0;
+
+function outdoorGuidanceText(en, he, ar, ru){
+  return ({en, he, ar, ru})[lang] || en;
+}
+
+function outdoorGuidanceStatus(message){
+  let status = document.getElementById('outdoorGuidanceStatus');
+
+  if(!status){
+    const wrap = document.getElementById('routeStepsWrap');
+    if(!wrap) return;
+
+    status = document.createElement('p');
+    status.id = 'outdoorGuidanceStatus';
+    status.className = 'service-status';
+    status.setAttribute('role', 'status');
+    wrap.appendChild(status);
+  }
+
+  status.textContent = message;
+  status.hidden = !message;
+}
+
+function outdoorMeters(a, b){
+  const latitude = (a[0] + b[0]) / 2 * Math.PI / 180;
+  return Math.hypot(
+    (b[0] - a[0]) * 110540,
+    (b[1] - a[1]) * 111320 * Math.cos(latitude)
+  );
+}
+
+function outdoorPointAt(state, distance){
+  const points = state.points;
+  const cumulative = state.cumulative;
+
+  for(let i = 1; i < points.length; i++){
+    if(distance > cumulative[i]) continue;
+
+    const length = cumulative[i] - cumulative[i - 1];
+    const fraction = length
+      ? Math.max(0, Math.min(1,
+          (distance - cumulative[i - 1]) / length))
+      : 0;
+
+    return [
+      points[i - 1][0] +
+        (points[i][0] - points[i - 1][0]) * fraction,
+      points[i - 1][1] +
+        (points[i][1] - points[i - 1][1]) * fraction
+    ];
+  }
+
+  return points.at(-1);
+}
+
+function highlightRouteStep(index){
+  document.querySelectorAll('#routeSteps li').forEach(item => {
+    const active = Number(item.dataset.index) === index;
+    item.classList.toggle('speaking', active);
+
+    if(active) item.setAttribute('aria-current', 'step');
+    else item.removeAttribute('aria-current');
+  });
+
+  if(index >= 0 && index < routeStepTexts.length){
+    activeRouteStepIndex = index;
+    syncMobileOutdoorGuide();
+  }
+}
+
+function updateReadStepsButton(){
+  const button = document.getElementById('readStepsBtn');
+  const label = document.getElementById('lbl-read-aloud');
+
+  if(button){
+    button.setAttribute('aria-pressed', String(readingSteps));
+  }
+
+  if(label){
+    label.textContent = readingSteps
+      ? t.stopReading
+      : t.readAloud;
+  }
+}
+
+// Always speaks one instruction, never the entire list.
+function speakRouteSteps(index = 0){
+  if(!window.speechSynthesis || !routeStepTexts[index]) return;
+
+  stopReadingSteps();
+
+  const token = ++outdoorSpeechToken;
+  const utterance = new SpeechSynthesisUtterance(
+    routeStepTexts[index]
+  );
+
+  const voice = getVoice();
+  utterance.rate = 0.95;
+  utterance.lang = voice?.lang || languageSpeechLocale();
+  if(voice) utterance.voice = voice;
+
+  readingSteps = true;
+  updateReadStepsButton();
+  highlightRouteStep(index);
+
+  const finish = () => {
+    if(token !== outdoorSpeechToken) return;
+
+    readingSteps = false;
+    updateReadStepsButton();
+    highlightRouteStep(outdoorGuidance?.currentIndex ?? -1);
+  };
+
+  utterance.onend = finish;
+  utterance.onerror = event => {
+    finish();
+
+    if(event.error === 'not-allowed'){
+      outdoorGuidanceStatus(outdoorGuidanceText(
+        'Tap an instruction to enable spoken guidance.',
+        'הקש על הוראה כדי להפעיל הדרכה קולית.',
+        'اضغط على تعليمات لتفعيل الإرشاد الصوتي.',
+        'Нажмите на инструкцию, чтобы включить голосовые подсказки.'
+      ));
+    }
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopReadingSteps(){
+  outdoorSpeechToken++;
+
+  if(readingSteps && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+  }
+
+  readingSteps = false;
+  updateReadStepsButton();
+}
+function toggleReadSteps(){
+  const state = outdoorGuidance;
+
+  if(readingSteps){
+    if(state){
+      state.speechMuted = true;
+      state.readAloudEnabled = false;
+    }
+
+    stopReadingSteps();
+    return;
+  }
+
+  if(state){
+    state.speechMuted = false;
+    state.readAloudEnabled = true;
+  }
+
+  const index = state?.currentIndex;
+
+  speakRouteSteps(
+    Number.isInteger(index) && index >= 0 ? index : 0
+  );
+}
+
+function stopOutdoorGuidance(){
+  const state = outdoorGuidance;
+  outdoorGuidance = null;
+
+  if(state){
+    if(state.watchdog){
+  clearInterval(state.watchdog);
+  state.watchdog = null;
+}
+    if(state.watchId !== null){
+      navigator.geolocation.clearWatch(state.watchId);
+    }
+
+    if(state.frame !== null){
+      cancelAnimationFrame(state.frame);
+    }
+
+    if(state.marker) map.removeLayer(state.marker);
+  }
+
+  stopReadingSteps();
+  highlightRouteStep(-1);
+  outdoorGuidanceStatus('');
+  document.getElementById('indoorArrivalHint')?.remove();
+}
+
+function outdoorMovementHeading(from, to){
+  const latitude = (from[0] + to[0]) / 2 * Math.PI / 180;
+
+  const east =
+    (to[1] - from[1]) * Math.cos(latitude);
+
+  const north = to[0] - from[0];
+
+  return (
+    Math.atan2(east, north) * 180 / Math.PI + 360
+  ) % 360;
+}
+
+function outdoorPositionIcon(heading = null){
+  const direction = Number.isFinite(heading)
+    ? `
+      <div style="
+        position:absolute;
+        inset:0;
+        transform:rotate(${heading}deg);
+      ">
+        <div style="
+          position:absolute;
+          left:8px;
+          top:0;
+          width:32px;
+          height:28px;
+          background:rgba(8,145,178,.28);
+          clip-path:polygon(50% 100%,0 0,100% 0);
+        "></div>
+      </div>
+    `
+    : '';
+
+  return L.divIcon({
+    className:'',
+    html:`
+      <div style="
+        position:relative;
+        width:48px;
+        height:48px;
+        pointer-events:none;
+      ">
+        ${direction}
+        <div style="
+          position:absolute;
+          left:15px;
+          top:15px;
+          width:18px;
+          height:18px;
+          border:3px solid white;
+          border-radius:50%;
+          background:#0891B2;
+          box-sizing:border-box;
+          box-shadow:0 1px 5px rgba(0,0,0,.3);
+        "></div>
+      </div>
+    `,
+    iconSize:[48,48],
+    iconAnchor:[24,24]
+  });
+}
+
+function revealContinueIndoor(manual = false){
+  const button = document.getElementById('continueIndoorBtn');
+  if(!button || button.dataset.gated !== '1') return;
+
+  button.style.display = 'block';
+  delete button.dataset.gated;
+
+  if(outdoorGuidance?.watchdog){
+    clearInterval(outdoorGuidance.watchdog);
+    outdoorGuidance.watchdog = null;
+  }
+
+  if(manual){
+    let hint = document.getElementById('indoorArrivalHint');
+
+    if(!hint){
+      hint = document.createElement('p');
+      hint.id = 'indoorArrivalHint';
+      hint.className = 'service-status';
+      button.before(hint);
+    }
+
+    hint.textContent = outdoorGuidanceText(
+      'Tap Continue indoors when you reach the entrance.',
+      'הקש על המשך פנימה כשתגיע לכניסה.',
+      'اضغط على المتابعة في الداخل عند وصولك إلى المدخل.',
+      'Нажмите «Продолжить внутри», когда дойдёте до входа.'
+    );
+  }
+}
+
+function updateOutdoorGuidance(state, distance, point){
+  if(outdoorGuidance !== state || state.finished) return;
+
+  state.distance = Math.max(
+    state.distance,
+    Math.min(state.total, distance)
+  );
+
+  if(
+  !state.demo &&
+  state.distance >= state.total - 25 &&
+  outdoorMeters(point, state.points.at(-1)) <= 25
+){
+  revealContinueIndoor();
+}
+
+let heading = null;
+
+if(state.demo){
+  const ahead = outdoorPointAt(
+    state,
+    Math.min(state.total, state.distance + 3)
+  );
+
+  if(outdoorMeters(point, ahead) > 0.1){
+    heading = outdoorMovementHeading(point, ahead);
+  }
+}else if(state.movementAnchor){
+  const moved = outdoorMeters(state.movementAnchor, point);
+
+  if(moved >= Math.max(8, state.gpsAccuracy || 8)){
+    state.movementHeading = outdoorMovementHeading(
+      state.movementAnchor,
+      point
+    );
+
+    state.movementAnchor = point;
+    state.movementHeadingTime = Date.now();
+  }
+
+  if(Date.now() - (state.movementHeadingTime || 0) < 10000){
+    heading = state.movementHeading;
+  }
+}else{
+  state.movementAnchor = point;
+}
+
+const roundedHeading = Number.isFinite(heading)
+  ? (Math.round(heading / 5) * 5) % 360
+  : null;
+
+if(!state.marker){
+  state.marker = L.marker(point, {
+    icon: outdoorPositionIcon(roundedHeading),
+    zIndexOffset:1000
+  }).addTo(map);
+
+  state.iconHeading = roundedHeading;
+
+  state.marker.bindTooltip(outdoorGuidanceText(
+    'Current position',
+    'מיקום נוכחי',
+    'الموقع الحالي',
+    'Текущая позиция'
+  ));
+}else{
+  state.marker.setLatLng(point);
+
+  if(state.iconHeading !== roundedHeading){
+    state.marker.setIcon(
+      outdoorPositionIcon(roundedHeading)
+    );
+
+    state.iconHeading = roundedHeading;
+  }
+}
+
+  // Step i describes the walk from step i-1 to step i.
+  let index = state.steps.length > 1 ? 1 : 0;
+
+  for(let i = 2; i < state.steps.length; i++){
+    if(state.distance >= state.steps[i - 1].at){
+      index = i;
+    }else{
+      break;
+    }
+  }
+
+  if(state.currentIndex !== index){
+    state.currentIndex = index;
+    highlightRouteStep(index);
+
+    if(
+      (audioOn || state.readAloudEnabled) &&
+      !state.speechMuted &&
+      !document.hidden
+){
+      speakRouteSteps(index);
+    }
+  }
+
+const arrived = state.demo
+  ? state.distance >= state.total
+  : state.distance >= state.total - 12 &&
+    outdoorMeters(point, state.points.at(-1)) <= 12;
+
+if(!arrived) return;
+
+state.finished = true;
+revealContinueIndoor();
+
+document.getElementById('indoorArrivalHint')?.remove();
+
+if(state.watchdog){
+  clearInterval(state.watchdog);
+  state.watchdog = null;
+}
+
+  if(state.watchId !== null){
+    navigator.geolocation.clearWatch(state.watchId);
+    state.watchId = null;
+  }
+
+  const message = state.options.indoorNext ||
+    outdoorGuidanceText(
+      'You have reached the end of the outdoor route.',
+      'הגעת לסוף המסלול החיצוני.',
+      'وصلت إلى نهاية المسار الخارجي.',
+      'Вы достигли конца внешнего маршрута.'
+    );
+
+  outdoorGuidanceStatus(message);
+
+  // Keep this separate from the instruction describing
+  // the final walking segment.
+  state.currentIndex = routeStepTexts.length;
+  routeStepTexts.push(message);
+
+if(
+  (audioOn || state.readAloudEnabled) &&
+  !state.speechMuted &&
+  !document.hidden
+){
+  speakRouteSteps(state.currentIndex);
+}
+}
+
+function projectOutdoorPosition(state, coordinate, accuracy){
+  const reference = coordinate[0] * Math.PI / 180;
+  const scaleX = 111320 * Math.cos(reference);
+  const scaleY = 110540;
+  let best = null;
+
+  for(let i = 1; i < state.points.length; i++){
+    const a = state.points[i - 1];
+    const b = state.points[i];
+
+    const ax = (a[1] - coordinate[1]) * scaleX;
+    const ay = (a[0] - coordinate[0]) * scaleY;
+    const bx = (b[1] - coordinate[1]) * scaleX;
+    const by = (b[0] - coordinate[0]) * scaleY;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const squared = dx * dx + dy * dy;
+
+    if(!squared) continue;
+
+    const fraction = Math.max(0, Math.min(1,
+      -(ax * dx + ay * dy) / squared
+    ));
+
+    const offset = Math.hypot(
+      ax + fraction * dx,
+      ay + fraction * dy
+    );
+
+    const distance = state.cumulative[i - 1] +
+      fraction *
+      (state.cumulative[i] - state.cumulative[i - 1]);
+
+    // Once tracking is established, avoid jumping to a
+    // distant part of the route that passes nearby.
+    if(state.lastFix){
+      const elapsed = Math.max(
+        0,
+        (Date.now() - state.lastFix.time) / 1000
+      );
+
+      const maximumAdvance =
+        3 * elapsed + Math.min(accuracy, 15) + 5;
+
+      if(distance > state.distance + maximumAdvance) continue;
+      if(distance < state.distance - 20) continue;
+    }
+
+    if(!best || offset < best.offset){
+      best = {offset, distance};
+    }
+  }
+
+  return best;
+}
+
+function startOutdoorGuidance(){
+  if(outdoorGuidance || !lastRouteStepsInput) return;
+
+  const {result, options} = lastRouteStepsInput;
+  const points = (result.coordinates || []).filter(point =>
+    Array.isArray(point) &&
+    Number.isFinite(point[0]) &&
+    Number.isFinite(point[1])
+  );
+
+  if(points.length < 2){
+  revealContinueIndoor(true);
+  return;
+}
+
+  const cumulative = [0];
+
+  for(let i = 1; i < points.length; i++){
+    cumulative.push(
+      cumulative[i - 1] +
+      outdoorMeters(points[i - 1], points[i])
+    );
+  }
+
+  const state = {
+    points,
+    cumulative,
+    total: cumulative.at(-1),
+    steps: lastRouteStepsInput.steps,
+    options,
+    distance: 0,
+    currentIndex: -1,
+    watchId: null,
+    frame: null,
+    marker: null,
+    lastFix: null,
+    finished: false,
+    speechMuted: false,
+    demo: new URLSearchParams(location.search).get('demo') === '1'
+  };
+
+  if(!state.total || !state.steps.length){
+  revealContinueIndoor(true);
+  return;
+}
+  outdoorGuidance = state;
+
+  if(state.demo){
+    outdoorGuidanceStatus(outdoorGuidanceText(
+      'Auto mode · simulated movement',
+      'מצב אוטומטי · תנועה מדומה',
+      'الوضع التلقائي · حركة محاكاة',
+      'Автоматический режим · имитация движения'
+    ));
+
+    let previousTime = null;
+const animate = timestamp => {
+  if(outdoorGuidance !== state || state.finished) return;
+
+  const speechBusy =
+    audioOn &&
+    window.speechSynthesis &&
+    (
+      window.speechSynthesis.speaking ||
+      window.speechSynthesis.pending ||
+      readingSteps
+    );
+
+  if(!state.introFinished && !speechBusy){
+  state.introFinished = true;
+}
+
+if(document.hidden || (!state.introFinished && speechBusy)){
+    previousTime = null;
+  }else{
+    const elapsed = previousTime === null
+      ? 0
+      : Math.min(0.25, (timestamp - previousTime) / 1000);
+
+    previousTime = timestamp;
+
+    // Auto demonstration: 3× normal walking speed.
+    const distance = Math.min(
+      state.total,
+      state.distance + elapsed * 5
+    );
+
+    updateOutdoorGuidance(
+      state,
+      distance,
+      outdoorPointAt(state, distance)
+    );
+  }
+
+  if(!state.finished){
+    state.frame = requestAnimationFrame(animate);
+  }
+};
+
+    state.frame = requestAnimationFrame(animate);
+    return;
+  }
+
+  if(!navigator.geolocation){
+    revealContinueIndoor(true);
+    outdoorGuidanceStatus(outdoorGuidanceText(
+      'Location unavailable. Tap an instruction to hear it.',
+      'המיקום אינו זמין. הקש על הוראה כדי לשמוע אותה.',
+      'الموقع غير متاح. اضغط على تعليمات لسماعها.',
+      'Местоположение недоступно. Нажмите на инструкцию, чтобы прослушать её.'
+    ));
+    return;
+  }
+
+  state.lastUsable = Date.now();
+
+state.watchdog = setInterval(() => {
+  if(outdoorGuidance !== state || state.finished) return;
+
+  if(Date.now() - state.lastUsable >= 20000){
+    revealContinueIndoor(true);
+    clearInterval(state.watchdog);
+    state.watchdog = null;
+  }
+}, 5000);
+
+  outdoorGuidanceStatus(outdoorGuidanceText(
+    'Finding your position…',
+    'מאתר את מיקומך…',
+    'جارٍ تحديد موقعك…',
+    'Определяем ваше местоположение…'
+  ));
+
+  state.watchId = navigator.geolocation.watchPosition(
+    position => {
+      if(outdoorGuidance !== state || state.finished) return;
+
+      const {latitude, longitude, accuracy} = position.coords;
+
+      if(
+        !Number.isFinite(accuracy) ||
+        accuracy > 30 ||
+        Date.now() - position.timestamp > 15000
+      ){
+        outdoorGuidanceStatus(outdoorGuidanceText(
+          'Location is imprecise. Automatic guidance is paused.',
+          'המיקום אינו מדויק. ההדרכה האוטומטית מושהית.',
+          'الموقع غير دقيق. الإرشاد التلقائي متوقف مؤقتًا.',
+          'Местоположение неточное. Автоматические подсказки приостановлены.'
+        ));
+        return;
+      }
+
+      const point = [latitude, longitude];
+      const projection = projectOutdoorPosition(
+        state, point, accuracy
+      );
+
+      if(
+        !projection ||
+        projection.offset > Math.max(12, Math.min(accuracy, 20))
+      ){
+        outdoorGuidanceStatus(outdoorGuidanceText(
+          'You appear to be away from the route. Tap a step to hear it.',
+          'נראה שאינך על המסלול. הקש על הוראה כדי לשמוע אותה.',
+          'يبدو أنك بعيد عن المسار. اضغط على تعليمات لسماعها.',
+          'Похоже, вы вне маршрута. Нажмите на инструкцию, чтобы прослушать её.'
+        ));
+        return;
+      }
+
+      outdoorGuidanceStatus('');
+
+      state.lastUsable = Date.now();
+
+      state.gpsAccuracy = accuracy;
+      // Do not advance backwards or repeatedly announce
+      // steps when GPS readings fluctuate.
+      state.lastFix = {time: Date.now()};
+
+      updateOutdoorGuidance(
+        state,
+        projection.distance,
+        point
+      );
+    },
+    () => {
+        if(outdoorGuidance !== state) return;
+
+        revealContinueIndoor(true);
+
+        outdoorGuidanceStatus(outdoorGuidanceText(
+        'Location unavailable. Tap an instruction to hear it.',
+        'המיקום אינו זמין. הקש על הוראה כדי לשמוע אותה.',
+        'الموقع غير متاح. اضغط على تعليمات لسماعها.',
+        'Местоположение недоступно. Нажмите на инструкцию, чтобы прослушать её.'
+      ));
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 15000
+    }
+  );}
+
 function renderRouteSteps(result, options = {}){
   const wrap = document.getElementById('routeStepsWrap');
   const list = document.getElementById('routeSteps');
   if(!wrap || !list) return;
-  stopReadingSteps();
+
+  stopOutdoorGuidance();
   routeStepTexts = [];
   routeStepShortTexts = [];
   activeRouteStepIndex = 0;
   list.innerHTML = '';
   setMobileOutdoorGuideOpen(false);
+  setMobileOutdoorGuideOpen(false);
   lastRouteStepsInput = result ? {result, options} : null;
-
   if(!result || typeof CampusRouteInstructions === 'undefined'){
     wrap.hidden = true;
     syncMobileOutdoorGuide();
@@ -7353,14 +8073,27 @@ function renderRouteSteps(result, options = {}){
   }
 
   const exclude = new Set(options.exclude || []);
-  const landmarks = CAMPUS_DATA.buildings.filter(building => !exclude.has(building.name));
-  const {steps} = CampusRouteInstructions.buildOutdoorSteps(result, {
-    landmarks,
-    startName: options.startName,
-    endName: options.endName
-  });
+  const landmarks = CAMPUS_DATA.buildings.filter(
+    building => !exclude.has(building.name)
+  );
+
+  const {steps} = CampusRouteInstructions.buildOutdoorSteps(
+    result,
+    {
+      landmarks,
+      startName: options.startName,
+      endName: options.endName
+    }
+  );
+
+  lastRouteStepsInput = {result, options, steps};
+
   routeStepTexts = steps.map(step =>
-    CampusRouteInstructions.formatStep(step, lang, name => localizedBuildingNameByEnglishName(name))
+    CampusRouteInstructions.formatStep(
+      step,
+      lang,
+      name => localizedBuildingNameByEnglishName(name)
+    )
   );
   routeStepShortTexts = steps.map(step =>
     CampusRouteInstructions.formatCompactStep(step, lang, name => localizedBuildingNameByEnglishName(name))
@@ -7369,93 +8102,41 @@ function renderRouteSteps(result, options = {}){
     routeStepTexts.push(options.indoorNext);
     routeStepShortTexts.push(({en:'Continue indoors',ar:'تابع إلى الداخل',he:'המשך פנימה',ru:'Продолжайте в здании'})[lang] || 'Continue indoors');
   }
-
   routeStepTexts.forEach((text, index) => {
     const item = document.createElement('li');
     item.textContent = text;
     item.tabIndex = 0;
     item.dataset.index = String(index);
     item.title = t.readAloud;
-    item.addEventListener('click', () => speakRouteSteps(index, {single:true}));
+
+    item.addEventListener('click', () =>
+      speakRouteSteps(index)
+    );
+
     item.addEventListener('keydown', event => {
       if(event.key === 'Enter' || event.key === ' '){
         event.preventDefault();
-        speakRouteSteps(index, {single:true});
+        speakRouteSteps(index);
       }
     });
+
     list.appendChild(item);
   });
+
   wrap.hidden = routeStepTexts.length === 0;
   syncMobileOutdoorGuide();
 }
 
 function refreshRouteSteps(){
-  updateReadStepsButton();
-  if(lastRouteStepsInput) renderRouteSteps(lastRouteStepsInput.result, lastRouteStepsInput.options);
-}
+  const previous = lastRouteStepsInput;
+  const wasTracking = Boolean(outdoorGuidance);
 
-function highlightRouteStep(index){
-  document.querySelectorAll('#routeSteps li').forEach(item => {
-    item.classList.toggle('speaking', Number(item.dataset.index) === index);
-  });
-  if(index >= 0 && index < routeStepTexts.length){
-    activeRouteStepIndex=index;
-    syncMobileOutdoorGuide();
+  if(previous){
+    renderRouteSteps(previous.result, previous.options);
+    if(wasTracking) startOutdoorGuidance();
   }
-}
 
-function updateReadStepsButton(){
-  const button = document.getElementById('readStepsBtn');
-  const label = document.getElementById('lbl-read-aloud');
-  if(button) button.setAttribute('aria-pressed', String(readingSteps));
-  if(label) label.textContent = readingSteps ? t.stopReading : t.readAloud;
-}
-
-// Reads the directions one step after another (or a single step).
-// The voice is the same one the Audio Guide uses.
-function speakRouteSteps(startIndex = 0, options = {}){
-  if(!('speechSynthesis' in window) || !routeStepTexts.length) return;
-  const synth = window.speechSynthesis;
-  if(!options.queue) synth.cancel();
-  const voice = getVoice();
-  const speechLang = languageSpeechLocale();
-  const indexes = options.single
-    ? [startIndex]
-    : routeStepTexts.map((_, index) => index).slice(startIndex);
-
-  readingSteps = true;
   updateReadStepsButton();
-  indexes.forEach((index, position) => {
-    const utterance = new SpeechSynthesisUtterance(routeStepTexts[index]);
-    utterance.rate = 0.95;
-    if(voice){
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-    }else{
-      utterance.lang = speechLang;
-    }
-    utterance.onstart = () => highlightRouteStep(index);
-    if(position === indexes.length - 1){
-      utterance.onend = utterance.onerror = () => {
-        readingSteps = false;
-        updateReadStepsButton();
-        highlightRouteStep(-1);
-      };
-    }
-    synth.speak(utterance);
-  });
-}
-
-function stopReadingSteps(){
-  if(readingSteps && 'speechSynthesis' in window) window.speechSynthesis.cancel();
-  readingSteps = false;
-  updateReadStepsButton();
-  highlightRouteStep(-1);
-}
-
-function toggleReadSteps(){
-  if(readingSteps) stopReadingSteps();
-  else speakRouteSteps(0);
 }
 
 // ═══════════════════════════════════════════
@@ -10200,7 +10881,7 @@ const summary = result.minutes
       'המסלול תוכנן.',
       'تم تخطيط الرحلة.'
     );
-if(result.nextAction){
+if(result.nextAction && result.nextActionReady){
   const reply = await askVisualQuestion(
     `${summary} ` + visualVoiceText(
       'Would you like to open indoor navigation?',
@@ -10225,13 +10906,19 @@ if(result.nextAction){
     startIndoorTransition();
   }
 }else{
-  await speakVisualQuestion(
-    `${summary} ` + visualVoiceText(
-      'Automatic spoken guidance during the outdoor walk is not available yet.',
-      'הנחיות קוליות אוטומטיות במהלך ההליכה בחוץ עדיין אינן זמינות.',
-      'الإرشادات الصوتية التلقائية أثناء المشي خارج المبنى غير متاحة بعد.'
-    )
-  );
+await speakVisualQuestion(
+  `${summary} ` + visualVoiceText(
+    result.nextAction
+      ? 'Follow the outdoor route. Continue indoors becomes available near the entrance.'
+      : 'Follow the outdoor route. Spoken instructions follow your progress when audio is enabled.',
+    result.nextAction
+      ? 'עקוב אחר המסלול החיצוני. האפשרות להמשיך פנימה תהיה זמינה ליד הכניסה.'
+      : 'עקוב אחר המסלול החיצוני. כשהשמע מופעל, ההנחיות הקוליות מתעדכנות לפי ההתקדמות שלך.',
+    result.nextAction
+      ? 'اتبع المسار الخارجي. ستتاح المتابعة في الداخل بالقرب من المدخل.'
+      : 'اتبع المسار الخارجي. تتبع التعليمات الصوتية تقدمك عندما يكون الصوت مفعّلًا.'
+  )
+);
 }
   }catch(error){
     console.error('Visual voice planning failed:', error);
@@ -10244,11 +10931,15 @@ if(result.nextAction){
       ));
     }
   }
-  finally{
-  if(runId === visualVoiceRunId){
-    visualVoiceActive = false;
-  }
-}
+    finally{
+      if(runId === visualVoiceRunId){
+        visualVoiceActive = false;
+
+        if(lastRouteStepsInput && !outdoorGuidance){
+          startOutdoorGuidance();
+        }
+      }
+    }
 }
 
 function toggleMic(target = 'destination') {
@@ -10874,6 +11565,13 @@ function startIndoorTransition(){
   const stage = indoorBtn.dataset.stage || 'destination';
 
   if(!building) return;
+  sessionStorage.setItem(
+  'campusway.outdoorDemo',
+  new URLSearchParams(window.location.search).get('demo') === '1'
+    ? 'true'
+    : 'false'
+);
+  stopOutdoorGuidance();
 
   saveOutdoorJourneyForTransition(stage);
   if(stage === 'origin') setJourneyPlanLeg(0);
@@ -11129,6 +11827,16 @@ if(
   ).textContent = t.continueIndoors;
 }
 
+if(
+  indoorBtn.dataset.building &&
+  ['destination', 'intermediate'].includes(indoorBtn.dataset.stage) &&
+  typeof outdoorGuidance !== 'undefined' &&
+  outdoorGuidance &&
+  !outdoorGuidance.finished
+){
+  indoorBtn.style.display = 'none';
+  indoorBtn.dataset.gated = '1';
+}
   sessionStorage.removeItem(
     'originIndoorComplete'
   );
