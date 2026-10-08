@@ -120,23 +120,68 @@ function normalizeStatus(data){
       : [];
     return kept;
   }
+function elevatorOutages(building){
+  const now = Date.now();
+  const result = [];
 
-  function elevatorOutages(building){
-    const now = Date.now();
-    const result = [];
-    for(const entry of official.elevators){
-      if(entry.building !== building || !isActive(entry, now)) continue;
-      if(String(entry.status || 'out-of-service') !== 'out-of-service') continue;
-      result.push({number: elevatorNumber(entry.elevator ?? entry.connectorId ?? entry.id), source:'official', note: entry.note || '', until: entry.until || ''});
+  for(const entry of official.elevators){
+    if(entry.building !== building || !isActive(entry, now)) continue;
+    if(String(entry.status || 'out-of-service') !== 'out-of-service'){
+      continue;
     }
-    for(const report of reports()){
-      if(report.kind !== 'elevator' || report.building !== building || report.problem !== 'out-of-service') continue;
-      if(now - report.time > REPORT_AVOID_HOURS * 3600000) continue;
-      result.push({number: elevatorNumber(report.connectorId), source:'you', note: report.note || '', time: report.time});
-    }
-    return result;
+
+    result.push({
+      number: elevatorNumber(
+        entry.elevator ?? entry.connectorId ?? entry.id
+      ),
+      source: 'official',
+      note: entry.note || '',
+      until: entry.until || ''
+    });
   }
 
+  for(const report of reports()){
+    if(report.building !== building) continue;
+
+    const age = now - Number(report.time);
+    if(
+      !Number.isFinite(age) ||
+      age < 0 ||
+      age >= REPORT_AVOID_HOURS * 3600000
+    ){
+      continue;
+    }
+
+    let connectorIds = [];
+
+    if(
+      report.kind === 'elevator' &&
+      report.problem === 'out-of-service'
+    ){
+      connectorIds = [report.connectorId];
+    }else if(
+      report.kind === 'elevator-group' &&
+      report.problem === 'all-out'
+    ){
+      connectorIds = Array.isArray(report.connectorIds)
+        ? report.connectorIds
+        : [];
+    }
+
+    for(const connectorId of connectorIds){
+      if(!connectorId) continue;
+
+      result.push({
+        number: elevatorNumber(connectorId),
+        source: 'you',
+        note: report.note || '',
+        time: report.time
+      });
+    }
+  }
+
+  return result;
+}
   function isElevatorOut(building, connectorId){
     const number = elevatorNumber(connectorId);
     return elevatorOutages(building).some(outage => outage.number === number);
@@ -225,24 +270,28 @@ function normalizeStatus(data){
 
   // ── Reports ──
   function addReport(report){
-    const entry = {
-      id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      time: Date.now(),
-      kind: report.kind || 'other',
-      building: report.building || '',
-      buildingName: report.buildingName || '',
-      connectorId: report.connectorId || '',
-      nodeId: report.nodeId || '',
-      label: report.label || '',
-      problem: report.problem || 'other',
-      note: String(report.note || '').slice(0, 500)
-    };
-    const list = reports();
-    list.unshift(entry);
-    writeJson(STORAGE_REPORTS, list.slice(0, 50));
-    notify();
-    return entry;
-  }
+  const entry = {
+    id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    time: Date.now(),
+    kind: report.kind || 'other',
+    building: report.building || '',
+    buildingName: report.buildingName || '',
+    connectorId: report.connectorId || '',
+    connectorIds: Array.isArray(report.connectorIds)
+      ? [...new Set(report.connectorIds.map(String).filter(Boolean))]
+      : [],
+    nodeId: report.nodeId || '',
+    label: report.label || '',
+    problem: report.problem || 'other',
+    note: String(report.note || '').slice(0, 500)
+  };
+
+  const list = reports();
+  list.unshift(entry);
+  writeJson(STORAGE_REPORTS, list.slice(0, 50));
+  notify();
+  return entry;
+}
 
   function removeReport(id){
     writeJson(STORAGE_REPORTS, reports().filter(report => report.id !== id));
@@ -257,10 +306,10 @@ const TEXT = {
     problem:'What is wrong?',
     note:'Details (optional)',
     notePlaceholder:'For example: the door does not open on floor 6',
-    save:'Save report',
+    save:'Report',
     cancel:'Cancel',
     done:'Done',
-    thanks:'Thank you — your report is saved on this device.',
+    thanks:'Thank you — your report has been recorded.',
     avoid:'CampusWay will route you around this elevator for the next 24 hours.',
     shareHint:'To let the campus team and other students know, send it on:',
     email:'Email the campus team',
@@ -270,6 +319,8 @@ const TEXT = {
     fixed:'It works again',
     none:'No reports yet.',
     problems:{
+      'one-out':'One elevator is not working',
+      'all-out':'All elevators are not working',
       quiet:'Quiet right now',
       noisy:'Noisy right now',
       crowded:'Crowded right now',
@@ -288,10 +339,10 @@ const TEXT = {
     problem:'מה הבעיה?',
     note:'פרטים (לא חובה)',
     notePlaceholder:'לדוגמה: הדלת לא נפתחת בקומה 6',
-    save:'שמירת הדיווח',
+    save:'דיווח',
     cancel:'ביטול',
     done:'סיום',
-    thanks:'תודה — הדיווח נשמר במכשיר הזה.',
+    thanks:'תודה — הדיווח שלך נרשם.',
     avoid:'ב-24 השעות הקרובות CampusWay ינתב אותך בלי המעלית הזו.',
     shareHint:'כדי שצוות הקמפוס וסטודנטים אחרים יידעו, אפשר לשלוח אותו:',
     email:'שליחה במייל לצוות הקמפוס',
@@ -301,6 +352,8 @@ const TEXT = {
     fixed:'זה עובד שוב',
     none:'אין עדיין דיווחים.',
     problems:{
+        'one-out':'מעלית אחת לא פועלת',
+  'all-out':'כל המעליות לא פועלות',
       quiet:'שקט כרגע',
       noisy:'רועש כרגע',
       crowded:'צפוף כרגע',
@@ -319,10 +372,10 @@ const TEXT = {
     problem:'ما المشكلة؟',
     note:'تفاصيل (اختياري)',
     notePlaceholder:'مثلًا: الباب لا يفتح في الطابق 6',
-    save:'حفظ البلاغ',
+    save:'إبلاغ',
     cancel:'إلغاء',
     done:'تم',
-    thanks:'شكرًا — تم حفظ بلاغك على هذا الجهاز.',
+    thanks:'شكرًا — تم تسجيل بلاغك.',
     avoid:'سيتجنب CampusWay هذا المصعد في مساراتك خلال الـ24 ساعة القادمة.',
     shareHint:'ليعرف طاقم الحرم والطلاب الآخرون، يمكنك إرساله:',
     email:'إرسال بريد إلى طاقم الحرم',
@@ -332,6 +385,8 @@ const TEXT = {
     fixed:'يعمل مجددًا',
     none:'لا توجد بلاغات بعد.',
     problems:{
+          'one-out':'مصعد واحد لا يعمل',
+'all-out':'جميع المصاعد لا تعمل',
       quiet:'هادئ الآن',
       noisy:'صاخب الآن',
       crowded:'مزدحم الآن',
@@ -350,10 +405,10 @@ const TEXT = {
     problem:'В чём проблема?',
     note:'Подробности (необязательно)',
     notePlaceholder:'Например: дверь не открывается на 6-м этаже',
-    save:'Сохранить сообщение',
+    save:'Сообщить',
     cancel:'Отмена',
     done:'Готово',
-    thanks:'Спасибо — сообщение сохранено на этом устройстве.',
+    thanks:'Спасибо — ваше сообщение зарегистрировано.',
     avoid:'В течение следующих 24 часов CampusWay будет строить маршруты в обход этого лифта.',
     shareHint:'Чтобы сообщить сотрудникам кампуса и другим студентам, отправьте это через:',
     email:'Отправить сотрудникам кампуса по электронной почте',
@@ -363,6 +418,8 @@ const TEXT = {
     fixed:'Снова работает',
     none:'Сообщений пока нет.',
     problems:{
+          'one-out':'Один лифт не работает',
+'all-out':'Все лифты не работают',
       quiet:'Сейчас тихо',
       noisy:'Сейчас шумно',
       crowded:'Сейчас многолюдно',
@@ -377,7 +434,8 @@ const TEXT = {
   }
 };
 const PROBLEMS = {
-  elevator:['out-of-service', 'doors', 'other'],
+  'elevator-group': ['one-out', 'all-out', 'other'],
+  elevator:['out-of-service','other'],
   restroom:['closed', 'accessible-stall', 'cleaning', 'other'],
   'rest-space':['quiet', 'noisy', 'crowded', 'closed', 'other'],
   landmark:['quiet', 'noisy', 'crowded', 'closed', 'other'],
@@ -479,51 +537,132 @@ const PROBLEMS = {
       const item = items[Number(select.value)] || items[0];
       const problem = form.querySelector('input[name="cwProblem"]:checked')?.value || 'other';
       const report = addReport({
-        kind:item.kind, building:options.building, buildingName:options.buildingName,
-        connectorId:item.connectorId, nodeId:item.nodeId, label:item.label, problem, note:note.value
+        kind:item.kind,
+        building:options.building,
+        buildingName:options.buildingName,
+        connectorId:item.connectorId,
+        connectorIds:item.connectorIds,
+        nodeId:item.nodeId,
+        label:item.label,
+        problem,
+        note:note.value
       });
       options.onChange?.();
       showThanks(report);
     });
 
-    function showThanks(report){
-      dialog.innerHTML = '';
-      const body = el('div', {class:'cw-dialog-body'});
-      body.append(el('div', {class:'cw-dialog-icon', 'aria-hidden':'true', text:'✓'}));
-      body.append(el('h2', {id:'cwReportTitle', text:text.thanks}));
-      if(report.kind === 'elevator' && report.problem === 'out-of-service') body.append(el('p', {text:text.avoid}));
-      body.append(el('p', {class:'cw-dialog-sub', text:text.shareHint}));
-      const actions = el('div', {class:'cw-dialog-actions cw-dialog-actions--stack'});
-      const message = reportText(report, lang);
-      if(official.reportEmail){
-        actions.append(el('a', {class:'btn btn-ghost', href:`mailto:${encodeURIComponent(official.reportEmail)}?subject=${encodeURIComponent(`CampusWay: ${report.label}`)}&body=${encodeURIComponent(message)}`, text:text.email}));
-      }
-      const copy = el('button', {type:'button', class:'btn btn-ghost', text:text.copy});
-      copy.addEventListener('click', async () => {
-        try{ await navigator.clipboard.writeText(message); copy.textContent = text.copied; }catch(error){ /* clipboard blocked */ }
-      });
-      actions.append(copy);
-      const done = el('button', {type:'button', class:'btn btn-primary', text:text.done});
-      done.addEventListener('click', close);
-      actions.append(done);
-      body.append(actions);
-      dialog.append(body);
-      done.focus();
-    }
+function showThanks(report){
+  dialog.innerHTML = '';
 
-    dialog.append(form, yours);
-    dialog.addEventListener('cancel', () => setTimeout(() => dialog.remove(), 0));
-    document.body.append(dialog);
-    if(typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', '');
-    select.focus();
-    return dialog;
+  const body = el('div', {class:'cw-dialog-body'});
+
+  body.append(
+    el('div', {
+      class:'cw-dialog-icon',
+      'aria-hidden':'true',
+      text:'✓'
+    }),
+    el('h2', {
+      id:'cwReportTitle',
+      text:text.thanks
+    })
+  );
+
+  const elevatorUnavailable =
+    (report.kind === 'elevator' &&
+      report.problem === 'out-of-service') ||
+    (report.kind === 'elevator-group' &&
+      report.problem === 'all-out');
+
+  const spaceUnavailable =
+    ['rest-space', 'landmark'].includes(report.kind) &&
+    ['noisy', 'crowded', 'closed'].includes(report.problem);
+
+  if(elevatorUnavailable){
+    const messages = {
+      en:'Your routes will avoid the reported elevators for 24 hours.',
+      he:'המסלולים שלך יימנעו מהמעליות שדווחו במשך 24 שעות.',
+      ar:'ستتجنب مساراتك المصاعد المُبلّغ عنها لمدة 24 ساعة.',
+      ru:'Ваши маршруты будут обходить указанные лифты в течение 24 часов.'
+    };
+
+    body.append(el('p', {
+      text:messages[lang] || messages.en
+    }));
   }
+
+  if(spaceUnavailable){
+    const messages = {
+      en:'This place will be excluded from your rest-space suggestions for 2 hours.',
+      he:'המקום הזה לא יופיע בהצעות למקומות מנוחה במשך שעתיים.',
+      ar:'لن يظهر هذا المكان ضمن اقتراحات أماكن الاستراحة لمدة ساعتين.',
+      ru:'Это место будет исключено из ваших рекомендаций мест для отдыха на 2 часа.'
+    };
+
+    body.append(el('p', {
+      text:messages[lang] || messages.en
+    }));
+  }
+
+  const actions = el('div', {
+    class:'cw-dialog-actions cw-dialog-actions--stack'
+  });
+
+  const done = el('button', {
+    type:'button',
+    class:'btn btn-primary',
+    text:text.done
+  });
+
+  done.addEventListener('click', close);
+  actions.append(done);
+  body.append(actions);
+  dialog.append(body);
+  done.focus();
+}
+
+  dialog.append(form, yours);
+  dialog.addEventListener('cancel', () =>
+    setTimeout(() => dialog.remove(), 0)
+  );
+
+  document.body.append(dialog);
+
+  if(typeof dialog.showModal === 'function'){
+    dialog.showModal();
+  }else{
+    dialog.setAttribute('open', '');
+  }
+
+  select.focus();
+  return dialog;
+} // End of openReportDialog
 
   function elevatorName(connectorId, lang = 'en'){
     const word = {en:'Elevator', he:'מעלית', ar:'مصعد', ru:'Лифт'}[lang] || 'Elevator';
     return `${word} ${elevatorNumber(connectorId)}`;
   }
+
+  function restSpaceUnavailable(buildingKey, nodeId){
+  const now = Date.now();
+  const maxAge = 2 * 60 * 60 * 1000;
+
+  const latest = reports()
+    .filter(report =>
+      ['rest-space', 'landmark'].includes(report.kind) &&
+      report.building === buildingKey &&
+      report.nodeId === nodeId &&
+      ['quiet', 'noisy', 'crowded', 'closed'].includes(report.problem) &&
+      Number(report.time) <= now &&
+      now - Number(report.time) < maxAge
+    )
+    .sort((a, b) => Number(b.time) - Number(a.time))[0];
+
+  return Boolean(
+    latest &&
+    ['noisy', 'crowded', 'closed'].includes(latest.problem)
+  );
+}
 
   root.CampusStatus = {
     load, ready, onChange,
@@ -531,6 +670,7 @@ const PROBLEMS = {
     closedNodes, closures, noGoAreas,
     hours, hoursText,
     reports, addReport, removeReport, openReportDialog,
+    restSpaceUnavailable,
     get noiseAreas(){ return official.noiseAreas || []; },
     get reportEmail(){ return official.reportEmail; }
   };
