@@ -3514,7 +3514,13 @@ async function rankNearbyRestSpaces(isCurrent = () => true){
 
   const start = restSpaceJourneyStart();
   const profile = currentProfile;
-  const matches = collectNearbyIndoorServices('rest-space');
+  const matches = collectNearbyIndoorServices('rest-space')
+  .filter(match =>
+    !window.CampusStatus?.restSpaceUnavailable?.(
+      match.buildingKey,
+      match.node.id
+    )
+  );
   const ranked = [];
 
   const startIsUnchanged = () => {
@@ -3690,12 +3696,7 @@ for(const place of floorChoices){
       button.className = 'btn btn-primary';
       button.style.minHeight = '44px';
       button.style.width = '100%';
-      button.textContent = text(
-        'Route here',
-        'נווט לכאן',
-        'انتقل إلى هنا',
-        'Проложить маршрут'
-      );
+      button.textContent = t.navigateHere;
 
       button.onclick = () => {
         if(!isCurrent()) return;
@@ -3744,9 +3745,7 @@ const actions = document.createElement('div');
 actions.style.display = 'flex';
 actions.style.gap = '6px';
 
-button.textContent = text(
-  'Go here', 'נווט לכאן', 'انتقل هنا', 'Перейти'
-);
+button.textContent = t.navigateHere;
 reportButton.textContent = text(
   'Report', 'דיווח', 'إبلاغ', 'Сообщить'
 );
@@ -3759,7 +3758,10 @@ for(const action of [button, reportButton]){
   action.style.padding = '6px 8px';
   action.style.fontSize = '.8rem';
 }
+actions.style.flexDirection = 'column';
 
+button.style.width = '100%';
+reportButton.style.width = '100%';
 actions.append(button, reportButton);
 row.append(description, actions);      popup.appendChild(row);
     }
@@ -7496,20 +7498,35 @@ function graphForBuilding(buildingKey){
 // Elevators of a building, one entry per elevator shaft.
 function buildingElevatorItems(buildingKey){
   const graph = graphForBuilding(buildingKey);
-  const seen = new Map();
+  const connectors = new Set();
+
   Object.values(graph?.floors || {}).forEach(floor => {
     (floor.nodes || []).forEach(node => {
       if(node.type !== 'elevator') return;
-      const number = CampusStatus.elevatorNumber(node.connectorId || node.label);
-      if(!seen.has(number)){
-        seen.set(number, {
-          value:`elevator:${number}`, kind:'elevator', connectorId:String(node.connectorId || number),
-          label:CampusStatus.elevatorName(number, lang)
-        });
-      }
+
+      const connector = String(node.connectorId || '').trim();
+      if(connector) connectors.add(connector);
     });
   });
-  return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, {numeric:true}));
+
+  const connectorIds = [...connectors];
+  if(!connectorIds.length) return [];
+
+  const multiple = connectorIds.length > 1;
+  const labels = {
+    en: multiple ? 'Elevators' : 'Elevator',
+    he: multiple ? 'מעליות' : 'מעלית',
+    ar: multiple ? 'المصاعد' : 'المصعد',
+    ru: multiple ? 'Лифты' : 'Лифт'
+  };
+
+  return [{
+    value: 'building-elevators',
+    kind: multiple ? 'elevator-group' : 'elevator',
+    connectorId: multiple ? '' : connectorIds[0],
+    connectorIds,
+    label: labels[lang] || labels.en
+  }];
 }
 
 async function openBuildingReport(buildingKey){

@@ -119,23 +119,68 @@
       : [];
     return kept;
   }
+function elevatorOutages(building){
+  const now = Date.now();
+  const result = [];
 
-  function elevatorOutages(building){
-    const now = Date.now();
-    const result = [];
-    for(const entry of official.elevators){
-      if(entry.building !== building || !isActive(entry, now)) continue;
-      if(String(entry.status || 'out-of-service') !== 'out-of-service') continue;
-      result.push({number: elevatorNumber(entry.elevator ?? entry.connectorId ?? entry.id), source:'official', note: entry.note || '', until: entry.until || ''});
+  for(const entry of official.elevators){
+    if(entry.building !== building || !isActive(entry, now)) continue;
+    if(String(entry.status || 'out-of-service') !== 'out-of-service'){
+      continue;
     }
-    for(const report of reports()){
-      if(report.kind !== 'elevator' || report.building !== building || report.problem !== 'out-of-service') continue;
-      if(now - report.time > REPORT_AVOID_HOURS * 3600000) continue;
-      result.push({number: elevatorNumber(report.connectorId), source:'you', note: report.note || '', time: report.time});
-    }
-    return result;
+
+    result.push({
+      number: elevatorNumber(
+        entry.elevator ?? entry.connectorId ?? entry.id
+      ),
+      source: 'official',
+      note: entry.note || '',
+      until: entry.until || ''
+    });
   }
 
+  for(const report of reports()){
+    if(report.building !== building) continue;
+
+    const age = now - Number(report.time);
+    if(
+      !Number.isFinite(age) ||
+      age < 0 ||
+      age >= REPORT_AVOID_HOURS * 3600000
+    ){
+      continue;
+    }
+
+    let connectorIds = [];
+
+    if(
+      report.kind === 'elevator' &&
+      report.problem === 'out-of-service'
+    ){
+      connectorIds = [report.connectorId];
+    }else if(
+      report.kind === 'elevator-group' &&
+      report.problem === 'all-out'
+    ){
+      connectorIds = Array.isArray(report.connectorIds)
+        ? report.connectorIds
+        : [];
+    }
+
+    for(const connectorId of connectorIds){
+      if(!connectorId) continue;
+
+      result.push({
+        number: elevatorNumber(connectorId),
+        source: 'you',
+        note: report.note || '',
+        time: report.time
+      });
+    }
+  }
+
+  return result;
+}
   function isElevatorOut(building, connectorId){
     const number = elevatorNumber(connectorId);
     return elevatorOutages(building).some(outage => outage.number === number);
@@ -224,24 +269,28 @@
 
   // ── Reports ──
   function addReport(report){
-    const entry = {
-      id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      time: Date.now(),
-      kind: report.kind || 'other',
-      building: report.building || '',
-      buildingName: report.buildingName || '',
-      connectorId: report.connectorId || '',
-      nodeId: report.nodeId || '',
-      label: report.label || '',
-      problem: report.problem || 'other',
-      note: String(report.note || '').slice(0, 500)
-    };
-    const list = reports();
-    list.unshift(entry);
-    writeJson(STORAGE_REPORTS, list.slice(0, 50));
-    notify();
-    return entry;
-  }
+  const entry = {
+    id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    time: Date.now(),
+    kind: report.kind || 'other',
+    building: report.building || '',
+    buildingName: report.buildingName || '',
+    connectorId: report.connectorId || '',
+    connectorIds: Array.isArray(report.connectorIds)
+      ? [...new Set(report.connectorIds.map(String).filter(Boolean))]
+      : [],
+    nodeId: report.nodeId || '',
+    label: report.label || '',
+    problem: report.problem || 'other',
+    note: String(report.note || '').slice(0, 500)
+  };
+
+  const list = reports();
+  list.unshift(entry);
+  writeJson(STORAGE_REPORTS, list.slice(0, 50));
+  notify();
+  return entry;
+}
 
   function removeReport(id){
     writeJson(STORAGE_REPORTS, reports().filter(report => report.id !== id));
@@ -249,67 +298,148 @@
   }
 
   // ── Report dialog ──
-  const TEXT = {
-    en:{
-      title:'Report a problem', what:'What is not working?', problem:'What is wrong?', note:'Details (optional)',
-      notePlaceholder:'For example: the door does not open on floor 6', save:'Save report', cancel:'Cancel', done:'Done',
-      thanks:'Thank you — your report is saved on this device.',
-      avoid:'CampusWay will route you around this elevator for the next 24 hours.',
-      shareHint:'To let the campus team and other students know, send it on:', email:'Email the campus team', copy:'Copy report', copied:'Copied',
-      yours:'Your recent reports', fixed:'It works again', none:'No reports yet.',
-      problems:{
-        'out-of-service':'Out of service', doors:'Doors or buttons not working',
-        'closed':'Closed or locked', 'accessible-stall':'Accessible stall not usable', cleaning:'Needs cleaning or supplies',
-        blocked:'Path blocked or construction', other:'Something else'
-      }
-    },
-    he:{
-      title:'דיווח על תקלה', what:'מה לא עובד?', problem:'מה הבעיה?', note:'פרטים (לא חובה)',
-      notePlaceholder:'לדוגמה: הדלת לא נפתחת בקומה 6', save:'שמירת הדיווח', cancel:'ביטול', done:'סיום',
-      thanks:'תודה — הדיווח נשמר במכשיר הזה.',
-      avoid:'ב-24 השעות הקרובות CampusWay ינתב אותך בלי המעלית הזו.',
-      shareHint:'כדי שצוות הקמפוס וסטודנטים אחרים יידעו, אפשר לשלוח אותו:', email:'שליחה במייל לצוות הקמפוס', copy:'העתקת הדיווח', copied:'הועתק',
-      yours:'הדיווחים האחרונים שלך', fixed:'זה עובד שוב', none:'אין עדיין דיווחים.',
-      problems:{
-        'out-of-service':'לא פועלת', doors:'דלתות או כפתורים לא עובדים',
-        'closed':'סגור או נעול', 'accessible-stall':'תא הנגישות לא שמיש', cleaning:'צריך ניקיון או ציוד',
-        blocked:'דרך חסומה או עבודות', other:'משהו אחר'
-      }
-    },
-    ar:{
-      title:'الإبلاغ عن مشكلة', what:'ما الذي لا يعمل؟', problem:'ما المشكلة؟', note:'تفاصيل (اختياري)',
-      notePlaceholder:'مثلًا: الباب لا يفتح في الطابق 6', save:'حفظ البلاغ', cancel:'إلغاء', done:'تم',
-      thanks:'شكرًا — تم حفظ بلاغك على هذا الجهاز.',
-      avoid:'سيتجنب CampusWay هذا المصعد في مساراتك خلال الـ24 ساعة القادمة.',
-      shareHint:'ليعرف طاقم الحرم والطلاب الآخرون، يمكنك إرساله:', email:'إرسال بريد إلى طاقم الحرم', copy:'نسخ البلاغ', copied:'تم النسخ',
-      yours:'بلاغاتك الأخيرة', fixed:'يعمل مجددًا', none:'لا توجد بلاغات بعد.',
-      problems:{
-        'out-of-service':'معطّل', doors:'الأبواب أو الأزرار لا تعمل',
-        'closed':'مغلق أو مقفل', 'accessible-stall':'حمام ذوي الإعاقة غير صالح', cleaning:'يحتاج تنظيفًا أو مستلزمات',
-        blocked:'الطريق مسدود أو أعمال بناء', other:'شيء آخر'
-      }
-    },
-    ru:{
-      title:'Сообщить о проблеме', what:'Что не работает?', problem:'В чём проблема?', note:'Подробности (необязательно)',
-      notePlaceholder:'Например: дверь не открывается на 6-м этаже', save:'Сохранить сообщение', cancel:'Отмена', done:'Готово',
-      thanks:'Спасибо — сообщение сохранено на этом устройстве.',
-      avoid:'В течение следующих 24 часов CampusWay будет строить маршруты в обход этого лифта.',
-      shareHint:'Чтобы сообщить сотрудникам кампуса и другим студентам, отправьте это через:', email:'Отправить сотрудникам кампуса по электронной почте', copy:'Копировать сообщение', copied:'Скопировано',
-      yours:'Ваши недавние сообщения', fixed:'Снова работает', none:'Сообщений пока нет.',
-      problems:{
-        'out-of-service':'Не работает', doors:'Двери или кнопки не работают',
-        'closed':'Закрыто или заперто', 'accessible-stall':'Доступная кабина не работает', cleaning:'Требуется уборка или расходные материалы',
-        blocked:'Путь перекрыт или ведутся работы', other:'Другая проблема'
-      }
+const TEXT = {
+  en:{
+    title:'Report a problem',
+    what:'What is not working?',
+    problem:'What is wrong?',
+    note:'Details (optional)',
+    notePlaceholder:'For example: the door does not open on floor 6',
+    save:'Report',
+    cancel:'Cancel',
+    done:'Done',
+    thanks:'Thank you — your report has been recorded.',
+    avoid:'CampusWay will route you around this elevator for the next 24 hours.',
+    shareHint:'To let the campus team and other students know, send it on:',
+    email:'Email the campus team',
+    copy:'Copy report',
+    copied:'Copied',
+    yours:'Your recent reports',
+    fixed:'It works again',
+    none:'No reports yet.',
+    problems:{
+      'one-out':'One elevator is not working',
+      'all-out':'All elevators are not working',
+      quiet:'Quiet right now',
+      noisy:'Noisy right now',
+      crowded:'Crowded right now',
+      'out-of-service':'Out of service',
+      doors:'Doors or buttons not working',
+      closed:'Closed or locked',
+      'accessible-stall':'Accessible stall not usable',
+      cleaning:'Needs cleaning or supplies',
+      blocked:'Path blocked or construction',
+      other:'Something else'
     }
-  };
-
-  const PROBLEMS = {
-    elevator:['out-of-service', 'doors', 'other'],
-    restroom:['closed', 'accessible-stall', 'cleaning', 'other'],
-    other:['blocked', 'closed', 'other']
-  };
-
+  },
+  he:{
+    title:'דיווח על תקלה',
+    what:'מה לא עובד?',
+    problem:'מה הבעיה?',
+    note:'פרטים (לא חובה)',
+    notePlaceholder:'לדוגמה: הדלת לא נפתחת בקומה 6',
+    save:'דיווח',
+    cancel:'ביטול',
+    done:'סיום',
+    thanks:'תודה — הדיווח שלך נרשם.',
+    avoid:'ב-24 השעות הקרובות CampusWay ינתב אותך בלי המעלית הזו.',
+    shareHint:'כדי שצוות הקמפוס וסטודנטים אחרים יידעו, אפשר לשלוח אותו:',
+    email:'שליחה במייל לצוות הקמפוס',
+    copy:'העתקת הדיווח',
+    copied:'הועתק',
+    yours:'הדיווחים האחרונים שלך',
+    fixed:'זה עובד שוב',
+    none:'אין עדיין דיווחים.',
+    problems:{
+        'one-out':'מעלית אחת לא פועלת',
+  'all-out':'כל המעליות לא פועלות',
+      quiet:'שקט כרגע',
+      noisy:'רועש כרגע',
+      crowded:'צפוף כרגע',
+      'out-of-service':'לא פועלת',
+      doors:'דלתות או כפתורים לא עובדים',
+      closed:'סגור או נעול',
+      'accessible-stall':'תא הנגישות לא שמיש',
+      cleaning:'צריך ניקיון או ציוד',
+      blocked:'דרך חסומה או עבודות',
+      other:'משהו אחר'
+    }
+  },
+  ar:{
+    title:'الإبلاغ عن مشكلة',
+    what:'ما الذي لا يعمل؟',
+    problem:'ما المشكلة؟',
+    note:'تفاصيل (اختياري)',
+    notePlaceholder:'مثلًا: الباب لا يفتح في الطابق 6',
+    save:'إبلاغ',
+    cancel:'إلغاء',
+    done:'تم',
+    thanks:'شكرًا — تم تسجيل بلاغك.',
+    avoid:'سيتجنب CampusWay هذا المصعد في مساراتك خلال الـ24 ساعة القادمة.',
+    shareHint:'ليعرف طاقم الحرم والطلاب الآخرون، يمكنك إرساله:',
+    email:'إرسال بريد إلى طاقم الحرم',
+    copy:'نسخ البلاغ',
+    copied:'تم النسخ',
+    yours:'بلاغاتك الأخيرة',
+    fixed:'يعمل مجددًا',
+    none:'لا توجد بلاغات بعد.',
+    problems:{
+          'one-out':'مصعد واحد لا يعمل',
+'all-out':'جميع المصاعد لا تعمل',
+      quiet:'هادئ الآن',
+      noisy:'صاخب الآن',
+      crowded:'مزدحم الآن',
+      'out-of-service':'معطّل',
+      doors:'الأبواب أو الأزرار لا تعمل',
+      closed:'مغلق أو مقفل',
+      'accessible-stall':'حمام ذوي الإعاقة غير صالح',
+      cleaning:'يحتاج تنظيفًا أو مستلزمات',
+      blocked:'الطريق مسدود أو أعمال بناء',
+      other:'شيء آخر'
+    }
+  },
+  ru:{
+    title:'Сообщить о проблеме',
+    what:'Что не работает?',
+    problem:'В чём проблема?',
+    note:'Подробности (необязательно)',
+    notePlaceholder:'Например: дверь не открывается на 6-м этаже',
+    save:'Сообщить',
+    cancel:'Отмена',
+    done:'Готово',
+    thanks:'Спасибо — ваше сообщение зарегистрировано.',
+    avoid:'В течение следующих 24 часов CampusWay будет строить маршруты в обход этого лифта.',
+    shareHint:'Чтобы сообщить сотрудникам кампуса и другим студентам, отправьте это через:',
+    email:'Отправить сотрудникам кампуса по электронной почте',
+    copy:'Копировать сообщение',
+    copied:'Скопировано',
+    yours:'Ваши недавние сообщения',
+    fixed:'Снова работает',
+    none:'Сообщений пока нет.',
+    problems:{
+          'one-out':'Один лифт не работает',
+'all-out':'Все лифты не работают',
+      quiet:'Сейчас тихо',
+      noisy:'Сейчас шумно',
+      crowded:'Сейчас многолюдно',
+      'out-of-service':'Не работает',
+      doors:'Двери или кнопки не работают',
+      closed:'Закрыто или заперто',
+      'accessible-stall':'Доступная кабина не работает',
+      cleaning:'Требуется уборка или расходные материалы',
+      blocked:'Путь перекрыт или ведутся работы',
+      other:'Другая проблема'
+    }
+  }
+};
+const PROBLEMS = {
+  'elevator-group': ['one-out', 'all-out', 'other'],
+  elevator:['out-of-service','other'],
+  restroom:['closed', 'accessible-stall', 'cleaning', 'other'],
+  'rest-space':['quiet', 'noisy', 'crowded', 'closed', 'other'],
+  landmark:['quiet', 'noisy', 'crowded', 'closed', 'other'],
+  other:['blocked', 'closed', 'other']
+};
   function el(tag, attributes = {}, children = []){
     const node = document.createElement(tag);
     for(const [key, value] of Object.entries(attributes)){
@@ -405,51 +535,132 @@
       const item = items[Number(select.value)] || items[0];
       const problem = form.querySelector('input[name="cwProblem"]:checked')?.value || 'other';
       const report = addReport({
-        kind:item.kind, building:options.building, buildingName:options.buildingName,
-        connectorId:item.connectorId, nodeId:item.nodeId, label:item.label, problem, note:note.value
+        kind:item.kind,
+        building:options.building,
+        buildingName:options.buildingName,
+        connectorId:item.connectorId,
+        connectorIds:item.connectorIds,
+        nodeId:item.nodeId,
+        label:item.label,
+        problem,
+        note:note.value
       });
       options.onChange?.();
       showThanks(report);
     });
 
-    function showThanks(report){
-      dialog.innerHTML = '';
-      const body = el('div', {class:'cw-dialog-body'});
-      body.append(el('div', {class:'cw-dialog-icon', 'aria-hidden':'true', text:'✓'}));
-      body.append(el('h2', {id:'cwReportTitle', text:text.thanks}));
-      if(report.kind === 'elevator' && report.problem === 'out-of-service') body.append(el('p', {text:text.avoid}));
-      body.append(el('p', {class:'cw-dialog-sub', text:text.shareHint}));
-      const actions = el('div', {class:'cw-dialog-actions cw-dialog-actions--stack'});
-      const message = reportText(report, lang);
-      if(official.reportEmail){
-        actions.append(el('a', {class:'btn btn-ghost', href:`mailto:${encodeURIComponent(official.reportEmail)}?subject=${encodeURIComponent(`CampusWay: ${report.label}`)}&body=${encodeURIComponent(message)}`, text:text.email}));
-      }
-      const copy = el('button', {type:'button', class:'btn btn-ghost', text:text.copy});
-      copy.addEventListener('click', async () => {
-        try{ await navigator.clipboard.writeText(message); copy.textContent = text.copied; }catch(error){ /* clipboard blocked */ }
-      });
-      actions.append(copy);
-      const done = el('button', {type:'button', class:'btn btn-primary', text:text.done});
-      done.addEventListener('click', close);
-      actions.append(done);
-      body.append(actions);
-      dialog.append(body);
-      done.focus();
-    }
+function showThanks(report){
+  dialog.innerHTML = '';
 
-    dialog.append(form, yours);
-    dialog.addEventListener('cancel', () => setTimeout(() => dialog.remove(), 0));
-    document.body.append(dialog);
-    if(typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', '');
-    select.focus();
-    return dialog;
+  const body = el('div', {class:'cw-dialog-body'});
+
+  body.append(
+    el('div', {
+      class:'cw-dialog-icon',
+      'aria-hidden':'true',
+      text:'✓'
+    }),
+    el('h2', {
+      id:'cwReportTitle',
+      text:text.thanks
+    })
+  );
+
+  const elevatorUnavailable =
+    (report.kind === 'elevator' &&
+      report.problem === 'out-of-service') ||
+    (report.kind === 'elevator-group' &&
+      report.problem === 'all-out');
+
+  const spaceUnavailable =
+    ['rest-space', 'landmark'].includes(report.kind) &&
+    ['noisy', 'crowded', 'closed'].includes(report.problem);
+
+  if(elevatorUnavailable){
+    const messages = {
+      en:'Your routes will avoid the reported elevators for 24 hours.',
+      he:'המסלולים שלך יימנעו מהמעליות שדווחו במשך 24 שעות.',
+      ar:'ستتجنب مساراتك المصاعد المُبلّغ عنها لمدة 24 ساعة.',
+      ru:'Ваши маршруты будут обходить указанные лифты в течение 24 часов.'
+    };
+
+    body.append(el('p', {
+      text:messages[lang] || messages.en
+    }));
   }
+
+  if(spaceUnavailable){
+    const messages = {
+      en:'This place will be excluded from your rest-space suggestions for 2 hours.',
+      he:'המקום הזה לא יופיע בהצעות למקומות מנוחה במשך שעתיים.',
+      ar:'لن يظهر هذا المكان ضمن اقتراحات أماكن الاستراحة لمدة ساعتين.',
+      ru:'Это место будет исключено из ваших рекомендаций мест для отдыха на 2 часа.'
+    };
+
+    body.append(el('p', {
+      text:messages[lang] || messages.en
+    }));
+  }
+
+  const actions = el('div', {
+    class:'cw-dialog-actions cw-dialog-actions--stack'
+  });
+
+  const done = el('button', {
+    type:'button',
+    class:'btn btn-primary',
+    text:text.done
+  });
+
+  done.addEventListener('click', close);
+  actions.append(done);
+  body.append(actions);
+  dialog.append(body);
+  done.focus();
+}
+
+  dialog.append(form, yours);
+  dialog.addEventListener('cancel', () =>
+    setTimeout(() => dialog.remove(), 0)
+  );
+
+  document.body.append(dialog);
+
+  if(typeof dialog.showModal === 'function'){
+    dialog.showModal();
+  }else{
+    dialog.setAttribute('open', '');
+  }
+
+  select.focus();
+  return dialog;
+} // End of openReportDialog
 
   function elevatorName(connectorId, lang = 'en'){
     const word = {en:'Elevator', he:'מעלית', ar:'مصعد', ru:'Лифт'}[lang] || 'Elevator';
     return `${word} ${elevatorNumber(connectorId)}`;
   }
+
+  function restSpaceUnavailable(buildingKey, nodeId){
+  const now = Date.now();
+  const maxAge = 2 * 60 * 60 * 1000;
+
+  const latest = reports()
+    .filter(report =>
+      ['rest-space', 'landmark'].includes(report.kind) &&
+      report.building === buildingKey &&
+      report.nodeId === nodeId &&
+      ['quiet', 'noisy', 'crowded', 'closed'].includes(report.problem) &&
+      Number(report.time) <= now &&
+      now - Number(report.time) < maxAge
+    )
+    .sort((a, b) => Number(b.time) - Number(a.time))[0];
+
+  return Boolean(
+    latest &&
+    ['noisy', 'crowded', 'closed'].includes(latest.problem)
+  );
+}
 
   root.CampusStatus = {
     load, ready, onChange,
@@ -457,6 +668,7 @@
     closedNodes, closures, noGoAreas,
     hours, hoursText,
     reports, addReport, removeReport, openReportDialog,
-    get reportEmail(){ return official.reportEmail; }
+    restSpaceUnavailable,
+    get noiseAreas(){ return official.noiseAreas || []; },    get reportEmail(){ return official.reportEmail; }
   };
 })(typeof self !== 'undefined' ? self : this);
