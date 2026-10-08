@@ -262,7 +262,10 @@ test('Phone Sensors exit confirmation on the origin leg hands the journey back o
   await h.run("$('sensorConfirmBtn').onclick()");
   assert.equal(h.run("sessionStorage.getItem('originIndoorComplete')"),'true');
   assert.equal(h.run("sessionStorage.getItem('journeyStage')"),'destination');
-  await h.advanceTime(500);
+  // Arrival waits for the user to choose the next journey leg.
+  assert.equal(h.run('arrivalNextStep.kind'),'outdoor');
+  assert.equal(h.run('window.replacedWith'),undefined);
+  h.run('arrivalNextStep.run()');
   assert.equal(h.run('window.replacedWith'),'../index.html?resumeJourney=1');
 });
 
