@@ -549,16 +549,17 @@ select:disabled{background-color:var(--surface-2);color:#94A3B8;cursor:not-allow
 .mobile-route-guide{display:none;}
 @media (max-width:900px){
   #steps{display:none!important;}
-  .mobile-route-guide{display:block;position:absolute;z-index:4;left:0;right:10px;bottom:12px;height:0;pointer-events:none;}
+  .mobile-route-guide{display:block;position:absolute;z-index:4;inset:0;pointer-events:none;}
   .mobile-route-current,.mobile-route-panel{pointer-events:auto;background:rgba(255,255,255,.98);border:1px solid var(--line);box-shadow:var(--shadow-lg);}
-  .mobile-route-current{position:absolute;left:10px;right:0;bottom:0;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;padding:9px 10px;border-radius:14px;}
+  .mobile-route-current{position:absolute;left:10px;right:10px;bottom:12px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;padding:9px 10px;border-radius:14px;}
   .mobile-route-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#E6F7F4;color:var(--success-ink);font-weight:900;font-size:1.15rem;}
   .mobile-route-current strong{display:block;font-size:.8125rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mobile-route-current span:not(.mobile-route-icon){display:block;margin-top:2px;color:var(--mid);font-size:.6875rem;font-weight:700;}
-  .mobile-route-toggle{position:absolute;left:0;bottom:52px;z-index:2;width:34px;min-width:34px;height:48px;padding:0;border:1px solid var(--primary);border-inline-start:0;border-radius:0 12px 12px 0;background:var(--surface);color:var(--primary);font-size:1.15rem;font-weight:800;line-height:1;box-shadow:var(--shadow);}
+  .mobile-route-toggle{position:absolute;left:0;top:50%;z-index:3;width:34px;min-width:34px;height:54px;transform:translateY(-50%);padding:0;border:1px solid var(--primary);border-inline-start:0;border-radius:0 12px 12px 0;background:var(--surface);color:var(--primary);font-size:1.15rem;font-weight:800;line-height:1;box-shadow:var(--shadow);}
   .mobile-route-toggle span{display:block;transition:transform .18s ease;}
   .mobile-route-guide.is-open .mobile-route-toggle span{transform:rotate(180deg);}
-  .mobile-route-panel{position:absolute;left:0;bottom:58px;width:min(78vw,290px);max-height:min(38vh,250px);margin:0;padding:11px;border-radius:0 16px 16px 0;overflow:auto;}
+  .mobile-route-guide.is-open .mobile-route-toggle{transform:translateY(-50%);}
+  .mobile-route-panel{position:absolute;left:0;top:10px;bottom:72px;width:min(72vw,280px);max-height:none;margin:0;padding:11px;border-radius:0 16px 16px 0;overflow:auto;}
   .mobile-route-panel[hidden]{display:none;}
   .mobile-route-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:.875rem;}
   .mobile-route-close{width:30px;height:30px;border:0;border-radius:8px;background:var(--surface-2);color:var(--ink);font-size:1rem;}

@@ -283,7 +283,7 @@
             <strong id="mobileOutdoorInstruction">Your next direction will appear here.</strong>
             <span id="mobileOutdoorProgress"></span>
           </div>
-          <button class="mobile-route-toggle" id="mobileOutdoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileOutdoorGuidePanel" aria-label="Show directions" title="Show directions"><span aria-hidden="true">⌃</span></button>
+          <button class="mobile-route-toggle" id="mobileOutdoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileOutdoorGuidePanel" aria-label="Show directions" title="Show directions"><span aria-hidden="true">›</span></button>
         </div>
         <div class="mobile-route-panel" id="mobileOutdoorGuidePanel" hidden>
           <div class="mobile-route-panel-head">
@@ -10514,12 +10514,12 @@ if(mobileOutdoorGuideToggle && typeof mobileOutdoorGuideToggle.addEventListener=
   setMobileOutdoorGuideOpen(panel?.hidden);
 });
 if(mobileOutdoorGuideToggle && typeof mobileOutdoorGuideToggle.addEventListener==='function'){
-  let drawerStartY=null;
-  mobileOutdoorGuideToggle.addEventListener('pointerdown',event=>{ drawerStartY=event.clientY; });
+  let drawerStartX=null;
+  mobileOutdoorGuideToggle.addEventListener('pointerdown',event=>{ drawerStartX=event.clientX; });
   mobileOutdoorGuideToggle.addEventListener('pointerup',event=>{
-    if(drawerStartY===null) return;
-    const delta=drawerStartY-event.clientY;
-    drawerStartY=null;
+    if(drawerStartX===null) return;
+    const delta=event.clientX-drawerStartX;
+    drawerStartX=null;
     if(Math.abs(delta)<18) return;
     mobileOutdoorGuideToggle.dataset.dragged='true';
     setMobileOutdoorGuideOpen(delta>0);

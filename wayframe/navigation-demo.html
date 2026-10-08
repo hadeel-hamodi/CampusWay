@@ -195,7 +195,7 @@
               <strong id="mobileIndoorInstruction">Your next direction will appear here.</strong>
               <span id="mobileIndoorProgress"></span>
             </div>
-            <button class="mobile-route-toggle" id="mobileIndoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileIndoorGuidePanel" aria-label="Show directions" title="Show directions"><span aria-hidden="true">⌃</span></button>
+            <button class="mobile-route-toggle" id="mobileIndoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileIndoorGuidePanel" aria-label="Show directions" title="Show directions"><span aria-hidden="true">›</span></button>
           </div>
           <div class="mobile-route-panel" id="mobileIndoorGuidePanel" hidden>
             <div class="mobile-route-panel-head">
@@ -5519,12 +5519,12 @@ function setupIndoorExtras(){
     }
     setMobileIndoorGuideOpen($('mobileIndoorGuidePanel').hidden);
   });
-  let indoorDrawerStartY=null;
-  $('mobileIndoorGuideToggle').addEventListener('pointerdown',event=>{ indoorDrawerStartY=event.clientY; });
+  let indoorDrawerStartX=null;
+  $('mobileIndoorGuideToggle').addEventListener('pointerdown',event=>{ indoorDrawerStartX=event.clientX; });
   $('mobileIndoorGuideToggle').addEventListener('pointerup',event=>{
-    if(indoorDrawerStartY===null) return;
-    const delta=indoorDrawerStartY-event.clientY;
-    indoorDrawerStartY=null;
+    if(indoorDrawerStartX===null) return;
+    const delta=event.clientX-indoorDrawerStartX;
+    indoorDrawerStartX=null;
     if(Math.abs(delta)<18) return;
     $('mobileIndoorGuideToggle').dataset.dragged='true';
     setMobileIndoorGuideOpen(delta>0);
