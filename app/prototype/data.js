@@ -25,6 +25,25 @@ const PLACE_NAMES_HE = {
 ].forEach(place => {
   place.name_he = PLACE_NAMES_HE[place.name] || place.name;
 });
+
+CAMPUS_DATA.points.smoking = [
+  {
+    name: 'Smoking area',
+    lat: 32.761700872883566,
+    lng: 35.01953255099758
+  },
+  {
+    name: 'Smoking area',
+    lat: 32.7616056136449,
+    lng: 35.01860238611699
+  },
+  {
+    name: 'Smoking area',
+    lat: 32.76174095854632,
+    lng: 35.02133421599866
+  }
+];
+
 const BUILDING_ENTRANCES = {
   madriga: [
    {

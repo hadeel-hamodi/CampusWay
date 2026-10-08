@@ -266,8 +266,7 @@ test('Phone Sensors exit confirmation on the origin leg hands the journey back o
   assert.equal(h.run('arrivalNextStep.kind'),'outdoor');
   assert.equal(h.run('window.replacedWith'),undefined);
   h.run('arrivalNextStep.run()');
-  assert.equal(h.run('window.replacedWith'),'../index.html?resumeJourney=1');
-});
+  assert.equal(h.run('window.replacedWith'),'../index.html?resumeJourney=1');});
 
 test('endpoint pause and automatic recalibration facing start allows backtracking',async()=>{
   const h=harness();h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:1-0.65/101.2}]);await startSensor(h);

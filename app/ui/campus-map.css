@@ -1009,8 +1009,7 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
   .mobile-route-panel li::before{content:counter(mobile-step);display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border-radius:50%;background:var(--primary-soft);color:var(--primary);font-size:.6875rem;font-weight:800;}
   .mobile-route-panel li.current{background:var(--primary-soft);font-weight:700;}
   .mobile-route-panel li.current::before{background:var(--primary);color:#fff;}
-}
-.rest-space-popup .leaflet-popup-content{
+}.rest-space-popup .leaflet-popup-content{
   margin: 12px 16px 10px 12px;
 }
 

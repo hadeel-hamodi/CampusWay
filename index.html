@@ -15,9 +15,6 @@
 <script src="app/ui/qr-code.js"></script>
 <script src="app/ui/share.js"></script>
 <script src="app/ui/campus-status.js"></script>
-<script src="app/prototype/madriga-graph.js"></script>
-
-<script src="app/prototype/multi-purpose-graph.js"></script>
 
 <link rel="stylesheet" href="app/ui/campusway.css">
 <link rel="stylesheet" href="app/ui/campus-map.css">
@@ -168,16 +165,6 @@
         <div id="alertArea" aria-live="polite"></div>
       </section>
 
-      <section class="panel location-share-panel" aria-labelledby="lbl-share-my-location">
-        <div class="panel-head">
-          <h2 class="panel-title" id="lbl-share-my-location">Share my current location</h2>
-        </div>
-        <p class="panel-hint" id="share-location-hint">Create a one-time link so someone on campus can find you.</p>
-        <button class="btn btn-primary location-share-btn" id="shareMyLocationBtn" type="button" onclick="shareMyLocation()">
-          <span aria-hidden="true">📍</span> <span id="lbl-share-my-location-btn">Share my location</span>
-        </button>
-      </section>
-
       <!-- Route result -->
       <section class="route-card" id="routeCard" aria-live="polite" aria-label="Route">
         <div class="route-card-head">
@@ -223,6 +210,24 @@
         </div>
       </section>
 
+      <div id="mentalBreakControls" hidden>
+  <button
+    id="mentalBreakBtn"
+    class="btn btn-primary"
+    type="button"
+    onclick="suggestNearestRestSpace()"
+    style="width:100%;min-height:48px;margin-bottom:12px">
+    <span aria-hidden="true">🌿</span>
+    <span id="lbl-mental-break">I need a break</span>
+  </button>
+
+        <div
+          id="mentalBreakSuggestion"
+          aria-live="polite"
+          hidden>
+        </div>
+      </div>
+
       <!-- Services near the starting point -->
       <section class="panel" aria-labelledby="lbl-services">
         <h2 class="panel-title" id="lbl-services">Services Near Me</h2>
@@ -257,9 +262,9 @@
             <span id="landmarkServiceIcon" aria-hidden="true">📍</span>
             <span id="lbl-service-landmarks">Landmarks</span>
           </button>
-          <button id="serviceShelterBtn" class="a11y-btn" type="button" onclick="findNearbyService('shelter')">
-            <span aria-hidden="true">🛡️</span>
-            <span id="lbl-service-shelters">Shelters</span>
+          <button id="serviceSmokingBtn" class="a11y-btn" type="button" onclick="findNearbyService('smoking')">
+            <span aria-hidden="true">🚬</span>
+            <span id="lbl-service-smoking">Smoking areas</span>
           </button>
         </div>
         <p class="service-status" id="serviceStatus" role="status" aria-live="polite"></p>
@@ -285,8 +290,7 @@
   <p class="panel-hint" id="share-location-hint" style="margin-top:8px">
     Create a one-time link so someone on campus can find you.
   </p>
-</section>      <!-- Saved places -->
-      <section class="panel places" aria-labelledby="lbl-favourites">
+</section>      <!-- Saved places -->      <section class="panel places" aria-labelledby="lbl-favourites">
         <h2 class="panel-title" id="lbl-favourites">⭐ Favourites</h2>
         <div class="building-list" id="favouriteList">
           <div class="empty-state" id="favEmpty">No saved places yet. Click "Save" on any building.</div>
@@ -478,7 +482,7 @@ const T = {
       {id:'mobility',label:'Mobility',         sub:'Wheelchair / crutches — avoids stairs'},
       {id:'visual', label:'Visual Impairment', sub:'High contrast and spoken navigation guidance'},
       {id:'spatial', label:'Spatial / Navigation',sub:'Fewer turns, simpler directions'},
-      {id:'mental',  label:'Sensory & Wellbeing Support',sub:'Finds suggested places for a break'},
+      {id:'mental',  label:'Sensory & Wellbeing Support',sub:'Prefers quieter paths and helps you find a place for a break'},
     ],
     alerts:{ /*
       mobility:'Stairs are excluded from accessible indoor routes. If no step-free route is mapped, CampusWay will tell you.',
@@ -554,7 +558,7 @@ const T = {
       {id:'mobility',label:'ניידות',              sub:'כיסא גלגלים / קביים — ללא מדרגות'},
       {id:'visual',  label:'לקות ראייה',          sub: 'ניגודיות גבוהה והנחיות ניווט קוליות'},
       {id:'spatial', label:'ניווט מרחבי',          sub:'פחות פניות, הוראות פשוטות'},
-      {id:'mental',  label:'תמיכה חושית ורווחה',   sub:'מציע מקומות להפסקה'},
+      {id:'mental',  label:'תמיכה חושית ורווחה',   sub:'מעדיף מסלולים שקטים יותר ועוזר למצוא מקום להפסקה'},
     ],
     alerts:{/*
       mobility:'מדרגות אינן נכללות במסלולים נגישים בתוך הבניינים. אם לא מופה מסלול ללא מדרגות, CampusWay יודיע לך.',
@@ -630,7 +634,7 @@ const T = {
       {id:'mobility',label:'إعاقة حركية',           sub:'كرسي متحرك / عكازات — تجنب السلالم'},
       {id:'visual',  label:'إعاقة بصرية',           sub: 'تباين عالٍ وإرشادات تنقّل صوتية'},
       {id:'spatial', label:'صعوبة في الملاحة',       sub:'منعطفات أقل، تعليمات أبسط'},
-      {id:'mental',  label:'الدعم الحسي والراحة النفسية', sub:'يقترح أماكن للاستراحة'},
+      {id:'mental',  label:'الدعم الحسي والراحة النفسية', sub:'يفضّل المسارات الأكثر هدوءًا ويساعدك في العثور على مكان للاستراحة'},
     ],
     alerts:{/*
       mobility:'يتم استبعاد الدرج من المسارات المهيأة داخل المباني. إذا لم يكن هناك مسار بدون درج على الخريطة، سيخبرك CampusWay.',
@@ -706,7 +710,7 @@ const T = {
       {id:'mobility', label:'Ограниченная мобильность', sub:'Кресло-коляска / костыли — без лестниц'},
       {id:'visual', label:'Нарушение зрения', sub:'Высокая контрастность и голосовые подсказки'},
       {id:'spatial', label:'Сложности с навигацией', sub:'Меньше поворотов и более простые инструкции'},
-      {id:'mental', label:'Сенсорная поддержка и благополучие', sub:'Предлагает места для отдыха'},
+      {id:'mental', label:'Сенсорная поддержка и благополучие', sub:'Предпочитает более тихие пути и помогает найти место для отдыха'},
     ],
     alerts:{},
     voices:['Русский','Английский','По умолчанию'],
@@ -994,6 +998,8 @@ let MAIN_GRAPH = null;
 let RABIN_GRAPH = null;
 let STUDENT_GRAPH = null;
 let EDUCATION_GRAPH = null;
+let MADRIGA_GRAPH = null;
+let MULTI_PURPOSE_GRAPH = null;
 const MAIN_GRAPH_URL =
   'buildings/main/main-indoor-graph.json';
 const RABIN_GRAPH_URL =
@@ -1053,11 +1059,29 @@ const educationGraphReady = loadCanonicalIndoorGraph(
   EDUCATION_GRAPH = graph;
   return graph;
 });
+const madrigaGraphReady = loadCanonicalIndoorGraph(
+  'buildings/madriga/madriga-indoor-graph.json',
+  'Terrace Building'
+).then(graph => {
+  MADRIGA_GRAPH = graph;
+  return graph;
+});
+
+const multiPurposeGraphReady = loadCanonicalIndoorGraph(
+  'buildings/multi-purpose/multi-purpose-indoor-graph.json',
+  'Multi-Purpose Building'
+).then(graph => {
+  MULTI_PURPOSE_GRAPH = graph;
+  return graph;
+});
+
 const indoorSearchGraphsReady = Promise.all([
   mainGraphReady,
   rabinGraphReady,
   studentGraphReady,
-  educationGraphReady
+  educationGraphReady,
+  madrigaGraphReady,
+  multiPurposeGraphReady
 ]);
 let customStart = null; // {lat, lng, label}
 let selectedStartLocation = null;
@@ -1331,7 +1355,8 @@ function changeSettingsLanguage(language, direction){
   if(currentOutdoorDestination){
     const destination = currentOutdoorDestination;
     routeTo(destination.name, destination.lat, destination.lng, {
-      keepIndoorContext: destination.keepIndoorContext
+      keepIndoorContext: destination.keepIndoorContext,
+      emergency: destination.emergency === true
     });
   }
 }
@@ -1436,8 +1461,12 @@ async function buildScheduleTargets(){
     });
   });
   const graphs = [
-    ['main', 'Main Building', MAIN_GRAPH], ['rabin', 'Rabin Building', RABIN_GRAPH],
-    ['student', 'Student House', STUDENT_GRAPH], ['education', 'Education and Science', EDUCATION_GRAPH]
+    ['main', 'Main Building', MAIN_GRAPH],
+    ['rabin', 'Rabin Building', RABIN_GRAPH],
+    ['student', 'Student House', STUDENT_GRAPH],
+    ['education', 'Education and Science', EDUCATION_GRAPH],
+    ['madriga', 'Terrace Building', MADRIGA_GRAPH],
+    ['multi-purpose', 'Multi-Purpose Building', MULTI_PURPOSE_GRAPH]
   ];
   graphs.forEach(([buildingKey, buildingName, graph]) => {
     Object.values(graph?.floors || {}).forEach(floor => {
@@ -1879,43 +1908,35 @@ if(controls.hidden && suggestion){
   suggestion.hidden = true;
   suggestion.replaceChildren();
 }
-}function updateRestSpaceServiceButton(){
-  const mentalProfile = currentProfile === 'mental';
+}function updateRestSpaceServiceButton(){  const mentalProfile = currentProfile === 'mental';
   const button = document.getElementById('landmarkServiceBtn');
   const icon = document.getElementById('landmarkServiceIcon');
   const label = document.getElementById('lbl-service-landmarks');
 
   if(!button || !icon || !label) return;
 
-  icon.textContent = mentalProfile ? '🌿' : '📍';
-  label.textContent = mentalProfile
-    ? t.serviceRestSpaces
-    : t.serviceLandmarks;
+  icon.textContent = '🌿';
+label.textContent = mentalProfile
+  ? t.serviceRestSpaces
+  : ({
+      en: 'Quiet spaces',
+      he: 'מרחבים שקטים',
+      ar: 'أماكن هادئة',
+      ru: 'Тихие места'
+    })[lang] || 'Quiet spaces';
   button.title = label.textContent;
 
   const grid = button.parentElement;
-  const order = mentalProfile
-    ? [
-        'landmarkServiceBtn',
-        'serviceRestroomBtn',
-        'serviceFoodBtn',
-        'serviceShopBtn',
-        'serviceClinicBtn',
-        'serviceGymBtn',
-        'serviceLibraryBtn',
-        'serviceShelterBtn'
-      ]
-    : [
-        'serviceRestroomBtn',
-        'serviceFoodBtn',
-        'serviceShopBtn',
-        'serviceClinicBtn',
-        'serviceGymBtn',
-        'serviceLibraryBtn',
-        'landmarkServiceBtn',
-        'serviceShelterBtn'
-      ];
-
+  const order = [
+  'serviceRestroomBtn',
+  'serviceFoodBtn',
+  'serviceShopBtn',
+  'serviceClinicBtn',
+  'serviceGymBtn',
+  'serviceLibraryBtn',
+  'landmarkServiceBtn',
+  'serviceSmokingBtn'
+];
   for(const id of order){
     const serviceButton = document.getElementById(id);
     if(serviceButton && serviceButton.parentElement === grid){
@@ -2023,7 +2044,12 @@ if(voiceArea){
   document.getElementById('lbl-service-restrooms').textContent = t.serviceRestrooms;
   document.getElementById('lbl-service-food').textContent = t.serviceFood;
   document.getElementById('lbl-service-shops').textContent = t.serviceShops;
-  document.getElementById('lbl-service-shelters').textContent = t.serviceShelters;
+  document.getElementById('lbl-service-smoking').textContent = ({
+  en: 'Smoking areas',
+  he: 'אזורי עישון',
+  ar: 'مناطق التدخين',
+  ru: 'Места для курения'
+})[lang] || 'Smoking areas';
   document.getElementById('lbl-service-clinic').textContent = t.serviceClinic;
   document.getElementById('lbl-service-gym').textContent = t.serviceGym;
   document.getElementById('lbl-service-library').textContent = t.serviceLibrary;
@@ -2312,16 +2338,15 @@ const startVoicePlanning =
   buildProfiles();
   if(window.CampusUI) window.CampusUI.refresh();
 
-  if(currentProfile === 'mental'){
-    void showRestSpacePreview();
-  }else{
-    clearRestSpacePreview();
-  }
+if(changed){
+  clearRestSpacePreview();
+}
 
   if(recalculate && changed && currentOutdoorDestination && !startVoicePlanning){
     const destination = currentOutdoorDestination;
     routeTo(destination.name, destination.lat, destination.lng, {
-      keepIndoorContext: destination.keepIndoorContext
+      keepIndoorContext: destination.keepIndoorContext,
+      emergency: destination.emergency === true
     });
   }
 
@@ -2875,6 +2900,69 @@ CAMPUS_DATA.points.shops.forEach(s=>{
   shopMarkers.push(marker);
 });
 
+// Smoking areas — map markers only; no legend entry
+const smokingMarkers = [];
+
+(CAMPUS_DATA.points.smoking || []).forEach(place => {
+  const smokingLabel = () => ({
+    en: 'Smoking area',
+    he: 'אזור עישון',
+    ar: 'منطقة تدخين',
+    ru: 'Место для курения'
+  }[lang] || 'Smoking area');
+
+  const highContrast = document.body.classList.contains('hc');
+
+  const icon = L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width:20px;
+        height:20px;
+        border-radius:50%;
+        background:${highContrast ? '#FFD400' : '#475569'};
+        color:${highContrast ? '#000' : '#fff'};
+        border:2px solid #fff;
+        box-shadow:0 2px 5px rgba(0,0,0,.2);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:12px;
+      ">🚬</div>
+    `,
+ iconSize: [20, 20],
+iconAnchor: [10, 10]
+  });
+
+  const marker = L.marker([place.lat, place.lng], {
+    icon,
+    title: smokingLabel()
+  })
+    .addTo(map)
+    .bindPopup(() => {
+      const popup = document.createElement('div');
+
+      const heading = document.createElement('strong');
+      heading.textContent = `🚬 ${smokingLabel()}`;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'building-popup-btn';
+      button.style.minHeight = '44px';
+      button.textContent = t.navigateHere;
+
+      button.onclick = () => {
+        map.closePopup();
+        routeTo(smokingLabel(), place.lat, place.lng);
+      };
+
+      popup.append(heading, button);
+      return popup;
+    });
+
+  smokingMarkers.push(marker);
+});
+
 // Clinic — red cross
 const clinicMarkers = [];
 
@@ -2890,14 +2978,6 @@ const marker = L.marker([c.lat,c.lng],{icon})
 
 clinicMarkers.push(marker);
 });
-
-// ==================================================
-// OUTDOOR STAIRS & ELEVATORS
-// ==================================================
-// Main Building Floor 600 outdoor elevator.
-// This is the same elevator used by the accessible
-// Main ↔ Student House outdoor routing graph.
-// ==================================================
 
 // ==================================================
 // OUTDOOR STAIRS & ELEVATORS
@@ -3232,6 +3312,15 @@ function collectIndoorShelterServices(){
 
 function restSpaceJourneyStart(){
   const start = getStart();
+  // An outdoor start must not reuse an old indoor starting room.
+if(!customStart?.buildingKey && !start?.buildingKey){
+  sessionStorage.removeItem('indoorStartContext');
+
+  if(sessionStorage.getItem('journeyStage') === 'origin'){
+    sessionStorage.removeItem('journeyStage');
+    sessionStorage.removeItem('originIndoorComplete');
+  }
+}
   const buildingKeys = {
     'Terrace Building': 'madriga',
     'Main Building': 'main',
@@ -3527,12 +3616,15 @@ async function restSpaceJourneySeconds(match, start){
   return Number.isFinite(bestSeconds) ? bestSeconds : null;
 }
 
-async function rankNearbyRestSpaces(isCurrent = () => true){
+async function rankNearbyRestSpaces(
+  isCurrent = () => true,
+  startOverride = null
+){
   await indoorSearchGraphsReady;
 
   if(!isCurrent()) return null;
 
-  const start = restSpaceJourneyStart();
+  const start = startOverride || restSpaceJourneyStart();
   const profile = currentProfile;
   const matches = collectNearbyIndoorServices('rest-space')
   .filter(match =>
@@ -3544,7 +3636,7 @@ async function rankNearbyRestSpaces(isCurrent = () => true){
   const ranked = [];
 
   const startIsUnchanged = () => {
-    const now = restSpaceJourneyStart();
+    const now = startOverride || restSpaceJourneyStart();
 
     return isCurrent() &&
       currentProfile === profile &&
@@ -3579,7 +3671,7 @@ async function rankNearbyRestSpaces(isCurrent = () => true){
     String(a.node.id).localeCompare(String(b.node.id))
   );
 
-  return ranked.slice(0, 3);
+  return ranked;
 }
 
 let restSpacePreviewRequestId = 0;
@@ -3604,22 +3696,26 @@ if(status) status.textContent = '';
 async function showRestSpacePreview(){
   clearRestSpacePreview();
   exitFoodShopMode();
+  const serviceType =
+    currentProfile === 'mental' ? 'rest-space' : 'landmark';
 
+  activeRouteService = serviceType;
+  setActiveServiceButton(serviceType);
   const serviceType =
     currentProfile === 'mental' ? 'rest-space' : 'landmark';
 
   activeRouteService = serviceType;
   setActiveServiceButton(serviceType);
 
-  if(currentProfile !== 'mental') return;
+  const previewProfile = currentProfile;
 
   document.getElementById('landmarkServiceBtn')
   ?.classList.add('service-active');
 
   const requestId = restSpacePreviewRequestId;
-  const isCurrent = () =>
-    requestId === restSpacePreviewRequestId &&
-    currentProfile === 'mental';
+const isCurrent = () =>
+  requestId === restSpacePreviewRequestId &&
+  currentProfile === previewProfile;
 
   const text = (en, he, ar, ru) =>
     lang === 'he' ? he : lang === 'ar' ? ar : lang === 'ru' ? ru : en;
@@ -3636,6 +3732,19 @@ async function showRestSpacePreview(){
   }
 
   const places = await rankNearbyRestSpaces(isCurrent);
+
+if(places){
+  const displayLabel = {
+    en: previewProfile === 'mental' ? 'Rest space' : 'Quiet space',
+    he: previewProfile === 'mental' ? 'מקום מנוחה' : 'מקום שקט',
+    ar: previewProfile === 'mental' ? 'مكان استراحة' : 'مكان هادئ',
+    ru: previewProfile === 'mental' ? 'Место для отдыха' : 'Тихое место'
+  }[lang] || 'Quiet space';
+
+  for(const place of places){
+    place.displayLabel = displayLabel;
+  }
+}
 
   if(!isCurrent() || places === null) return;
 
@@ -3783,8 +3892,7 @@ actions.style.flexDirection = 'column';
 button.style.width = '100%';
 reportButton.style.width = '100%';
 actions.append(button, reportButton);
-row.append(description, actions);      popup.appendChild(row);
-    }
+row.append(description, actions);      popup.appendChild(row);    }
 
     const marker = L.marker(
       [group[0].building.lat, group[0].building.lng],
@@ -3876,8 +3984,8 @@ function collectNearbyIndoorServices(type){
 
     let reachableNodeIds = null;
 
-    if(type === 'rest-space'){
-    const accessible = currentProfile === 'mobility';
+if(type === 'rest-space' || type === 'landmark'){
+      const accessible = currentProfile === 'mobility';
     const routeGraph = buildIndoorEtaGraph(item.graph, accessible);
 
     const configuredEntrances =
@@ -3911,10 +4019,10 @@ function collectNearbyIndoorServices(type){
 
       for(const node of (floor.nodes || [])){
 
-        const matchesType = type === 'rest-space'
-          ? CampusRoutePlanner.isSuggestedRestSpace(node)
+        const matchesType =
+        type === 'rest-space' || type === 'landmark'
+          ? node.type === 'landmark'
           : node.type === type;
-
         if(
           matchesType &&
           (!reachableNodeIds || reachableNodeIds.has(node.id))
@@ -4031,7 +4139,7 @@ function setActiveServiceButton(type){
     library: 'serviceLibraryBtn',
     landmark: 'landmarkServiceBtn',
     'rest-space': 'landmarkServiceBtn',
-    shelter: 'serviceShelterBtn'
+    smoking: 'serviceSmokingBtn'
   };
 
   Object.values(buttons).forEach(id => {
@@ -4040,7 +4148,9 @@ function setActiveServiceButton(type){
       ?.classList.remove('service-active');
   });
 
-  const activeButton = document.getElementById(buttons[type]);
+  const activeButton = buttons[type]
+  ? document.getElementById(buttons[type])
+  : null;
 
   if(activeButton){
     activeButton.classList.add('service-active');
@@ -4049,7 +4159,7 @@ function setActiveServiceButton(type){
 
 async function findNearbyService(type){
 
-   if(type === 'rest-space' && currentProfile === 'mental'){
+   if(type === 'rest-space' || type === 'landmark'){
   const button = document.getElementById('landmarkServiceBtn');
 
   if(button?.classList.contains('service-active')){
@@ -4059,6 +4169,7 @@ async function findNearbyService(type){
   }
   return;
 }
+clearRestSpacePreview();
   const requestId = ++nearbyServiceRequestId;
 
   if([
@@ -4171,6 +4282,74 @@ if(type === 'shop'){
     return;
   }
 
+  if(type === 'smoking'){
+  const profile = currentProfile;
+  const accessible = profile === 'mobility';
+  let nearestSmoking = null;
+  let shortestDistance = Infinity;
+
+  for(const place of (CAMPUS_DATA.points.smoking || [])){
+    try{
+      const candidate = await CampusOutdoorRouting.route(
+        start.lat,
+        start.lng,
+        place.lat,
+        place.lng,
+        {avoidSteps: accessible}
+      );
+
+      if(requestId !== nearbyServiceRequestId || currentProfile !== profile){
+        return;
+      }
+
+      const coordinates = candidate?.coordinates;
+      if(!coordinates || coordinates.length < 2) continue;
+
+      let distance = 0;
+      for(let i = 1; i < coordinates.length; i++){
+        distance += CampusOutdoorRouting.distance(
+          coordinates[i - 1],
+          coordinates[i]
+        );
+      }
+
+      if(distance < shortestDistance){
+        shortestDistance = distance;
+        nearestSmoking = place;
+      }
+    }catch(error){
+      if(requestId !== nearbyServiceRequestId || currentProfile !== profile){
+        return;
+      }
+      console.warn('Could not check smoking-area route:', error);
+    }
+  }
+
+  if(!nearestSmoking){
+    notify(({
+      en: 'No reachable smoking area was found from your starting point.',
+      he: 'לא נמצא אזור עישון שניתן להגיע אליו מנקודת ההתחלה שלך.',
+      ar: 'لم يتم العثور على منطقة تدخين يمكن الوصول إليها من نقطة البداية.',
+      ru: 'От вашей начальной точки не найден доступный маршрут к месту для курения.'
+    })[lang]);
+    return;
+  }
+
+  const label = ({
+    en: 'Smoking area',
+    he: 'אזור עישון',
+    ar: 'منطقة تدخين',
+    ru: 'Место для курения'
+  })[lang] || 'Smoking area';
+
+  await routeTo(
+    label,
+    nearestSmoking.lat,
+    nearestSmoking.lng
+  );
+  return;
+}
+
   if(!services || !services.length) return;
 
   let nearest = null;
@@ -4201,7 +4380,8 @@ if(type === 'shop'){
         destinationDisplayLabel: {
           en: 'Nearest restroom',
           he: 'השירותים הקרובים ביותר',
-          ar: 'أقرب مرحاض'
+          ar: 'أقرب مرحاض',
+          ru: 'Ближайший туалет'
         }[lang] || 'Nearest restroom',
         destinationType: 'restroom',
         buildingKey: nearest.buildingKey
@@ -5232,12 +5412,16 @@ async function getJourneyEtaSeconds({
 }
 
 async function routeTo(name, lat, lng, options={}){
-
     clearOutdoorEndpointMarkers();
   const avoidNoise =
-  currentProfile === 'mental' && options.emergency !== true;  const keepIndoorContext = options.keepIndoorContext === true;
-  keepIndoorContextForCurrentRoute = keepIndoorContext;
-  currentOutdoorDestination = {name, lat, lng, keepIndoorContext};
+  currentProfile === 'mental' && options.emergency !== true;  const keepIndoorContext = options.keepIndoorContext === true;  keepIndoorContextForCurrentRoute = keepIndoorContext;
+  currentOutdoorDestination = {
+  name,
+  lat,
+  lng,
+  keepIndoorContext,
+  emergency: options.emergency === true
+};
   if(!keepIndoorContext) sessionStorage.removeItem('indoorContext');
   if(typeof renderRouteSteps === 'function') renderRouteSteps(null);
   if(typeof emergencyRouteActive !== 'undefined') emergencyRouteActive = options.emergency === true;
@@ -5693,7 +5877,8 @@ if(
             destinationEntrance.lat,
             destinationEntrance.lng,
             {
-              avoidSteps: currentProfile === 'mobility'
+              avoidSteps: currentProfile === 'mobility',
+              avoidNoise
             }
           );
 
@@ -5820,7 +6005,8 @@ if(
           destinationEntrance.lat,
           destinationEntrance.lng,
           {
-            avoidSteps: currentProfile === 'mobility'
+            avoidSteps: currentProfile === 'mobility',
+            avoidNoise
           }
         );
 
@@ -6036,7 +6222,8 @@ const transferSeconds =
                   destinationEntrance.lng,
                   {
                     avoidSteps:
-                      currentProfile === 'mobility'
+                      currentProfile === 'mobility',
+                      avoidNoise
                   }
                 );
 
@@ -6388,7 +6575,8 @@ if(
             selectedEntrance.lat,
             selectedEntrance.lng,
             {
-              avoidSteps: currentProfile === 'mobility'
+              avoidSteps: currentProfile === 'mobility',
+              avoidNoise
             }
           );
       }catch(error){
@@ -6564,7 +6752,8 @@ if(outdoorLegRequired){
       start.lat, start.lng, lat, lng,
       {
         avoidSteps: currentProfile === 'mobility',
-        preferFewerTurns: currentProfile === 'spatial'
+        preferFewerTurns: currentProfile === 'spatial',
+        avoidNoise
       }
     );
   }catch(error){
@@ -6730,7 +6919,8 @@ if(
       outdoorDestinationLng,
       {
         avoidSteps: currentProfile === 'mobility',
-        preferFewerTurns: currentProfile === 'spatial'
+        preferFewerTurns: currentProfile === 'spatial',
+        avoidNoise
       }
     );
 
@@ -7356,9 +7546,7 @@ function setMobileOutdoorGuideOpen(open){
   toggle.setAttribute('aria-expanded',String(open));
   toggle.setAttribute('aria-label',mobileRouteGuideCopy(open?'hide':'show'));
   document.getElementById('mobileOutdoorGuide')?.classList.toggle('is-open',open);
-}
-
-var outdoorGuidance = null;
+}var outdoorGuidance = null;
 var outdoorSpeechToken = 0;
 
 function outdoorGuidanceText(en, he, ar, ru){
@@ -7423,12 +7611,10 @@ function highlightRouteStep(index){
     if(active) item.setAttribute('aria-current', 'step');
     else item.removeAttribute('aria-current');
   });
-
   if(index >= 0 && index < routeStepTexts.length){
     activeRouteStepIndex = index;
     syncMobileOutdoorGuide();
-  }
-}
+  }}
 
 function updateReadStepsButton(){
   const button = document.getElementById('readStepsBtn');
@@ -8052,7 +8238,6 @@ state.watchdog = setInterval(() => {
       timeout: 15000
     }
   );}
-
 function renderRouteSteps(result, options = {}){
   const wrap = document.getElementById('routeStepsWrap');
   const list = document.getElementById('routeSteps');
@@ -8548,15 +8733,7 @@ function shelterBuildings(){
 }
 
 async function emergencyStartPoint(){
-  if(customStart) return customStart;
-  if(!navigator.geolocation) return getStart();
-  return new Promise(resolve => {
-    navigator.geolocation.getCurrentPosition(
-      position => resolve({lat:position.coords.latitude, lng:position.coords.longitude, label:'📍 GPS'}),
-      () => resolve(getStart()),
-      {enableHighAccuracy:true, timeout:4000, maximumAge:60000}
-    );
-  });
+  return getStart();
 }
 
 async function nearestShelterPlan(start){
@@ -8576,7 +8753,16 @@ async function nearestShelterPlan(start){
       for(const entrance of entrances){
         let outdoor = null;
         try{
-          outdoor = await CampusOutdoorRouting.route(start.lat, start.lng, entrance.lat, entrance.lng, {avoidSteps:accessible});
+          outdoor = await CampusOutdoorRouting.route(
+          start.lat,
+          start.lng,
+          entrance.lat,
+          entrance.lng,
+          {
+            avoidSteps: accessible,
+            avoidNoise: false
+          }
+        );
         }catch(error){
           outdoor = null;
         }
@@ -9073,7 +9259,14 @@ function getStartMatches(filter){
     {
       graph: typeof EDUCATION_GRAPH !== 'undefined' ? EDUCATION_GRAPH : null,
       buildingName: 'Education and Science',
-      buildingKey: 'education'
+            buildingKey: 'education'
+    },
+    {
+      graph: typeof MULTI_PURPOSE_GRAPH !== 'undefined'
+        ? MULTI_PURPOSE_GRAPH
+        : null,
+      buildingName: 'Multi-Purpose Building',
+      buildingKey: 'multi-purpose'
     }
   ];
 
@@ -9320,7 +9513,8 @@ function pickStart(name, lat, lng, displayLabel = ''){
     setTimeout(()=>{
       if(currentOutdoorDestination !== destination) return;
       routeTo(destination.name, destination.lat, destination.lng, {
-        keepIndoorContext: destination.keepIndoorContext
+        keepIndoorContext: destination.keepIndoorContext,
+emergency: destination.emergency === true
       });
     }, 700);
   }
@@ -9525,6 +9719,12 @@ let startSearchRequestId = 0;
 
 async function showReadyStartSuggestions(value){
   const requestId = ++startSearchRequestId;
+
+  if(!String(value || '').trim()){
+    startSuggestions.style.display = 'none';
+    return;
+  }
+
   await indoorSearchGraphsReady;
   if(requestId !== startSearchRequestId) return;
   showStartSuggestions(value);
@@ -9537,7 +9737,13 @@ async function runReadyStartSearch(value){
   return doStartSearch(value);
 }
 
-startInput.addEventListener('focus', ()=> showReadyStartSuggestions(startInput.value));
+startInput.addEventListener('focus', ()=>{
+  if(startInput.value.trim()){
+    showReadyStartSuggestions(startInput.value);
+  }else{
+    startSuggestions.style.display = 'none';
+  }
+});
 startInput.addEventListener('input', e=>{
   clearIndoorStartJourney();
   customStart = null;
@@ -9875,6 +10081,12 @@ let destinationSearchRequestId = 0;
 
 async function showReadySearchSuggestions(value){
   const requestId = ++destinationSearchRequestId;
+
+  if(!String(value || '').trim()){
+    searchSuggestions.style.display = 'none';
+    return;
+  }
+
   await indoorSearchGraphsReady;
   if(requestId !== destinationSearchRequestId) return;
   showSearchSuggestions(value);
@@ -9887,7 +10099,9 @@ async function runReadyDestinationSearch(value){
   return doSearch(value);
 }
 
-document.getElementById('searchInput').addEventListener('focus', ()=> showReadySearchSuggestions(''));
+document.getElementById('searchInput').addEventListener('focus', e=>{
+  showReadySearchSuggestions(e.target.value);
+});
 document.getElementById('searchInput').addEventListener('input', e=>{
   selectedSearchDestination = null;
   showReadySearchSuggestions(e.target.value);
@@ -11487,7 +11701,10 @@ async function resumeOutdoorJourneyAfterOrigin(){
     destination.name,
     Number(destination.lat),
     Number(destination.lng),
-    {keepIndoorContext: destination.keepIndoorContext === true}
+    {
+      keepIndoorContext: destination.keepIndoorContext === true,
+      emergency: destination.emergency === true
+    }
   );
 
   return {

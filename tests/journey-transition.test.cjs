@@ -253,9 +253,12 @@ test('outdoor directions wait until an origin indoor leg has reached the exit', 
   }
 });
 
-test('indoor screen keeps the route guide in the sidebar instead of duplicating it on the map', () => {
-  assert.match(navigation, /class="navBanner" aria-hidden="true" hidden/);
-  assert.match(indoorCss, /\.navBanner\[hidden\]\{display:none !important;\}/);
+test('indoor screen keeps current guidance visible and highlights the sidebar step', () => {
+  const banner = navigation.match(/<div\b[^>]*class="navBanner"[^>]*>/);
+
+  assert.ok(banner, 'Indoor guidance banner exists');
+  assert.doesNotMatch(banner[0], /\bhidden\b/);
+  assert.doesNotMatch(banner[0], /aria-hidden="true"/);
   assert.match(navigation, /function syncIndoorStepListPosition\(\)/);
   assert.doesNotMatch(navigation, /indoorShareBtn/);
   assert.doesNotMatch(navigation, /shareIndoorDestination/);

@@ -107,17 +107,27 @@ function connectedNodeIds(value, starts, options = {}){
   return reached;
 }
 
-test('main page loads canonical Main, Rabin, Student and Education graphs before using them', async () => {
+test('main page loads all six canonical indoor graphs before using them', async () => {
   const requests = [];
+  const graphsByUrl = {
+    'buildings/main/main-indoor-graph.json':mainGraph,
+    'buildings/rabin/rabin-indoor-graph.json':rabinGraph,
+    'buildings/student/student-indoor-graph.json':graph,
+    'buildings/education/education-indoor-graph.json':graph,
+    'buildings/madriga/madriga-indoor-graph.json':graph,
+    'buildings/multi-purpose/multi-purpose-indoor-graph.json':graph
+  };
+
   const context = vm.createContext({
     fetch:async url => {
       requests.push(url);
+      assert.ok(graphsByUrl[url], `Unexpected graph URL: ${url}`);
+
       return {
         ok:true,
         status:200,
         async json(){
-          if(url.includes('/main/')) return mainGraph;
-          return url.includes('/rabin/') ? rabinGraph : graph;
+          return graphsByUrl[url];
         }
       };
     },
@@ -128,26 +138,30 @@ test('main page loads canonical Main, Rabin, Student and Education graphs before
     between(index, 'let MAIN_GRAPH = null;', 'let customStart = null;'),
     context
   );
+
   await vm.runInContext('indoorSearchGraphsReady', context);
 
-  assert.deepEqual(requests, [
-    'buildings/main/main-indoor-graph.json',
-    'buildings/rabin/rabin-indoor-graph.json',
-    'buildings/student/student-indoor-graph.json',
-    'buildings/education/education-indoor-graph.json'
-  ]);
-  assert.equal(
-    vm.runInContext('MAIN_GRAPH', context).floors.floor600.nodes.length,
-    mainGraph.floors.floor600.nodes.length
+  assert.deepEqual(
+    [...requests].sort(),
+    Object.keys(graphsByUrl).sort()
   );
-  assert.equal(
-    vm.runInContext('RABIN_GRAPH', context).floors.floor5.nodes.length,
-    rabinGraph.floors.floor5.nodes.length
-  );
-  assert.equal(
-    vm.runInContext('STUDENT_GRAPH', context).floors.floor1.nodes.length,
-    graph.floors.floor1.nodes.length
-  );
+
+  const expectedGraphs = {
+    MAIN_GRAPH:mainGraph,
+    RABIN_GRAPH:rabinGraph,
+    STUDENT_GRAPH:graph,
+    EDUCATION_GRAPH:graph,
+    MADRIGA_GRAPH:graph,
+    MULTI_PURPOSE_GRAPH:graph
+  };
+
+  for(const [variable, expected] of Object.entries(expectedGraphs)){
+    assert.equal(
+      vm.runInContext(variable, context),
+      expected,
+      `${variable} should contain its fetched canonical graph`
+    );
+  }
 });
 
 test('a delayed graph load cannot show stale search suggestions', async () => {

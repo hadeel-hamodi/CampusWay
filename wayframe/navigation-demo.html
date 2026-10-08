@@ -207,7 +207,7 @@
         </section>
 
         <div class="navStack">
-          <div class="navBanner" aria-hidden="true" hidden>
+          <div class="navBanner">
           <div class="turnIcon" id="turnIcon" aria-hidden="true">↑</div>
             <div class="bannerText" role="status" aria-live="polite">
               <strong id="instruction">Choose a destination</strong>
@@ -272,9 +272,9 @@ const ORDER = [
 
 const FLOOR_PLAN_FLOORS={
   madriga:['floorminus1','floor0','floor1','floor2','floor3','floor4'],
-  education:['floor0','floor1','floor2','floor3','floor4','floor5','floor6'],
+  education:['floor1','floor2','floor3','floor4','floor5','floor6'],
   main:['floor500','floor600','floor700'],
-  'multi-purpose':['floorminus1','floor0','floor1','floor2'],
+  'multi-purpose':['floor1'],
   rabin:['floor5','floor6','floor7'],
   student:['floor0','floor1','floor2','floor3','floor4']
 };
@@ -3647,8 +3647,7 @@ function advanceJourneyPlanLeg(){
   }catch(error){
     console.warn('Could not advance the journey plan:',error);
   }
-}function returnToOutdoorJourney(){
-  sessionStorage.setItem(
+}function returnToOutdoorJourney(){  sessionStorage.setItem(
     'campusTransitionDirection',
     'outdoor'
   );
@@ -3832,8 +3831,7 @@ return;
       };
       announceArrival();
       return;
-    }
-    sessionStorage.setItem('originIndoorComplete','true');
+    }    sessionStorage.setItem('originIndoorComplete','true');
     sessionStorage.setItem('campusTransitionDirection','outdoor');
     sessionStorage.removeItem('intermediateIndoorTransfer');
     $('instruction').textContent=localizedInstruction(

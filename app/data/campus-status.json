@@ -8,6 +8,16 @@
   ],
   "updated": "2026-10-04",
   "elevators": [],
+  "noiseAreas": [
+  {
+    "id": "garden-cafe",
+    "label": "Garden Café",
+    "outdoorNodeIds": ["campus_main_garden_path"],
+    "noisy": true,
+    "crowded": true,
+    "until": "2026-10-20T23:59:59+03:00"
+  }
+],
   "closures": [],
   "openingHours": {},
   "reportEmail": ""
