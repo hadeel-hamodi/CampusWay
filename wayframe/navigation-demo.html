@@ -895,11 +895,18 @@ if(journeyStage === 'same-building'){
     ensureNodeOption('from', startNode);
     $('from').value = startNode.id;
 
-    const destinationNode = nodeById(
-      intermediateTransfer?.destinationNodeId ||
-      ($('accessibleRoute').checked ? 'floor5_n104' : 'floor5_n204')
-    );
+    const usesTerraceElevator =
+      intermediateTransfer?.destinationBuilding === 'madriga';
 
+    if(usesTerraceElevator){
+      $('accessibleRoute').checked = true;
+    }
+
+const destinationNode = nodeById(
+  usesTerraceElevator
+    ? 'floor5_n104'
+    : intermediateTransfer?.destinationNodeId
+);
 if(destinationNode){
   $('toFloor').value = destinationNode.floor;
 
@@ -1121,26 +1128,6 @@ if(context.destinationType === 'rest-space'){
           $('to').value = destination.id;
         }
       }
-
-      // Arrived at the building without a room chosen yet: open the
-      // destination list on the entrance floor so the next step is one choice.
-      if($('from').value && !$('to').value && !$('toFloor').value){
-        $('toFloor').value = $('fromFloor').value;
-        fillLocationSelect($('toFloor').value, 'to', 'Choose destination...');
-        $('instruction').textContent = localizedInstruction(
-          'Where to inside?',
-          'إلى أين داخل المبنى؟',
-          'לאן בתוך הבניין?',
-          'Куда внутри здания?'
-        );
-        $('subInstruction').textContent = localizedInstruction(
-          'Choose a room or place under “To”.',
-          'اختر غرفة أو مكانًا في خانة "إلى".',
-          'בחר חדר או מקום בשדה "לאן".',
-          'Выберите комнату или место в поле «Куда».'
-        );
-        showChosenStart();
-      }
     }catch(error){
       console.warn(
         'Could not restore indoor destination:',
@@ -1166,6 +1153,38 @@ if(context.destinationType === 'rest-space'){
 
     if(restorePendingSharedElevatorRide()){
     sessionStorage.removeItem('sharedNavigationResume');
+    return;
+  }
+
+    // A building-only destination is complete at its arrival point.
+  // Restore any shared elevator ride first, so it can finish normally.
+  let arrivalContext = null;
+
+  try{
+    arrivalContext = JSON.parse(
+      sessionStorage.getItem('indoorContext') || 'null'
+    );
+  }catch(error){
+    console.warn('Could not read building arrival context:', error);
+  }
+
+  const buildingOnlyDestination =
+    sessionStorage.getItem('journeyStage') === 'destination' &&
+    arrivalContext?.buildingKey === BUILDING &&
+    !arrivalContext.destinationNodeId &&
+    !arrivalContext.destinationLabel &&
+    !(arrivalContext.destinationNodeIds?.length);
+
+  const buildingArrivalNode = nodeById($('from').value);
+
+  if(buildingOnlyDestination && buildingArrivalNode){
+    routeNodes = [{
+      ...buildingArrivalNode,
+      _displayLabel: indoorBuildingDisplayName()
+    }];
+    routePath = [buildingArrivalNode.id];
+    sessionStorage.removeItem('sharedNavigationResume');
+    completeNavigation();
     return;
   }
 
@@ -3804,6 +3823,11 @@ return;
         'הגעת למעבר. המשך לבניין מדרגה כשתהיה מוכן.',
         'Переход достигнут. Продолжайте в здание «Терраса», когда будете готовы.'
       );
+      // An uninterrupted elevator transfer goes directly to the Terrace screen.
+      if(dest.type === 'elevator'){
+        window.location.replace('./navigation-demo.html?building=madriga');
+        return;
+      }
       advanceJourneyPlanLeg();
       if(typeof renderIndoorJourneyPlan === 'function') renderIndoorJourneyPlan();
       arrivalNextStep={
@@ -3814,7 +3838,6 @@ return;
       announceArrival();
       return;
     }
-
     sessionStorage.setItem('originIndoorComplete','true');
     sessionStorage.setItem('campusTransitionDirection','outdoor');
     sessionStorage.removeItem('intermediateIndoorTransfer');

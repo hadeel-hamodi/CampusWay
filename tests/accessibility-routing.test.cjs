@@ -392,7 +392,8 @@ test('Mobility outdoor failure does not draw the unverified fallback path', asyn
     return elements.get(id);
   };
   const calls = [];
-  const context = vm.createContext({
+ const context = vm.createContext({
+  clearOutdoorEndpointMarkers(){},
     document:{getElementById:element},
     sessionStorage:{removeItem(){},getItem(){return null;},setItem(){}},
     CampusOutdoorRouting:{
@@ -413,7 +414,7 @@ test('Mobility outdoor failure does not draw the unverified fallback path', asyn
     sharedIndoorTransfer(){return null;},
     clearInterval() {}
   });
-  vm.runInContext(between(index, 'async function routeTo(', 'function closeRoute(){'), context);
+  vm.runInContext(between(index, 'async function routeTo(', 'function closeRoute(){'), context,);
   await vm.runInContext("routeTo('Main Building',3,4)", context);
   assert.equal(calls.length, 1);
   assert.equal(calls[0][4].avoidSteps, true);

@@ -1763,7 +1763,103 @@ if(place) return localizedPlaceName(place);
   return name;
 }
 
-function updateRestSpaceServiceButton(){
+async function suggestNearestRestSpace(){
+  if(currentProfile !== 'mental') return;
+
+  const box = document.getElementById('mentalBreakSuggestion');
+  if(!box) return;
+
+  const request = String(Number(box.dataset.request || 0) + 1);
+  box.dataset.request = request;
+
+  const isCurrent = () =>
+    currentProfile === 'mental' &&
+    box.dataset.request === request;
+
+  const text = (en, he, ar, ru) =>
+    ({en, he, ar, ru}[lang] || en);
+
+  box.hidden = false;
+  box.replaceChildren();
+  box.textContent = text(
+    'Finding a nearby rest space…',
+    'מחפש מקום מנוחה קרוב…',
+    'جارٍ البحث عن مكان استراحة قريب…',
+    'Ищем ближайшее место для отдыха…'
+  );
+
+  try{
+const position = null;
+
+    if(!isCurrent()) return;
+
+    const start = position
+      ? {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          buildingKey: null,
+          nodeId: null,
+          entrances: [],
+          accessible: false
+        }
+      : restSpaceJourneyStart();
+
+    const places = await rankNearbyRestSpaces(isCurrent, start);
+    if(!isCurrent() || places === null) return;
+
+    box.replaceChildren();
+
+    if(!places.length){
+      box.textContent = t.noRestSpace;
+      return;
+    }
+
+    const nearest = places[0];
+
+    clearRestSpacePreview();
+    await routeToIndoorService(nearest);
+
+    if(!isCurrent()) return;
+
+    box.hidden = true;
+    box.replaceChildren();
+  }catch(error){
+    if(!isCurrent()) return;
+
+    console.warn('Could not suggest a rest space:', error);
+    box.textContent = text(
+      'Could not find a rest space right now. Please try again.',
+      'לא ניתן למצוא מקום מנוחה כרגע. נסה שוב בבקשה.',
+      'تعذر العثور على مكان استراحة الآن. حاول مرة أخرى.',
+      'Не удалось найти место для отдыха. Попробуйте ещё раз.'
+    );
+  }
+}
+
+function updateMentalBreakControls(){
+  const controls = document.getElementById('mentalBreakControls');
+  const label = document.getElementById('lbl-mental-break');
+  const suggestion = document.getElementById('mentalBreakSuggestion');
+
+  if(!controls || !label) return;
+
+  controls.hidden = currentProfile !== 'mental';
+
+  label.textContent = {
+    en: 'I need a break',
+    he: 'אני צריך הפסקה',
+    ar: 'أحتاج إلى استراحة',
+    ru: 'Мне нужен перерыв'
+  }[lang] || 'I need a break';
+
+if(controls.hidden && suggestion){
+  suggestion.dataset.request =
+    String(Number(suggestion.dataset.request || 0) + 1);
+
+  suggestion.hidden = true;
+  suggestion.replaceChildren();
+}
+}function updateRestSpaceServiceButton(){
   const mentalProfile = currentProfile === 'mental';
   const button = document.getElementById('landmarkServiceBtn');
   const icon = document.getElementById('landmarkServiceIcon');
@@ -2895,6 +2991,57 @@ if(allLatLngs.length) map.fitBounds(allLatLngs, {padding:[60,60], maxZoom:16});
 // ROUTING
 // ═══════════════════════════════════════════
 let routeLine = null;
+let outdoorEndpointMarkers = [];
+
+function clearOutdoorEndpointMarkers(){
+  for(const marker of outdoorEndpointMarkers){
+    map.removeLayer(marker);
+  }
+  outdoorEndpointMarkers = [];
+}
+
+function addOutdoorEndpoint(kind, lat, lng){
+  const isStart = kind === 'start';
+  const labels = {
+    en: {start:'Start', destination:'Destination'},
+    he: {start:'התחלה', destination:'יעד'},
+    ar: {start:'البداية', destination:'الوجهة'},
+    ru: {start:'Начало', destination:'Пункт назначения'}
+  };
+  const label = (labels[lang] || labels.en)[kind];
+
+  const html = isStart
+    ? `<svg width="24" height="24" viewBox="-12 -12 24 24"
+        aria-hidden="true">
+        <circle class="outdoor-start-ring" r="8"/>
+        <circle class="outdoor-start-core" r="3.2"/>
+      </svg>`
+    : `<svg width="30" height="40" viewBox="-15 -36 30 40"
+        aria-hidden="true">
+        <path class="outdoor-dest-pin"
+          d="M0 0 C-4 -7 -12 -12 -12 -21 A12 12 0 1 1 12 -21 C12 -12 4 -7 0 0 Z"/>
+        <circle class="outdoor-dest-dot" cx="0" cy="-21" r="4.6"/>
+      </svg>`;
+
+  const marker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: 'outdoor-endpoint',
+      html,
+      iconSize: isStart ? [24, 24] : [30, 40],
+      iconAnchor: isStart ? [12, 12] : [15, 36]
+    }),
+    title: label,
+    alt: label,
+    zIndexOffset: 1000
+  }).addTo(map);
+
+  marker.bindTooltip(label, {
+    direction: 'top',
+    offset: isStart ? [0, -12] : [0, -36]
+  });
+
+  outdoorEndpointMarkers.push(marker);
+}
 const DEFAULT_START = CAMPUS_DATA.points.gates[0];
 
 function getStart(){
@@ -3328,7 +3475,11 @@ async function restSpaceJourneySeconds(match, start){
           origin.lng,
           entrance.lat,
           entrance.lng,
-          {avoidSteps: start.accessible}
+            {
+            avoidSteps: start.accessible,
+            avoidNoise: currentProfile === 'mental',
+            preferFewerTurns: currentProfile === 'spatial'
+          }
         );
 
         if(!outdoorRoute?.coordinates ||
@@ -3426,6 +3577,13 @@ if(status) status.textContent = '';
 
 async function showRestSpacePreview(){
   clearRestSpacePreview();
+  exitFoodShopMode();
+
+  const serviceType =
+    currentProfile === 'mental' ? 'rest-space' : 'landmark';
+
+  activeRouteService = serviceType;
+  setActiveServiceButton(serviceType);
 
   if(currentProfile !== 'mental') return;
 
@@ -3460,7 +3618,21 @@ async function showRestSpacePreview(){
     return;
   }
 
-  if(status) status.textContent = '';
+   if(status){
+    status.textContent = previewProfile === 'mental'
+      ? text(
+          'Rest spaces are highlighted on the map. Select one to get directions.',
+          'מקומות מנוחה מסומנים במפה. בחר מקום כדי לקבל הוראות הגעה.',
+          'أماكن الاستراحة مميزة على الخريطة. اختر مكانًا للحصول على الاتجاهات.',
+          'Места для отдыха выделены на карте. Выберите место, чтобы проложить маршрут.'
+        )
+      : text(
+          'Quiet spaces are highlighted on the map. Select one to get directions.',
+          'מרחבים שקטים מסומנים במפה. בחר מקום כדי לקבל הוראות הגעה.',
+          'الأماكن الهادئة مميزة على الخريطة. اختر مكانًا للحصول على الاتجاهات.',
+          'Тихие места выделены на карте. Выберите место, чтобы проложить маршрут.'
+        );
+  }
 
   const groups = new Map();
 
@@ -3474,19 +3646,37 @@ async function showRestSpacePreview(){
 
   for(const group of groups.values()){
     const popup = document.createElement('div');
-    popup.style.minWidth = '200px';
+    popup.style.width = '220px';
+    popup.style.maxWidth = 'calc(100vw - 90px)';
     popup.dir = languageDirection();
 
-    for(const place of group){
-      const row = document.createElement('div');
-      row.style.marginBottom = '12px';
+const seenFloors = new Set();
 
+const floorChoices = group.filter(place => {
+  const floor = String(place.floor);
+
+  if(seenFloors.has(floor)) return false;
+
+  seenFloors.add(floor);
+  return true;
+}).slice(0, 2);
+
+for(const place of floorChoices){
+  const row = document.createElement('div');
+         row.style.padding = '8px 0';
+      if(popup.childElementCount){
+        row.style.borderTop = '1px solid #ccc';
+      }
       const floor = String(place.floor)
         .replace(/^floor/, '')
         .replace(/^minus/, '-');
 
       const minutes = Math.max(1, Math.ceil(place.seconds / 60));
       const description = document.createElement('p');
+
+      description.style.margin = '0 0 6px';
+      description.style.fontSize = '.85rem';
+      description.style.lineHeight = '1.4';
 
       description.textContent = text(
         `${place.displayLabel} · Floor ${floor} · about ${minutes} min`,
@@ -3514,8 +3704,64 @@ async function showRestSpacePreview(){
         routeToIndoorService(place);
       };
 
-      row.append(description, button);
-      popup.appendChild(row);
+      const reportButton = document.createElement('button');
+reportButton.type = 'button';
+reportButton.className = 'btn btn-ghost';
+reportButton.style.minHeight = '44px';
+reportButton.style.width = '100%';
+reportButton.style.marginTop = '6px';
+reportButton.textContent = text(
+  'Report current conditions',
+  'דווח על המצב כרגע',
+  'أبلغ عن الوضع الحالي',
+  'Сообщить о текущих условиях'
+);
+
+reportButton.onclick = () => {
+  if(!isCurrent()) return;
+
+  map.closePopup();
+
+  window.CampusStatus.openReportDialog({
+    lang,
+    building: place.buildingKey,
+    buildingName: localizedBuildingName(place.building),
+    items: [{
+      value: place.node.id,
+      nodeId: place.node.id,
+      kind: 'rest-space',
+      label: text(
+        `${place.displayLabel} · Floor ${floor}`,
+        `${place.displayLabel} · קומה ${floor}`,
+        `${place.displayLabel} · الطابق ${floor}`,
+        `${place.displayLabel} · этаж ${floor}`
+      )
+    }]
+  });
+};
+
+const actions = document.createElement('div');
+actions.style.display = 'flex';
+actions.style.gap = '6px';
+
+button.textContent = text(
+  'Go here', 'נווט לכאן', 'انتقل هنا', 'Перейти'
+);
+reportButton.textContent = text(
+  'Report', 'דיווח', 'إبلاغ', 'Сообщить'
+);
+
+for(const action of [button, reportButton]){
+  action.style.width = 'auto';
+  action.style.flex = '1';
+  action.style.minWidth = '0';
+  action.style.marginTop = '0';
+  action.style.padding = '6px 8px';
+  action.style.fontSize = '.8rem';
+}
+
+actions.append(button, reportButton);
+row.append(description, actions);      popup.appendChild(row);
     }
 
     const marker = L.marker(
@@ -3532,7 +3778,10 @@ async function showRestSpacePreview(){
       }
     );
 
-    marker.bindPopup(popup);
+       marker.bindPopup(popup, {
+      className: 'rest-space-popup',
+      maxWidth: 230
+    });
     marker.addTo(map);
     restSpacePreviewMarkers.push(marker);
   }
@@ -4961,7 +5210,10 @@ async function getJourneyEtaSeconds({
 }
 
 async function routeTo(name, lat, lng, options={}){
-  const keepIndoorContext = options.keepIndoorContext === true;
+
+    clearOutdoorEndpointMarkers();
+  const avoidNoise =
+  currentProfile === 'mental' && options.emergency !== true;  const keepIndoorContext = options.keepIndoorContext === true;
   keepIndoorContextForCurrentRoute = keepIndoorContext;
   currentOutdoorDestination = {name, lat, lng, keepIndoorContext};
   if(!keepIndoorContext) sessionStorage.removeItem('indoorContext');
@@ -6315,6 +6567,21 @@ if(
   document.getElementById('routeTitle').textContent = message;
   document.getElementById('routeSub').textContent = '';
   document.getElementById('routeEta').textContent = '—';
+    if(routeLine && !sameBuilding){
+    // An indoor start belongs on the indoor map.
+    if(!startingBuildingKey){
+      addOutdoorEndpoint('start', start.lat, start.lng);
+    }
+
+    // An indoor destination belongs on the indoor map.
+    if(!hasDestinationIndoorJourney){
+      addOutdoorEndpoint(
+        'destination',
+        visualDestinationLat,
+        visualDestinationLng
+      );
+    }
+  }
   document.getElementById('routeCard').classList.add('show');
 
   if(!visualVoiceActive) speak(message);
@@ -6975,6 +7242,7 @@ if(currentProfile === 'visual' && visualVoiceActive){
 }
 
 function closeRoute(){
+  clearOutdoorEndpointMarkers();
   outdoorRouteRequestId++;
   currentOutdoorDestination = null;
   [
@@ -7709,7 +7977,19 @@ function useGPS_do(){
       document.getElementById('startInput').disabled = false;
       if(gpsMarker) map.removeLayer(gpsMarker);
       gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#0891B2',fillColor:'#0891B2',fillOpacity:0.4,weight:3}).addTo(map);
-      gpsMarker.bindPopup('📍 ' + t.yourLocation).openPopup();
+            const hereLabel = {
+        en: 'You are here',
+        he: 'אתה כאן',
+        ar: 'أنت هنا',
+        ru: 'Вы здесь'
+      }[lang] || 'You are here';
+
+      gpsMarker.bindTooltip('📍 ' + hereLabel, {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -12],
+        className: 'location-label'
+      }).openTooltip();
       map.flyTo([lat,lng],17,{duration:0.8});
       speak(t.gpsActive);
     },
@@ -8837,7 +9117,7 @@ const buildingNames = {
   sessionStorage.setItem('indoorBuilding', buildingKey);
 
   const inputLabel =
-    `${displayLabel || `${t.room} ${label}`} — ${localizedBuildingName(building)}`;
+    `${displayLabel || `${t.room} ${label}`} · ${localizedBuildingName(building)}`;
 
   document.getElementById('searchInput').value = inputLabel;
   selectedSearchDestination = {
@@ -10778,10 +11058,16 @@ try{
 
 if(
   intermediateTransfer?.building === 'rabin' &&
-  destinationBuilding === 'madriga'
+  intermediateTransfer.destinationBuilding === 'madriga' &&
+  (
+    destinationBuilding === 'madriga' ||
+    currentOutdoorDestination?.name === 'Terrace Building'
+  )
 ){
+  indoorBtn.style.display = 'block';
   indoorBtn.dataset.stage = 'intermediate';
   indoorBtn.dataset.building = 'rabin';
+  indoorBtn.dataset.destinationBuilding = 'madriga';
 
   document.getElementById(
     'lbl-continue-indoor'
