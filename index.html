@@ -6995,6 +6995,7 @@ function closeRoute(){
 // WRITTEN AND SPOKEN DIRECTIONS (outdoor leg)
 // ═══════════════════════════════════════════
 var routeStepTexts = [];
+var routeStepShortTexts = [];
 var readingSteps = false;
 var lastRouteStepsInput = null;
 var activeRouteStepIndex = 0;
@@ -7019,7 +7020,7 @@ function syncMobileOutdoorGuide(){
   if(!routeStepTexts.length){ guide.hidden=true; list.innerHTML=''; return; }
   const index=Math.max(0,Math.min(activeRouteStepIndex,routeStepTexts.length-1));
   guide.hidden=false;
-  current.textContent=routeStepTexts[index];
+  current.textContent=routeStepShortTexts[index] || routeStepTexts[index];
   progress.textContent=`${mobileRouteGuideCopy('step')} ${index+1} / ${routeStepTexts.length}`;
   list.innerHTML=routeStepTexts.map((text,stepIndex)=>`<li class="${stepIndex===index?'current':''}" data-route-step="${stepIndex}">${text}</li>`).join('');
   const toggle=document.getElementById('mobileOutdoorGuideToggle');
@@ -7049,6 +7050,7 @@ function renderRouteSteps(result, options = {}){
   if(!wrap || !list) return;
   stopReadingSteps();
   routeStepTexts = [];
+  routeStepShortTexts = [];
   activeRouteStepIndex = 0;
   list.innerHTML = '';
   setMobileOutdoorGuideOpen(false);
@@ -7070,7 +7072,13 @@ function renderRouteSteps(result, options = {}){
   routeStepTexts = steps.map(step =>
     CampusRouteInstructions.formatStep(step, lang, name => localizedBuildingNameByEnglishName(name))
   );
-  if(options.indoorNext) routeStepTexts.push(options.indoorNext);
+  routeStepShortTexts = steps.map(step =>
+    CampusRouteInstructions.formatCompactStep(step, lang, name => localizedBuildingNameByEnglishName(name))
+  );
+  if(options.indoorNext){
+    routeStepTexts.push(options.indoorNext);
+    routeStepShortTexts.push(localizedInstruction('Continue indoors','تابع إلى الداخل','המשך פנימה','Продолжайте в здании'));
+  }
 
   routeStepTexts.forEach((text, index) => {
     const item = document.createElement('li');

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v63-mobile-route-guide';
+const CACHE_NAME = 'campusway-v64-compact-route-directions';
 
 const APP_FILES = [
 './',
