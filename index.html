@@ -283,7 +283,7 @@
             <strong id="mobileOutdoorInstruction">Your next direction will appear here.</strong>
             <span id="mobileOutdoorProgress"></span>
           </div>
-          <button class="mobile-route-toggle" id="mobileOutdoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileOutdoorGuidePanel">All directions</button>
+          <button class="mobile-route-toggle" id="mobileOutdoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileOutdoorGuidePanel" aria-label="Show directions" title="Show directions"><span aria-hidden="true">⌃</span></button>
         </div>
         <div class="mobile-route-panel" id="mobileOutdoorGuidePanel" hidden>
           <div class="mobile-route-panel-head">
@@ -7001,9 +7001,10 @@ var activeRouteStepIndex = 0;
 
 function mobileRouteGuideCopy(key){
   const copy={
-    all:{ar:'كل التعليمات',he:'כל ההנחיות',ru:'Все указания',en:'All directions'},
     directions:{ar:'التعليمات',he:'הנחיות',ru:'Указания',en:'Directions'},
     close:{ar:'إغلاق التعليمات',he:'סגירת ההנחיות',ru:'Закрыть указания',en:'Close directions'},
+    show:{ar:'إظهار التعليمات',he:'הצגת ההנחיות',ru:'Показать указания',en:'Show directions'},
+    hide:{ar:'إخفاء التعليمات',he:'הסתרת ההנחיות',ru:'Скрыть указания',en:'Hide directions'},
     step:{ar:'الخطوة',he:'שלב',ru:'Шаг',en:'Step'}
   };
   return copy[key]?.[lang] || copy[key]?.en || '';
@@ -7023,7 +7024,7 @@ function syncMobileOutdoorGuide(){
   list.innerHTML=routeStepTexts.map((text,stepIndex)=>`<li class="${stepIndex===index?'current':''}" data-route-step="${stepIndex}">${text}</li>`).join('');
   const toggle=document.getElementById('mobileOutdoorGuideToggle');
   const panel=document.getElementById('mobileOutdoorGuidePanel');
-  if(toggle) toggle.textContent=mobileRouteGuideCopy('all');
+  if(toggle) toggle.setAttribute('aria-label',mobileRouteGuideCopy('show'));
   if(panel){
     const title=panel.querySelector('.mobile-route-panel-head strong');
     const close=panel.querySelector('.mobile-route-close');
@@ -7038,6 +7039,8 @@ function setMobileOutdoorGuideOpen(open){
   if(!panel || !toggle) return;
   panel.hidden=!open;
   toggle.setAttribute('aria-expanded',String(open));
+  toggle.setAttribute('aria-label',mobileRouteGuideCopy(open?'hide':'show'));
+  document.getElementById('mobileOutdoorGuide')?.classList.toggle('is-open',open);
 }
 
 function renderRouteSteps(result, options = {}){
@@ -10503,9 +10506,25 @@ function journeyLegLabel(leg){
 
 const mobileOutdoorGuideToggle=document.getElementById('mobileOutdoorGuideToggle');
 if(mobileOutdoorGuideToggle && typeof mobileOutdoorGuideToggle.addEventListener==='function') mobileOutdoorGuideToggle.addEventListener('click',()=>{
+  if(mobileOutdoorGuideToggle.dataset.dragged==='true'){
+    mobileOutdoorGuideToggle.dataset.dragged='';
+    return;
+  }
   const panel=document.getElementById('mobileOutdoorGuidePanel');
   setMobileOutdoorGuideOpen(panel?.hidden);
 });
+if(mobileOutdoorGuideToggle && typeof mobileOutdoorGuideToggle.addEventListener==='function'){
+  let drawerStartY=null;
+  mobileOutdoorGuideToggle.addEventListener('pointerdown',event=>{ drawerStartY=event.clientY; });
+  mobileOutdoorGuideToggle.addEventListener('pointerup',event=>{
+    if(drawerStartY===null) return;
+    const delta=drawerStartY-event.clientY;
+    drawerStartY=null;
+    if(Math.abs(delta)<18) return;
+    mobileOutdoorGuideToggle.dataset.dragged='true';
+    setMobileOutdoorGuideOpen(delta>0);
+  });
+}
 const mobileOutdoorGuideClose=document.getElementById('mobileOutdoorGuideClose');
 if(mobileOutdoorGuideClose && typeof mobileOutdoorGuideClose.addEventListener==='function') mobileOutdoorGuideClose.addEventListener('click',()=>setMobileOutdoorGuideOpen(false));
 const mobileOutdoorSteps=document.getElementById('mobileOutdoorSteps');
