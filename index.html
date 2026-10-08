@@ -276,6 +276,23 @@
 
     <main class="map-wrap" aria-label="Campus map">
       <div id="map"></div>
+      <section class="mobile-route-guide" id="mobileOutdoorGuide" hidden aria-label="Current direction">
+        <div class="mobile-route-current" role="status" aria-live="polite">
+          <span class="mobile-route-icon" aria-hidden="true">↑</span>
+          <div>
+            <strong id="mobileOutdoorInstruction">Your next direction will appear here.</strong>
+            <span id="mobileOutdoorProgress"></span>
+          </div>
+          <button class="mobile-route-toggle" id="mobileOutdoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileOutdoorGuidePanel">All directions</button>
+        </div>
+        <div class="mobile-route-panel" id="mobileOutdoorGuidePanel" hidden>
+          <div class="mobile-route-panel-head">
+            <strong>Directions</strong>
+            <button class="mobile-route-close" id="mobileOutdoorGuideClose" type="button" aria-label="Close directions">✕</button>
+          </div>
+          <ol id="mobileOutdoorSteps"></ol>
+        </div>
+      </section>
       <div class="legend-wrap">
         <button class="map-chip" id="legendToggle" type="button" aria-expanded="true" aria-controls="mapLegend">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
@@ -6980,6 +6997,48 @@ function closeRoute(){
 var routeStepTexts = [];
 var readingSteps = false;
 var lastRouteStepsInput = null;
+var activeRouteStepIndex = 0;
+
+function mobileRouteGuideCopy(key){
+  const copy={
+    all:{ar:'كل التعليمات',he:'כל ההנחיות',ru:'Все указания',en:'All directions'},
+    directions:{ar:'التعليمات',he:'הנחיות',ru:'Указания',en:'Directions'},
+    close:{ar:'إغلاق التعليمات',he:'סגירת ההנחיות',ru:'Закрыть указания',en:'Close directions'},
+    step:{ar:'الخطوة',he:'שלב',ru:'Шаг',en:'Step'}
+  };
+  return copy[key]?.[lang] || copy[key]?.en || '';
+}
+
+function syncMobileOutdoorGuide(){
+  const guide=document.getElementById('mobileOutdoorGuide');
+  const current=document.getElementById('mobileOutdoorInstruction');
+  const progress=document.getElementById('mobileOutdoorProgress');
+  const list=document.getElementById('mobileOutdoorSteps');
+  if(!guide || !current || !progress || !list) return;
+  if(!routeStepTexts.length){ guide.hidden=true; list.innerHTML=''; return; }
+  const index=Math.max(0,Math.min(activeRouteStepIndex,routeStepTexts.length-1));
+  guide.hidden=false;
+  current.textContent=routeStepTexts[index];
+  progress.textContent=`${mobileRouteGuideCopy('step')} ${index+1} / ${routeStepTexts.length}`;
+  list.innerHTML=routeStepTexts.map((text,stepIndex)=>`<li class="${stepIndex===index?'current':''}" data-route-step="${stepIndex}">${text}</li>`).join('');
+  const toggle=document.getElementById('mobileOutdoorGuideToggle');
+  const panel=document.getElementById('mobileOutdoorGuidePanel');
+  if(toggle) toggle.textContent=mobileRouteGuideCopy('all');
+  if(panel){
+    const title=panel.querySelector('.mobile-route-panel-head strong');
+    const close=panel.querySelector('.mobile-route-close');
+    if(title) title.textContent=mobileRouteGuideCopy('directions');
+    if(close) close.setAttribute('aria-label',mobileRouteGuideCopy('close'));
+  }
+}
+
+function setMobileOutdoorGuideOpen(open){
+  const panel=document.getElementById('mobileOutdoorGuidePanel');
+  const toggle=document.getElementById('mobileOutdoorGuideToggle');
+  if(!panel || !toggle) return;
+  panel.hidden=!open;
+  toggle.setAttribute('aria-expanded',String(open));
+}
 
 function renderRouteSteps(result, options = {}){
   const wrap = document.getElementById('routeStepsWrap');
@@ -6987,11 +7046,14 @@ function renderRouteSteps(result, options = {}){
   if(!wrap || !list) return;
   stopReadingSteps();
   routeStepTexts = [];
+  activeRouteStepIndex = 0;
   list.innerHTML = '';
+  setMobileOutdoorGuideOpen(false);
   lastRouteStepsInput = result ? {result, options} : null;
 
   if(!result || typeof CampusRouteInstructions === 'undefined'){
     wrap.hidden = true;
+    syncMobileOutdoorGuide();
     return;
   }
 
@@ -7023,6 +7085,7 @@ function renderRouteSteps(result, options = {}){
     list.appendChild(item);
   });
   wrap.hidden = routeStepTexts.length === 0;
+  syncMobileOutdoorGuide();
 }
 
 function refreshRouteSteps(){
@@ -7034,6 +7097,10 @@ function highlightRouteStep(index){
   document.querySelectorAll('#routeSteps li').forEach(item => {
     item.classList.toggle('speaking', Number(item.dataset.index) === index);
   });
+  if(index >= 0 && index < routeStepTexts.length){
+    activeRouteStepIndex=index;
+    syncMobileOutdoorGuide();
+  }
 }
 
 function updateReadStepsButton(){
@@ -10433,6 +10500,19 @@ function journeyLegLabel(leg){
   const to=localizedBuildingNameByEnglishName(buildingNames[leg.toBuilding] || leg.toBuilding || '');
   return `${from} → ${to}`;
 }
+
+const mobileOutdoorGuideToggle=document.getElementById('mobileOutdoorGuideToggle');
+if(mobileOutdoorGuideToggle && typeof mobileOutdoorGuideToggle.addEventListener==='function') mobileOutdoorGuideToggle.addEventListener('click',()=>{
+  const panel=document.getElementById('mobileOutdoorGuidePanel');
+  setMobileOutdoorGuideOpen(panel?.hidden);
+});
+const mobileOutdoorGuideClose=document.getElementById('mobileOutdoorGuideClose');
+if(mobileOutdoorGuideClose && typeof mobileOutdoorGuideClose.addEventListener==='function') mobileOutdoorGuideClose.addEventListener('click',()=>setMobileOutdoorGuideOpen(false));
+const mobileOutdoorSteps=document.getElementById('mobileOutdoorSteps');
+if(mobileOutdoorSteps && typeof mobileOutdoorSteps.addEventListener==='function') mobileOutdoorSteps.addEventListener('click',event=>{
+  const item=event.target.closest('[data-route-step]');
+  if(item) speakRouteSteps(Number(item.dataset.routeStep),{single:true});
+});
 
 function renderJourneyPlan(){
   const container=document.getElementById('outdoorJourneyPlan');

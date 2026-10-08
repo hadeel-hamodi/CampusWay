@@ -188,6 +188,24 @@
 
         <button id="recenterBtn" class="recenterBtn" type="button">◎ Recenter</button>
 
+        <section class="mobile-route-guide" id="mobileIndoorGuide" hidden aria-label="Current direction">
+          <div class="mobile-route-current" role="status" aria-live="polite">
+            <span class="mobile-route-icon" aria-hidden="true">↑</span>
+            <div>
+              <strong id="mobileIndoorInstruction">Your next direction will appear here.</strong>
+              <span id="mobileIndoorProgress"></span>
+            </div>
+            <button class="mobile-route-toggle" id="mobileIndoorGuideToggle" type="button" aria-expanded="false" aria-controls="mobileIndoorGuidePanel">All directions</button>
+          </div>
+          <div class="mobile-route-panel" id="mobileIndoorGuidePanel" hidden>
+            <div class="mobile-route-panel-head">
+              <strong>Directions</strong>
+              <button class="mobile-route-close" id="mobileIndoorGuideClose" type="button" aria-label="Close directions">✕</button>
+            </div>
+            <ol id="mobileIndoorSteps"></ol>
+          </div>
+        </section>
+
         <div class="navStack">
           <div class="navBanner" aria-hidden="true" hidden>
           <div class="turnIcon" id="turnIcon" aria-hidden="true">↑</div>
@@ -5289,6 +5307,49 @@ function currentGuidanceText(){
   return sub ? `${main}. ${sub}` : main;
 }
 
+function mobileIndoorGuideCopy(key){
+  const copy={
+    all:{ar:'كل التعليمات',he:'כל ההנחיות',ru:'Все указания',en:'All directions'},
+    directions:{ar:'التعليمات',he:'הנחיות',ru:'Указания',en:'Directions'},
+    close:{ar:'إغلاق التعليمات',he:'סגירת ההנחיות',ru:'Закрыть указания',en:'Close directions'},
+    step:{ar:'الخطوة',he:'שלב',ru:'Шаг',en:'Step'}
+  };
+  return copy[key]?.[indoorLang] || copy[key]?.en || '';
+}
+
+function syncMobileIndoorGuide(){
+  const guide=$('mobileIndoorGuide');
+  const current=$('mobileIndoorInstruction');
+  const progress=$("mobileIndoorProgress");
+  const list=$('mobileIndoorSteps');
+  if(!guide || !current || !progress || !list) return;
+  const steps=[...document.querySelectorAll('#steps .stepList li')];
+  if(!routeNodes.length || !steps.length){ guide.hidden=true; list.innerHTML=''; return; }
+  let active=0;
+  steps.forEach((item,index)=>{ if(Number(item.dataset.stepNode)<=progressIndex) active=index; });
+  guide.hidden=false;
+  current.textContent=$('instruction').textContent.trim() || steps[active].textContent;
+  progress.textContent=`${mobileIndoorGuideCopy('step')} ${active+1} / ${steps.length}`;
+  list.innerHTML=steps.map((item,index)=>`<li class="${index===active?'current':''}" data-indoor-step="${index}">${item.innerHTML}</li>`).join('');
+  const toggle=$('mobileIndoorGuideToggle');
+  const panel=$('mobileIndoorGuidePanel');
+  if(toggle) toggle.textContent=mobileIndoorGuideCopy('all');
+  if(panel){
+    const title=panel.querySelector('.mobile-route-panel-head strong');
+    const close=panel.querySelector('.mobile-route-close');
+    if(title) title.textContent=mobileIndoorGuideCopy('directions');
+    if(close) close.setAttribute('aria-label',mobileIndoorGuideCopy('close'));
+  }
+}
+
+function setMobileIndoorGuideOpen(open){
+  const panel=$('mobileIndoorGuidePanel');
+  const toggle=$('mobileIndoorGuideToggle');
+  if(!panel || !toggle) return;
+  panel.hidden=!open;
+  toggle.setAttribute('aria-expanded',String(open));
+}
+
 // ── Steps: highlight where you are, tap a step to hear it ──
 function highlightIndoorStep(){
   const items=[...document.querySelectorAll('#steps .stepList li')];
@@ -5296,6 +5357,7 @@ function highlightIndoorStep(){
   let current=0;
   items.forEach((item,index)=>{ if(Number(item.dataset.stepNode)<=progressIndex) current=index; });
   items.forEach((item,index)=>item.classList.toggle('current',index===current && (navigationActive || progressIndex>0)));
+  syncMobileIndoorGuide();
 }
 
 // ── Live status ──
@@ -5447,6 +5509,15 @@ function setupIndoorExtras(){
     const item=event.target.closest('li');
     if(item && (event.key==='Enter'||event.key===' ')){ event.preventDefault(); speakIndoor(item.textContent,true); }
   });
+  $('mobileIndoorGuideToggle').addEventListener('click',()=>{
+    setMobileIndoorGuideOpen($('mobileIndoorGuidePanel').hidden);
+  });
+  $('mobileIndoorGuideClose').addEventListener('click',()=>setMobileIndoorGuideOpen(false));
+  $('mobileIndoorSteps').addEventListener('click',event=>{
+    const item=event.target.closest('[data-indoor-step]');
+    if(item) speakIndoor(item.textContent,true);
+  });
+  new MutationObserver(syncMobileIndoorGuide).observe($('steps'),{childList:true,subtree:true,characterData:true});
 
   // Speak each new instruction while a route is shown.
   let speakTimer=null;
@@ -5461,6 +5532,8 @@ function setupIndoorExtras(){
       }
     },150);
   }).observe($('instruction'),{childList:true,characterData:true,subtree:true});
+
+  new MutationObserver(syncMobileIndoorGuide).observe($('instruction'),{childList:true,characterData:true,subtree:true});
 
   new MutationObserver(highlightIndoorStep).observe($('livePos'),{childList:true,characterData:true,subtree:true});
 
