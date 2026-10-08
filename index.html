@@ -7077,7 +7077,7 @@ function renderRouteSteps(result, options = {}){
   );
   if(options.indoorNext){
     routeStepTexts.push(options.indoorNext);
-    routeStepShortTexts.push(localizedInstruction('Continue indoors','تابع إلى الداخل','המשך פנימה','Продолжайте в здании'));
+    routeStepShortTexts.push(({en:'Continue indoors',ar:'تابع إلى الداخل',he:'המשך פנימה',ru:'Продолжайте в здании'})[lang] || 'Continue indoors');
   }
 
   routeStepTexts.forEach((text, index) => {
