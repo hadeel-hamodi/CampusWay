@@ -3266,12 +3266,21 @@ function updateWheelchairInstruction(){
     ? localizedInstruction('less than 1 m','أقل من متر','פחות ממטר','менее 1 м')
     : localizedInstruction(`about ${Math.round(distance)} m`,`حوالي ${Math.round(distance)} متر`,`כ-${Math.round(distance)} מ׳`,`около ${Math.round(distance)} м`);
   const checkpoint=wheelchairCheckpointName(targetIndex);
-  $('subInstruction').textContent=localizedInstruction(
-    `${distanceText} to ${checkpoint}. Confirm only when you reach it.`,
-    `${distanceText} حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
-    `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`,
-    `${distanceText} до ${checkpoint}. Подтвердите только после прибытия.`
-  );
+  // The reminder to confirm only on arrival is given at the first point; after
+  // that the distance to the next point is enough.
+  $('subInstruction').textContent=progressIndex===0
+    ? localizedInstruction(
+        `${distanceText} to ${checkpoint}. Confirm only when you reach it.`,
+        `${distanceText} حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
+        `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`,
+        `${distanceText} до ${checkpoint}. Подтвердите только после прибытия.`
+      )
+    : localizedInstruction(
+        `${distanceText} to ${checkpoint}.`,
+        `${distanceText} حتى ${checkpoint}.`,
+        `${distanceText} עד ${checkpoint}.`,
+        `${distanceText} до ${checkpoint}.`
+      );
 let isOutdoorExit = false;
 
 if(
