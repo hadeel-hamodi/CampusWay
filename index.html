@@ -7507,9 +7507,10 @@ sessionStorage.setItem(
     sessionStorage.setItem(
       'intermediateIndoorTransfer',
       JSON.stringify({
-        building: 'rabin',
-        startNodeId: 'floor7_n108',
-        destinationBuilding: 'madriga'
+      building: 'rabin',
+      startNodeId: 'floor7_n108',
+      destinationNodeId: 'floor5_n104',
+      destinationBuilding: 'madriga'
       })
     );
   }
@@ -7804,8 +7805,15 @@ const routeArrow = typeof routeDirectionArrow === 'function'
     !activeSharedTransfer &&
     outdoorResult &&
     waypoints === outdoorResult.coordinates;
-  const destinationBuildingForSteps =
-    CAMPUS_DATA.buildings.find(building => building.name === name);
+const outdoorDestinationName =
+  usesMainToMadrigaChain && startingBuildingKey === 'main'
+    ? 'Rabin Building'
+    : name;
+
+const destinationBuildingForSteps =
+  CAMPUS_DATA.buildings.find(
+    building => building.name === outdoorDestinationName
+  );
   renderRouteSteps(hasRealOutdoorRoute ? outdoorResult : null, {
     startName: startLabel,
     endName: destinationBuildingForSteps
@@ -12756,6 +12764,28 @@ function buildJourneyPlan({includeOutdoor=true}={}){
   const intermediate = read('intermediateIndoorTransfer');
   const legs = [];
 
+  // A journey within one building has one indoor stage.
+if(
+  !includeOutdoor &&
+  start?.buildingKey &&
+  start.buildingKey === destination?.buildingKey &&
+  start.startNodeId &&
+  destination.destinationNodeId &&
+  !transfer &&
+  !intermediate
+){
+  return {
+    version: 1,
+    currentLeg: 0,
+    legs: [{
+      kind: 'indoor',
+      building: start.buildingKey,
+      from: start.startNodeId,
+      to: destination.destinationNodeId
+    }]
+  };
+}
+
   if(start?.startNodeId && start?.exitEntranceId && start.startNodeId !== start.exitEntranceId){
     legs.push({kind:'indoor', building:start.buildingKey, from:start.startNodeId, to:start.exitEntranceId});
   }
@@ -12766,16 +12796,39 @@ function buildJourneyPlan({includeOutdoor=true}={}){
 ){
     legs.push({kind:'transfer', fromBuilding:transfer.originBuilding, toBuilding:transfer.destinationBuilding, method:transfer.method || 'connection'});
   }
-  if(intermediate?.building && intermediate?.startNodeId && intermediate?.destinationNodeId){
-    legs.push({kind:'indoor', building:intermediate.building, from:intermediate.startNodeId, to:intermediate.destinationNodeId});
-  }
-  const directIndoorTransfer =
+ const intermediateLeg =
+  intermediate?.building &&
+  intermediate?.startNodeId &&
+  intermediate?.destinationNodeId
+    ? {
+        kind: 'indoor',
+        building: intermediate.building,
+        from: intermediate.startNodeId,
+        to: intermediate.destinationNodeId
+      }
+    : null;
+
+// Main → Terrace: walk outdoors before navigating through Rabin.
+const intermediateAfterOutdoor =
+  start?.buildingKey === 'main' &&
+  intermediate?.building === 'rabin' &&
+  intermediate.destinationBuilding === 'madriga';
+
+if(intermediateLeg && !intermediateAfterOutdoor){
+  legs.push(intermediateLeg);
+}
+
+const directIndoorTransfer =
   transfer?.originBuilding &&
   transfer?.destinationBuilding &&
   !intermediate;
 
 if(includeOutdoor && !directIndoorTransfer){
   legs.push({kind:'outdoor'});
+}
+
+if(intermediateLeg && intermediateAfterOutdoor){
+  legs.push(intermediateLeg);
 }
   if(destination?.buildingKey && destination?.startNodeId && destination?.destinationNodeId && destination.startNodeId !== destination.destinationNodeId){
     legs.push({kind:'indoor', building:destination.buildingKey, from:destination.startNodeId, to:destination.destinationNodeId});
@@ -12788,7 +12841,7 @@ function saveJourneyPlan(plan){
   const storageKey=typeof JOURNEY_PLAN_STORAGE_KEY === 'string'
     ? JOURNEY_PLAN_STORAGE_KEY
     : 'journeyPlan';
-  if(!plan?.legs || plan.legs.length < 2){
+  if(!plan?.legs || plan.legs.length === 0){
     sessionStorage.removeItem(storageKey);
     return;
   }
@@ -12995,7 +13048,7 @@ function renderJourneyPlan(){
   if(!container) return;
   let plan=null;
   try{plan=JSON.parse(sessionStorage.getItem(JOURNEY_PLAN_STORAGE_KEY) || 'null');}catch(error){plan=null;}
-  if(!plan?.legs || plan.legs.length<2){container.hidden=true;return;}
+ if(!plan?.legs || plan.legs.length===0){container.hidden=true;return;}
   const title={en:'Your journey',he:'המסלול שלך',ar:'رحلتك',ru:'Ваш маршрут'}[lang] || 'Your journey';
   container.hidden=false;
   container.innerHTML = `

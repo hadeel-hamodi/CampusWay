@@ -649,7 +649,7 @@ function renderIndoorJourneyPlan(){
   if(!container) return;
   let plan=null;
   try{plan=JSON.parse(sessionStorage.getItem('journeyPlan') || 'null');}catch(error){plan=null;}
-  if(!plan?.legs || plan.legs.length<2){container.hidden=true;return;}
+  if(!plan?.legs || plan.legs.length===0){container.hidden=true;return;}
 const buildingName = key =>
   key === 'madriga'
     ? localizedInstruction(
@@ -2535,8 +2535,15 @@ if(isSharedOrigin && stepItems.at(-1)?.sharedTransfer){
   stepItems.push({index:routeNodes.length-1});
 }
   indoorRouteStepTexts=steps.slice();
-  $('steps').innerHTML=`<ol class="stepList">${steps.map((s,i)=>`<li data-step-node="${stepItems[i]?.index ?? 0}" tabindex="0">${esc(s)}</li>`).join('')}</ol>`;
-  $('instruction').textContent=localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','עקוב אחר המסלול המסומן','Следуйте по выделенному маршруту');
+$('steps').innerHTML = `<ol class="stepList">${
+  steps.map((s, i) => {
+    const item = stepItems[i];
+    const start = item?.index ?? 0;
+    const end = item?.after ?? start;
+
+    return `<li data-step-node="${start}" data-step-end="${end}" tabindex="0">${esc(s)}</li>`;
+  }).join('')
+}</ol>`;  $('instruction').textContent=localizedInstruction('Follow the highlighted route','اتبع المسار المحدد','עקוב אחר המסלול המסומן','Следуйте по выделенному маршруту');
   $('subInstruction').textContent=localizedInstruction(`Destination: ${bLabel}`,`الوجهة: ${localizedNodeLabel(bLabel)}`,`יעד: ${localizedNodeLabel(bLabel)}`,`Пункт назначения: ${localizedNodeLabel(bLabel)}`);
 const walkingSpeedMps = 1.2;
 
@@ -3100,7 +3107,11 @@ if(navMode === 'auto'){
   const dot = v1.x * v2.x + v1.y * v2.y;
   const angle = Math.atan2(cross, dot) * 180 / Math.PI;
 
-  if(Math.abs(angle) < 25){
+  const distanceToTurn =
+  indoorDistanceMeters(a, b) *
+  (1 - Math.max(0, Math.min(1, progressT)));
+
+if(Math.abs(angle) < 25 || distanceToTurn > 3){
     setIcon('↑');
     $('instruction').textContent = localizedInstruction(
       'Continue straight',
@@ -3108,23 +3119,19 @@ if(navMode === 'auto'){
       'המשך ישר',
       'Продолжайте прямо'
     );
-  }else if(angle > 0){
-    setIcon('↱');
-    $('instruction').textContent = localizedInstruction(
-      'Turn right',
-      'انعطف يمينًا',
-      'פנה ימינה',
-      'Поверните направо'
-    );
-  }else{
-    setIcon('↰');
-    $('instruction').textContent = localizedInstruction(
-      'Turn left',
-      'انعطف يسارًا',
-      'פנה שמאלה',
-      'Поверните налево'
-    );
-  }
+}else{
+  const right = angle > 0;
+  const meters = Math.max(1, Math.round(distanceToTurn));
+
+  setIcon(right ? '↱' : '↰');
+
+$('instruction').textContent = localizedInstruction(
+  right ? 'Turn right' : 'Turn left',
+  right ? 'انعطف يمينًا' : 'انعطف يسارًا',
+  right ? 'פנה ימינה' : 'פנה שמאלה',
+  right ? 'Поверните направо' : 'Поверните налево'
+);
+}
 }
 
 function wheelchairTarget(direction){
@@ -3478,6 +3485,21 @@ function updateProgressUI(){
 
 // The complete indoor guide stays in the sidebar. Highlight the next relevant
 // step there instead of repeating the same instruction in a second map banner.
+function currentIndoorStepIndex(items){
+  if(!items.length) return -1;
+
+  const current = items.findIndex(item => {
+    const end = Number(
+      item.dataset.stepEnd ?? item.dataset.stepNode
+    );
+
+    return end > progressIndex ||
+      (end === progressIndex && progressT === 0);
+  });
+
+  return current === -1 ? items.length - 1 : current;
+}
+
 function syncIndoorStepListPosition(){
   if(typeof document==='undefined' ||
      typeof document.querySelectorAll!=='function') return;
@@ -3485,13 +3507,7 @@ function syncIndoorStepListPosition(){
   const items=[...document.querySelectorAll('#steps [data-step-node]')];
   if(!items.length) return;
 
-  let current=items[0];
-
-  items.forEach(item=>{
-    if(Number(item.dataset.stepNode)<=progressIndex){
-      current=item;
-    }
-  });
+const current = items[currentIndoorStepIndex(items)];
 
   items.forEach(item=>{
     item.classList.remove('current-step');
@@ -4810,36 +4826,87 @@ async function enableSensors(requestToken){
 
   sensorsEnabled=true;
 }
+let speakTimer = null;
 
 let autoTimer = null;
 let autoFloorPauseUntil = 0;
 function startAutoDemo(){
   if(autoTimer !== null) clearInterval(autoTimer);
 
+  updateTurnInstruction();
+
+  let waitingForFirstInstruction = false;
+  let speechWaitTimer = null;
+  let finalSpeechWaitStart = 0;
+
+  const releaseMovement = () => {
+    waitingForFirstInstruction = false;
+    clearTimeout(speechWaitTimer);
+  };
+
+  if(indoorVoiceOn && window.speechSynthesis){
+    clearTimeout(speakTimer);
+    speakTimer = null;
+
+    const guidance = automaticIndoorSpeech();
+
+    if(guidance?.text){
+      waitingForFirstInstruction = true;
+      indoorAutoSpeechKey = guidance.key;
+      lastSpokenGuidance = guidance.text;
+
+      // Keep the demo usable if the browser cannot start speech.
+      speechWaitTimer = setTimeout(releaseMovement, 3000);
+
+      speakIndoor(guidance.text, false, {
+        minor: false,
+        onstart: () => {
+          clearTimeout(speechWaitTimer);
+          speechWaitTimer = setTimeout(releaseMovement, 10000);
+        },
+        onfinish: releaseMovement
+      });
+    }
+  }
+
   autoTimer = setInterval(() => {
     if(!navigationActive || navMode !== 'auto'){
+      releaseMovement();
       clearInterval(autoTimer);
       autoTimer = null;
       return;
     }
 
+    if(waitingForFirstInstruction) return;
+    // Let the last instruction finish before arriving, so the arrival
+    // message is not cancelled and restarted a moment later.
+    if(
+      indoorVoiceOn &&
+      progressIndex >= routeNodes.length - 2 &&
+      (
+        window.speechSynthesis?.speaking ||
+        window.speechSynthesis?.pending
+      )
+    ){
+      if(!finalSpeechWaitStart) finalSpeechWaitStart = Date.now();
+      if(Date.now() - finalSpeechWaitStart < 2500) return;
+    }
     if(document.getElementById('cancelJourneyDialog')?.open) return;
-
     if(Date.now() < autoFloorPauseUntil) return;
 
     const a = routeNodes[progressIndex];
-const b = routeNodes[progressIndex + 1];
+    const b = routeNodes[progressIndex + 1];
 
-const slowSegment = [a, b].some(node =>
-  node && ['stairs', 'elevator'].includes(node.type)
-);
+    const slowSegment = [a, b].some(node =>
+      node && ['stairs', 'elevator'].includes(node.type)
+    );
 
-advanceAlongRoute(slowSegment ? 0.25 : 0.5); //indoor demo speed
+    advanceAlongRoute(slowSegment ? 0.2 : 0.5);
 
-if(navigationActive && followCamera){
-  followNode(currentInterpolated());
-  drawBaseMap();
-}
+    if(navigationActive && followCamera){
+      followNode(currentInterpolated());
+      drawBaseMap();
+    }
   }, 200);
 }
 
@@ -5804,7 +5871,8 @@ async function speakIndoor(text, force = false, options = {}){
     if(CampusSpeech.isVoiceError(event)) CampusSpeech.showMissingVoice(indoorLang);
   };
 
-  synth.cancel();
+ // Cancelling when nothing is playing makes some browsers start the next voice late.
+if(synth.speaking || synth.pending) synth.cancel();
 
   const appleMobile =
   /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -5819,7 +5887,12 @@ if(appleMobile){
   utterance.lang = locale;
   utterance.rate = 0.97;
   utterance.pitch = 1;
-  utterance.onerror = onVoiceError;
+  utterance.onstart = () => options.onstart?.();
+utterance.onend = () => options.onfinish?.();
+utterance.onerror = event => {
+  onVoiceError(event);
+  options.onfinish?.();
+};
   synth.speak(utterance);
   return;
 }
@@ -5866,7 +5939,12 @@ if(voice){
   utterance.lang = voice?.lang || locale;
   utterance.rate = 0.97;
   utterance.pitch = 1;
-  utterance.onerror = onVoiceError;
+  utterance.onstart = () => options.onstart?.();
+utterance.onend = () => options.onfinish?.();
+utterance.onerror = event => {
+  onVoiceError(event);
+  options.onfinish?.();
+};
 
 console.log('[Indoor speech]', {
   text: spokenText,
@@ -5977,9 +6055,8 @@ function automaticIndoorSpeech(){
       if(includesConnector) break;
 
       indoorCombinedTurn = i;
-
-      const first = indoorTurnWords(firstTurn);
-      const second = indoorTurnWords(secondTurn);
+const first = indoorTurnWords(firstTurn);
+const second = indoorTurnWords(secondTurn);
 
       return {
         text: localizedInstruction(
@@ -5995,7 +6072,7 @@ function automaticIndoorSpeech(){
 
     return {
       text,
-      key: `turn:${firstIndex}:${text}`,
+      key: `turn:${firstIndex}`,
       minor: false
     };
   }
@@ -6066,8 +6143,7 @@ function syncMobileIndoorGuide(){
   list.innerHTML='';
   return;
 }
-  let active=0;
-  steps.forEach((item,index)=>{ if(Number(item.dataset.stepNode)<=progressIndex) active=index; });
+const active = currentIndoorStepIndex(steps);
   guide.hidden=false;
   $('mobileIndoorTurnIcon').textContent =
   $('turnIcon').textContent;
@@ -6382,41 +6458,67 @@ currentCard.addEventListener('keydown',event=>{
   });
   new MutationObserver(syncMobileIndoorGuide).observe($('steps'),{childList:true,subtree:true,characterData:true});
 
-// Speak instruction changes only during active navigation.
-let speakTimer = null;
 
-new MutationObserver(() => {
+
+function announceCurrentIndoorGuidance(){
   clearTimeout(speakTimer);
+  speakTimer = null;
 
-  if(!indoorVoiceOn || !navigationActive || !routeNodes.length){
+  if(
+    !indoorVoiceOn ||
+    !navigationActive ||
+    !routeNodes.length
+  ){
     return;
   }
 
-  speakTimer = setTimeout(() => {
-    if(!indoorVoiceOn || !navigationActive || !routeNodes.length){
-      return;
-    }
+  const guidance = automaticIndoorSpeech();
 
-    const guidance = automaticIndoorSpeech();
+  if(
+    !guidance?.text ||
+    guidance.key === indoorAutoSpeechKey
+  ){
+    return;
+  }
 
-    if(
-      guidance?.text &&
-      guidance.key !== indoorAutoSpeechKey
-    ){
-      indoorAutoSpeechKey = guidance.key;
-      lastSpokenGuidance = guidance.text;
+  const synth = window.speechSynthesis;
 
-      speakIndoor(guidance.text, false, {
-        minor: guidance.minor
-      });
-    }
-      }, 150);
-    }).observe($('instruction'), {
+  // Wait instead of marking a straight instruction as already spoken.
+  // Recheck the current guidance on each retry, so old instructions
+  // are discarded if the user reaches a turn in the meantime.
+  if(
+    guidance.minor &&
+    synth &&
+    (synth.speaking || synth.pending)
+  ){
+    speakTimer = setTimeout(
+      announceCurrentIndoorGuidance,
+      200
+    );
+    return;
+  }
+
+  indoorAutoSpeechKey = guidance.key;
+  lastSpokenGuidance = guidance.text;
+
+  speakIndoor(guidance.text, false, {
+    minor: guidance.minor
+  });
+}
+new MutationObserver(() => {
+  // A scheduled announcement reads the latest instruction.
+  // Do not postpone it again on every movement update.
+  if(speakTimer !== null) return;
+
+  speakTimer = setTimeout(
+    announceCurrentIndoorGuidance,
+    0
+  );
+}).observe($('instruction'), {
   childList: true,
   characterData: true,
   subtree: true
 });
-
   new MutationObserver(syncMobileIndoorGuide).observe($('instruction'),{childList:true,characterData:true,subtree:true});
 
   new MutationObserver(highlightIndoorStep).observe($('livePos'),{childList:true,characterData:true,subtree:true});
