@@ -1578,7 +1578,9 @@ for(const c of (f.connections||[])){
     for(let i=0;i<floors.length-1;i++){
       const aL=pf.get(floors[i]),bL=pf.get(floors[i+1]);
       const a=aL[aL.length-1],b=bL[bL.length-1];
-      const w=k.startsWith('elevator:')?.02:.04;
+      // One floor costs about 10 s by elevator and 30 s by stairs (12 m / 36 m of walking),
+      // the same as the campus planner, so routes never leave a floor just to save a few metres.
+      const w=k.startsWith('elevator:')?12:36;
       adj.get(a.id).push({id:b.id,w,kind:'vertical'});
       adj.get(b.id).push({id:a.id,w,kind:'vertical'});
     }
