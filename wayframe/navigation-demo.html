@@ -5530,52 +5530,120 @@ function handleWheelZoom(e){
 
 mapViewport.addEventListener('wheel',handleWheelZoom,{passive:false,capture:true});
 
-// Click + drag to explore the map manually.
-// Dragging temporarily turns off automatic camera-follow.
-mapViewport.addEventListener('pointerdown',e=>{
-  if(e.button!==0) return;
+// One finger pans; two fingers zoom.
+const mapPointers = new Map();
+let previousGesture = null;
 
-  if(e.target.closest('button, select')) return;
-  isPanning=true;
-  followCamera=false;
-  panStart={
-    x:e.clientX,
-    y:e.clientY,
-    cameraX:camera.x,
-    cameraY:camera.y
+mapViewport.style.touchAction = 'none';
+
+function gesturePosition() {
+  const points = [...mapPointers.values()];
+  if (!points.length) return null;
+
+  if (points.length === 1) {
+    return { x: points[0].x, y: points[0].y, distance: 0 };
+  }
+
+  const [a, b] = points;
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    distance: Math.hypot(b.x - a.x, b.y - a.y)
   };
-  mapViewport.setPointerCapture?.(e.pointerId);
-  mapViewport.style.cursor='grabbing';
-  $('recenterBtn').style.display='block';
+}
+
+mapViewport.addEventListener('pointerdown', function (event) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (event.target.closest('button, select, input, a, .navStack')) return;
+  if (mapPointers.size >= 2) return;
+
+  mapPointers.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY
+  });
+
+  previousGesture = gesturePosition();
+  isPanning = true;
+  followCamera = false;
+  mapViewport.setPointerCapture(event.pointerId);
+  mapViewport.style.cursor = 'grabbing';
+  $('recenterBtn').style.display = 'block';
 });
-mapViewport.addEventListener('pointermove',e=>{
-  if(!isPanning) return;
 
-  const units=mapUnitsPerPixel();
-  const dx=(e.clientX-panStart.x)*units;
-  const dy=(e.clientY-panStart.y)*units;
+mapViewport.addEventListener('pointermove', function (event) {
+  if (!mapPointers.has(event.pointerId)) return;
 
-  const angle=headingDeg*Math.PI/180;
-  const cos=Math.cos(angle);
-  const sin=Math.sin(angle);
+  event.preventDefault();
 
-  camera.x-=dx*cos + dy*sin;
-  camera.y-=-dx*sin + dy*cos;
+  mapPointers.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY
+  });
 
-  panStart.x=e.clientX;
-  panStart.y=e.clientY;
+  const current = gesturePosition();
+  const previous = previousGesture;
+  if (!current || !previous) return;
 
+  // Pan using the finger position or the midpoint between two fingers.
+  const units = mapUnitsPerPixel();
+  const dx = (current.x - previous.x) * units;
+  const dy = (current.y - previous.y) * units;
+  const angle = headingDeg * Math.PI / 180;
+
+  camera.x -= dx * Math.cos(angle) + dy * Math.sin(angle);
+  camera.y -= -dx * Math.sin(angle) + dy * Math.cos(angle);
+
+  if (current.distance > 0 && previous.distance > 0) {
+    const matrix = svg.getScreenCTM();
+
+    if (matrix) {
+      const point = svg.createSVGPoint();
+      point.x = current.x;
+      point.y = current.y;
+      const anchor = point.matrixTransform(matrix.inverse());
+
+      const oldScale = camera.scale;
+      const nextScale = Math.max(
+        0.8,
+        Math.min(15, oldScale * current.distance / previous.distance)
+      );
+
+      const ratio = oldScale / nextScale;
+      camera.x = anchor.x + (camera.x - anchor.x) * ratio;
+      camera.y = anchor.y + (camera.y - anchor.y) * ratio;
+      camera.scale = nextScale;
+
+      $('zoomReset').textContent =
+        Math.round(camera.scale / 2.5 * 100) + '%';
+    }
+  }
+
+  previousGesture = current;
   drawBaseMap();
 });
 
-function endPan(e){
-  if(!isPanning) return;
-  isPanning=false;
-  mapViewport.releasePointerCapture?.(e.pointerId);
-  mapViewport.style.cursor='grab';
+function endMapGesture(event) {
+  if (!mapPointers.delete(event.pointerId)) return;
+
+  if (mapViewport.hasPointerCapture(event.pointerId)) {
+    mapViewport.releasePointerCapture(event.pointerId);
+  }
+
+  previousGesture = gesturePosition();
+  isPanning = mapPointers.size > 0;
+  mapViewport.style.cursor = isPanning ? 'grabbing' : 'grab';
 }
-mapViewport.addEventListener('pointerup',endPan);
-mapViewport.addEventListener('pointercancel',endPan);
+
+mapViewport.addEventListener('pointerup', endMapGesture);
+mapViewport.addEventListener('pointercancel', endMapGesture);
+mapViewport.addEventListener('lostpointercapture', endMapGesture);
+
+window.addEventListener('blur', function () {
+  mapPointers.clear();
+  previousGesture = null;
+  isPanning = false;
+  mapViewport.style.cursor = 'grab';
+});
 
 $('recenterBtn').onclick=()=>{
   followCamera=true;
