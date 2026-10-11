@@ -8128,6 +8128,70 @@ if(gpsMarker){
   renderRouteSteps(null);
 }
 
+// The outdoor walk was the last part of the journey: say so clearly and let the
+// user finish, or plan the next route from here (as the indoor page does).
+function showOutdoorArrival(placeName){
+  if(document.getElementById('outdoorArrivalDialog')) return;
+  const destination = currentOutdoorDestination;
+  const copy = {
+    en: {title:'You have arrived!', done:'Done', next:'New route from here'},
+    he: {title:'הגעת ליעד!', done:'סיום', next:'מסלול חדש מכאן'},
+    ar: {title:'لقد وصلت!', done:'تم', next:'مسار جديد من هنا'},
+    ru: {title:'Вы прибыли!', done:'Готово', next:'Новый маршрут отсюда'}
+  }[lang] || {title:'You have arrived!', done:'Done', next:'New route from here'};
+
+  const dialog = document.createElement('dialog');
+  dialog.id = 'outdoorArrivalDialog';
+  dialog.className = 'outdoor-arrival-dialog';
+  dialog.lang = lang;
+  dialog.dir = ['he', 'ar'].includes(lang) ? 'rtl' : 'ltr';
+  dialog.setAttribute('aria-labelledby', 'outdoorArrivalTitle');
+  dialog.setAttribute('aria-describedby', 'outdoorArrivalPlace');
+
+  const icon = document.createElement('div');
+  icon.className = 'outdoor-arrival-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="outdoor-arrival-check" d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  const title = document.createElement('h2');
+  title.id = 'outdoorArrivalTitle';
+  title.textContent = copy.title;
+
+  const place = document.createElement('p');
+  place.id = 'outdoorArrivalPlace';
+  place.textContent = placeName || '';
+
+  const actions = document.createElement('div');
+  actions.className = 'outdoor-arrival-actions';
+
+  const doneButton = document.createElement('button');
+  doneButton.type = 'button';
+  doneButton.className = 'btn btn-primary';
+  doneButton.textContent = copy.done;
+  doneButton.onclick = () => {
+    dialog.close();
+    closeRoute();
+  };
+
+  const nextButton = document.createElement('button');
+  nextButton.type = 'button';
+  nextButton.className = 'btn btn-secondary';
+  nextButton.textContent = copy.next;
+  nextButton.onclick = () => {
+    dialog.close();
+    closeRoute();
+    if(destination) pickStart(destination.name, destination.lat, destination.lng, placeName);
+    document.getElementById('searchInput')?.focus();
+  };
+
+  dialog.addEventListener('close', () => dialog.remove());
+  actions.append(doneButton, nextButton);
+  dialog.append(icon, title, place, actions);
+  document.body.append(dialog);
+  dialog.showModal();
+  doneButton.focus();
+}
+
 var routeStepTexts = [];
 var routeStepShortTexts = [];
 var readingSteps = false;
@@ -8896,12 +8960,17 @@ if(!arrived) return;
 
 state.finished = true;
 if(currentProfile === 'visual' && typeof CampusHaptics !== 'undefined') CampusHaptics.arrive();
+// An indoor part (or a building after this one) still follows this walk.
+let journeyContinues = Boolean(
+  document.getElementById('continueIndoorBtn')?.dataset.building
+);
 try{
   const plan = JSON.parse(
     sessionStorage.getItem(JOURNEY_PLAN_STORAGE_KEY) || 'null'
   );
 
   const legIndex = plan?.currentLeg;
+  if(Number.isInteger(legIndex) && plan.legs?.length > legIndex + 1) journeyContinues = true;
 
   if(plan?.legs?.[legIndex]?.kind === 'outdoor'){
     plan.legs[legIndex].completed = true;
@@ -8955,6 +9024,14 @@ if(
   !document.hidden
 ){
   speakRouteSteps(state.currentIndex, {automatic: true});
+}
+
+if(!journeyContinues){
+  showOutdoorArrival(
+    state.options.endName ||
+    document.getElementById('searchInput')?.value.trim() ||
+    currentOutdoorDestination?.name
+  );
 }
 }
 
