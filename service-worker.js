@@ -17,6 +17,7 @@ const APP_FILES = [
   './app/ui/share.js',
   './app/ui/campus-status.js',
   './app/ui/speech-voice.js',
+  './app/ui/haptics.js',
   './app/data/campus-status.json',
 
   './app/prototype/data.js',

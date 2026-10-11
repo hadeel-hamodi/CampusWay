@@ -16,6 +16,7 @@
 <script src="app/ui/share.js"></script>
 <script src="app/ui/campus-status.js"></script>
 <script src="app/ui/speech-voice.js"></script>
+<script src="app/ui/haptics.js"></script>
 
 <link rel="stylesheet" href="app/ui/campusway.css">
 <link rel="stylesheet" href="app/ui/campus-map.css">
@@ -8801,6 +8802,21 @@ const arrived = state.demo
 
 const step = state.steps[index];
 
+// Visual Impairment profile: one vibration as each turn or flight of steps
+// comes up (Android only; see app/ui/haptics.js).
+if(
+  !arrived &&
+  step &&
+  currentProfile === 'visual' &&
+  ['turn', 'stairs'].includes(step.kind) &&
+  step.at - state.distance <= 15 &&
+  state.lastHapticStep !== index &&
+  typeof CampusHaptics !== 'undefined'
+){
+  state.lastHapticStep = index;
+  CampusHaptics.turn();
+}
+
 if(
   !arrived &&
   step &&
@@ -8836,6 +8852,7 @@ if(
 if(!arrived) return;
 
 state.finished = true;
+if(currentProfile === 'visual' && typeof CampusHaptics !== 'undefined') CampusHaptics.arrive();
 try{
   const plan = JSON.parse(
     sessionStorage.getItem(JOURNEY_PLAN_STORAGE_KEY) || 'null'

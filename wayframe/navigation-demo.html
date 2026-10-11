@@ -252,6 +252,7 @@
 <script src="../app/ui/qr-code.js"></script>
 <script src="../app/ui/campus-status.js"></script>
 <script src="../app/ui/speech-voice.js"></script>
+<script src="../app/ui/haptics.js"></script>
 <script src="step-detector.js"></script>
 <script src="heading-tracker.js"></script>
 <script src="route-progress.js"></script>
@@ -3559,6 +3560,7 @@ if(a.floor !== b.floor){
     autoDemoRide.start !== progressIndex
   ){
     const ride = rideInstruction(a, b, target);
+    if($('turnIcon')) $('turnIcon').textContent = '↕';
     $('instruction').textContent = ride.text;
     $('subInstruction').textContent = ride.sub;
 
@@ -3982,6 +3984,25 @@ function advanceJourneyPlanLeg(){
 // What the arrival message's main button does next (null = journey finished).
 // Arrival never navigates away on its own; the user decides.
 var arrivalNextStep=null;
+// Visual Impairment profile: vibrate once as a turn comes up and twice for a
+// floor change (Android only; see app/ui/haptics.js).
+let lastHapticRoute = null;
+let lastHapticKey = '';
+function vibrateForGuidance(){
+  if(!navigationActive || selectedRoutingProfile() !== 'visual' || typeof CampusHaptics === 'undefined') return;
+  const icon = $('turnIcon').textContent.trim();
+  const kind = icon === '↕' ? 'floor' : ['↱', '↰', '↶'].includes(icon) ? 'turn' : null;
+  if(!kind) return;
+  if(lastHapticRoute !== routeNodes){
+    lastHapticRoute = routeNodes;
+    lastHapticKey = '';
+  }
+  const key = `${progressIndex}:${icon}`;
+  if(key === lastHapticKey) return;
+  lastHapticKey = key;
+  CampusHaptics[kind]();
+}
+
 function announceArrival(){
   const message = arrivalNextStep?.kind === 'outdoor'
   ? localizedInstruction(
@@ -5703,7 +5724,9 @@ function showArrivalDialog(next){
   if(dialog.open) dialog.close();
   dialog.showModal();
   primary.focus();
-  try{ navigator.vibrate?.([60,40,60]); }catch(error){ /* not supported */ }
+  // The Visual Impairment profile gets the longer arrival pattern (app/ui/haptics.js).
+  if(selectedRoutingProfile() === 'visual' && typeof CampusHaptics !== 'undefined') CampusHaptics.arrive();
+  else try{ navigator.vibrate?.([60,40,60]); }catch(error){ /* not supported */ }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6587,6 +6610,7 @@ new MutationObserver(() => {
   subtree: true
 });
   new MutationObserver(syncMobileIndoorGuide).observe($('instruction'),{childList:true,characterData:true,subtree:true});
+  new MutationObserver(vibrateForGuidance).observe($('turnIcon'),{childList:true,characterData:true,subtree:true});
 
   new MutationObserver(highlightIndoorStep).observe($('livePos'),{childList:true,characterData:true,subtree:true});
 
