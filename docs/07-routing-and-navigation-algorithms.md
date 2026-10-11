@@ -12,8 +12,8 @@
 
 ### 1.1 Shortest path: Dijkstra
 
-- The graph is undirected and weighted; weights are in metres (outdoor weights are multiplied by a path-type cost).
-- The standard Dijkstra algorithm picks the unvisited node with the smallest distance by a linear scan and stops as soon as the target is reached. This is O(V²), which is fast enough for about 1,000 outdoor and 750 indoor nodes per building.
+- The graph is undirected and weighted; weights are in metres. Outdoor weights are multiplied by a path-type cost (and by 5 at noisy or crowded points for the Sensory & Wellbeing profile); indoor floor changes cost 12 m per floor by elevator and 36 m by stairs.
+- The standard Dijkstra algorithm picks the unvisited node with the smallest distance by a linear scan and stops as soon as the target is reached. This is O(V²), which is fast enough for about 1,070 outdoor nodes and at most about 750 indoor nodes per building.
 
 ### 1.2 Fewer-turns path (Spatial profile)
 
@@ -39,15 +39,16 @@ Tests check that a slightly longer route with fewer turns wins, that excessive d
 flowchart TD
     osm["campus-osm.json<br/>OpenStreetMap extract<br/>947 nodes · 157 ways"] --> build["Build undirected graph<br/>haversine length ×<br/>path-type cost"]
     build --> corr["Apply hand-mapped campus<br/>corrections: paths, crossings,<br/>bridge, stairs, elevators"]
-    corr --> restr{"Live restrictions<br/>(campus-status.json +<br/>user reports)"}
+    corr --> restr{"Live restrictions<br/>(live status +<br/>user reports)"}
     restr -->|"no-go polygons,<br/>elevator outages"| filt["Skip blocked edges"]
     restr -->|none| snap
     filt --> snap["Snap start/end to<br/>nearest graph node"]
     snap --> prof{Profile}
-    prof -->|"General / Visual / Mental"| dij["Dijkstra<br/>shortest weighted path"]
+    prof -->|"General / Visual"| dij["Dijkstra<br/>shortest weighted path"]
+    prof -->|Sensory| dijn["Dijkstra, edges at<br/>noisy / crowded points × 5"]
     prof -->|Mobility| dijm["Dijkstra without<br/>steps edges"]
     prof -->|Spatial| turn["Dijkstra on edge states<br/>+6 m per turn ≥ 35°"]
-    dij & dijm & turn --> poly["Route polyline + distance"]
+    dij & dijn & dijm & turn --> poly["Route polyline + distance"]
     poly --> eta["ETA: 1.2 m/s<br/>(0.8 m/s Mobility)<br/>+ indoor legs"]
     poly --> ins["route-instructions.js<br/>turns, stairs, landmarks"]
     eta & ins --> card["Route card on map"]
@@ -60,8 +61,8 @@ flowchart TD
 | Source | Content |
 |---|---|
 | `app/prototype/campus-osm.json` | OpenStreetMap extract from the Overpass API (base date 2026-09-21): 947 nodes and 157 `highway=*` ways (service, footway, path, residential, steps) |
-| `applyCampusCorrections()` in `outdoor-routing.js` | Hand-mapped additions and fixes: about 117 extra nodes, 148 added and 8 removed edges. Covers campus paths, pedestrian crossings, building approaches, the Main–Rabin bridge, Rabin plaza stairs, shop and food access, gate paths, and two outdoor elevator links. |
-| Result | 1,064 nodes and 1,089 undirected edges |
+| `applyCampusCorrections()` in `outdoor-routing.js` | Hand-mapped additions and fixes: 120 extra nodes, about 150 added and 8 removed edges. Covers campus paths, pedestrian crossings, building approaches, the Main–Rabin bridge, Rabin plaza stairs, shop and food access, gate paths, and two outdoor elevator links. |
+| Result | 1,067 nodes and 1,096 undirected edges (counted after loading, as the tests do) |
 
 Each way is split into edges between consecutive nodes. An edge's length is computed with the haversine formula, and its routing weight is:
 
@@ -82,7 +83,7 @@ weight = length (m) × TYPE_COST[path type]
 ### 2.2 Snapping and search
 
 1. The start and end coordinates snap to the nearest graph node (haversine). With *avoid steps*, nodes reachable only by steps are skipped.
-2. The path is searched with Dijkstra, or with the fewer-turns variant for the Spatial profile.
+2. The path is searched with Dijkstra, or with the fewer-turns variant for the Spatial profile. For the Sensory & Wellbeing profile, every edge that touches a point of an active noise area (`noiseAreas` in the live status, marked `noisy` or `crowded` and not past `until`) costs 5 times as much, so quieter paths win unless they are much longer. Emergency (shelter) routes ignore noise.
 3. The result is the polyline `[start, …nodes, end]` with its distance and the list of edges, which is used for the instructions.
 
 ### 2.3 Restrictions
@@ -98,8 +99,8 @@ weight = length (m) × TYPE_COST[path type]
 The indoor page builds a routing graph from `buildings/<key>/<key>-indoor-graph.json`:
 
 - **Walking edges.** Each `connection` becomes an undirected edge. Its length in metres is computed from the normalised coordinates, see [3.3](#indoor-distances-and-eta).
-- **Vertical edges.** Nodes of type `stairs` or `elevator` that share a `connectorId` are grouped. Each floor's node is linked to the same group's node on the next mapped floor in the building's floor order. Floor changes are given a very small weight (elevator 0.02, stairs 0.04), so routing is driven by walking distance.
-- **Step-free routing** (the *Accessible route* option, the Mobility profile, or Manual / Wheelchair mode) removes every edge that touches a `stairs` node, and every stair link between floors.
+- **Vertical edges.** Nodes of type `stairs` or `elevator` that share a `connectorId` are grouped. Each floor's node is linked to the same group's node on the next mapped floor in the building's floor order. One floor costs **12 m by elevator** and **36 m by stairs** (about 10 s and 30 s of walking), the same weights the campus planner uses for journey times, so a route never leaves a floor just to save a few metres.
+- **Step-free routing** (the *Accessible route* option, the Mobility profile, or Manual / Wheelchair mode chosen for Mobility) removes every edge that touches a `stairs` node, and every stair link between floors. The tap-to-confirm fallback used when motion sensors are unavailable keeps the original route, stairs included.
 - **Live status** removes closed nodes and elevators reported out of service.
 
 ### 3.2 Destination resolution
@@ -140,11 +141,11 @@ This is an approximation. Floor plans of different real sizes give proportionall
 | Component | Formula |
 |---|---|
 | Outdoor walking | distance ÷ 1.2 m/s (Mobility: 0.8 m/s) |
-| Indoor walking | distance ÷ 1.2 m/s |
+| Indoor walking | distance ÷ 1.2 m/s (all profiles) |
 | Elevator ride | 30 s waiting + 10 s per floor |
 | Stairs | 30 s per floor |
 | Rabin ↔ Terrace shared transfer | 40 s (elevator) or 30 s (stairs) |
-| Display | minutes, rounded, at least 1 ("3 min walk"); hours with one decimal above 60 minutes |
+| Display | Campus map: minutes, rounded, at least 1 ("3 min walk"); hours with one decimal above 60 minutes. Indoor page: minutes rounded up, at least 1 |
 
 For the nearest-shelter search, an unreachable outdoor leg is estimated as straight-line distance × 1.3, and an unknown indoor leg adds 60 s.
 
@@ -161,9 +162,9 @@ For the nearest-shelter search, an unreachable outdoor leg is estimated as strai
 7. Add a **"take the stairs"** step where a `steps` edge begins.
 8. On walks longer than **120 m**, add "passing X on your left/right" for buildings within **25 m**.
 9. Round distances: under 10 m to 5 m (minimum 5 m), under 100 m to 5 m, otherwise to 10 m.
-10. Output text from templates in English, Hebrew or Arabic.
+10. Output text from templates in English, Hebrew, Arabic or Russian. A shorter form of each step (e.g. *Turn left*, *Take the stairs*) is used for the live direction banner.
 
-Example (Main Building → Student House): *"Start at Main Building and head southeast · Walk 30 m, passing Education and Science on your right · Walk 140 m, then turn left near Rabin Building · … · Walk 10 m to arrive at Student House."*
+Example (Main Building floor 600 entrance → Student House, current data): *"Start at Main Building and head southeast · Walk 15 m, then turn left · Walk 35 m, then bear right · Walk 5 m, then take the stairs · … · Walk 100 m, then turn left near Rabin Building · Walk 20 m, then bear left · Walk 10 m to arrive at Student House."*
 
 ### 6.2 Indoor (`navigation-demo.html`)
 
@@ -175,7 +176,7 @@ Example (Main Building → Student House): *"Start at Main Building and head sou
 
 ## 7. Phone-sensor navigation
 
-Phone Sensors mode is **pedestrian dead reckoning constrained to the planned route**. The app does not try to find an absolute position. It moves a cursor forwards or backwards along the route polyline, one detected step at a time.
+Phone Sensors mode is **pedestrian dead reckoning constrained to the planned route**. The app does not try to find an absolute position. It moves a cursor forwards or backwards along the route polyline, one detected step at a time. It is the default indoor mode for every profile except Mobility; if the motion-sensor permission is refused or no motion readings arrive, the page falls back to tap-to-confirm checkpoints ([section 8](#8-manual--wheelchair-checkpoints)). At the last point the user confirms the estimated arrival (*✓ I have arrived* or *✓ I reached the exit*).
 
 ```mermaid
 flowchart TD
@@ -240,7 +241,7 @@ flowchart TD
 
 ## 8. Manual / Wheelchair checkpoints
 
-`wayframe/wheelchair-navigation.js` reduces the route to the points the user should confirm:
+This mode is used for the Mobility profile, and as the fallback when motion-sensor permission is refused or the phone has no motion sensors (then on the original route, stairs included). `wayframe/wheelchair-navigation.js` reduces the route to the points the user should confirm:
 
 1. **Mandatory points:** start, end, both sides of every floor change, and connector nodes (elevator, stairs, ramp). A multi-floor elevator ride collapses to entry and exit.
 2. **Simplification** between mandatory points: Ramer–Douglas–Peucker with a tolerance of **0.35 m** in metre space.
@@ -263,4 +264,6 @@ The banner shows the turn and the distance to the next checkpoint ("about 9 m to
 | Corner tolerance | 0.75 m | `wayframe/route-progress.js` |
 | Checkpoint simplification | 0.35 m RDP, 35° turn | `wayframe/wheelchair-navigation.js` |
 | Outdoor instruction thresholds | look 12 m, merge 15 m, min step 8 m, landmark 30 m, pass gap 120 m, pass 25 m | `app/prototype/route-instructions.js` |
-| Auto mode speed | 1 m per 80 ms tick, 2 s pause per floor change | `navigation-demo.html` |
+| Indoor floor-change cost | 12 m per floor by elevator, 36 m by stairs | `navigation-demo.html`, `index.html` |
+| Noise penalty (Sensory & Wellbeing) | edge weight × 5 at active noise-area points | `app/prototype/outdoor-routing.js` |
+| Auto mode speed | 0.5 m per 200 ms tick (0.2 m on segments at stairs or elevators); floor change: elevator 3 s + 1 s per floor, stairs 4 s per floor | `navigation-demo.html` |

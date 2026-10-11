@@ -1,12 +1,14 @@
 // Live campus status for CampusWay: elevator outages, closures ("no-go
 // zones"), opening hours and problem reports.
 //
-// Official status comes from app/data/campus-status.json (edited by the
-// campus team, by hand or from admin.html). Reports made in the app are kept
-// on this device: CampusWay avoids an elevator you reported as out of service
-// for 24 hours. When the app is opened from the CampusWay local server
-// (server/campusway-server.js), reports and anonymous usage counts are also
-// sent to it; on GitHub Pages or a plain static server nothing is sent.
+// The live status comes from the cloud inbox (published from admin.html);
+// app/data/campus-status.json is the offline fallback and names the inbox
+// (reportEndpoint). Reports made in the app are kept on this device until
+// they are sent, and CampusWay avoids an elevator you reported as out of
+// service for 24 hours. Reports and anonymous usage counts go to the
+// CampusWay PC server when the app is opened from it, otherwise to the cloud
+// inbox; with neither reachable they wait on the device.
+// See docs/18-data-servers-and-offline.md.
 (function(root){
   const STORAGE_REPORTS = 'campuswayReports';
   const STORAGE_CACHE = 'campuswayStatusCache';

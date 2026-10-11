@@ -25,6 +25,7 @@ Start with **[01 · Project overview](01-project-overview.md)** if you are new t
 | 15 | [Glossary](15-glossary.md) | Terms used in the code and in these documents |
 | 16 | [Team and credits](16-team-and-credits.md) | Contributors and third-party software and data |
 | 17 | [Admin screen and local server](17-admin-screen.md) | Managing reports, live status, announcements and content from one PC; where the data is kept; roles and privacy |
+| 18 | [Data, servers and offline use](18-data-servers-and-offline.md) | What runs on the phone and what on a server; the cloud inbox database and the PC's JSON files, what each stores and how; what the phone sends; how the app relies on its offline cache |
 
 ## Supporting folders
 

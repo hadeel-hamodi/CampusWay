@@ -8,7 +8,7 @@
 
 ## 1. Tools overview
 
-None of these pages is linked from the app; open them by URL (e.g. `http://localhost:8080/wayframe/wayframe.html`).
+None of these pages is linked from the app; open them by URL (e.g. `http://localhost:8080/wayframe/wayframe.html`). The admin screen needs the PC server (`node server/campusway-server.js` or `start-admin.bat`).
 
 | Page | Purpose |
 |---|---|
@@ -18,6 +18,7 @@ None of these pages is linked from the app; open them by URL (e.g. `http://local
 | `wayframe/audio-test.html` | Text-to-speech voice availability per language |
 | `wayframe/mic-test.html` | Microphone permission and level meter |
 | `index.html?debug` | Click the map to get coordinates |
+| `admin.html` → **Data health** | Automatic checks of the indoor maps per building and floor: isolated nodes, stairs and elevators without a connector ID, connectors on a single floor, placeholder names, missing entrances, places that cannot be reached and places reachable only by stairs; *Show on map* highlights the nodes ([17 · Admin screen](17-admin-screen.md)) |
 
 ## 2. WayFrame node plotter
 
@@ -71,8 +72,9 @@ flowchart TD
 7. If the building is new, also:
    - add its entrances to `BUILDING_ENTRANCES` in `app/prototype/data.js`;
    - add the graph and floor plans to `APP_FILES` in `service-worker.js`;
-   - add the building to the lists in `index.html` and `navigation-demo.html` (search graphs, floor order, building names).
-8. **Bump `CACHE_NAME`**, run the tests, and check the route in the app.
+   - add the building to the lists in `index.html` and `navigation-demo.html` (search graphs, floor order, building names);
+   - add it to `BUILDINGS` in `app/admin/status-schema.js`, so the admin screen and the status checks know it.
+8. **Bump `CACHE_NAME`**, run the tests, and check the route in the app. Graphs and floor plans are fetched network-first, so online users get the change at once; the new cache name refreshes every phone's offline copy.
 
 **Quality checks before committing:**
 
@@ -80,7 +82,9 @@ flowchart TD
 - [ ] Every stairs and elevator node has a connector ID, and the same ID exists on each floor it serves.
 - [ ] Every floor that should be step-free is reachable by an elevator.
 - [ ] Labels are real room numbers or names, not "Node 123".
-- [ ] If the building has a JS copy (`madriga-graph.js`, `multi-purpose-graph.js`), update it too.
+- [ ] The admin **Data health** page shows no new errors or warnings for the building, and `node --test tests/*.test.cjs` passes.
+
+The app loads the six JSON graphs directly (`index.html` and `navigation-demo.html`). `app/prototype/madriga-graph.js` and `multi-purpose-graph.js` are older copies that the app no longer uses (the service worker still precaches them). The admin **Data health** page compares them with the JSON files, and one test still reads `madriga-graph.js`; they do not need updating.
 
 ## 4. Adding entrances and places
 
@@ -101,7 +105,7 @@ rabin: [
 - `lat`/`lng` should sit on, or very close to, an outdoor path. Check with `?debug`.
 - Mark entrances that need stairs with `requiresStairs: true`, so the Mobility profile skips them. Use `primary: true` for the default entrance.
 
-**Food place or shop** (`CAMPUS_DATA.points.food` / `.shops`): add `{name, lat, lng, type}` and, if it is inside a mapped building, `indoor: {buildingKey, nodeIds: [...]}`. Add the Hebrew name to `PLACE_NAMES_HE`.
+**Food place or shop** (`CAMPUS_DATA.points.food` / `.shops`): add `{name, lat, lng, type}` and, if it is inside a mapped building, `indoor: {buildingKey, nodeIds: [...]}`. Add the Hebrew name to `PLACE_NAMES_HE` (and the Russian one to `PLACE_NAMES_RU` in `index.html`).
 
 **Outdoor path fix** (`app/prototype/outdoor-routing.js` → `applyCampusCorrections()`): add a node with `addCampusNode('campus_<name>', lat, lng)` **before** any `addEdge` that uses it, then `addEdge(a, b, 'footway' | 'steps' | …)`. An edge whose end node does not exist yet is skipped without a warning.
 
@@ -114,7 +118,7 @@ rabin: [
 | Page | How to use it |
 |---|---|
 | **Sensor test** | Open on a phone over HTTPS → *Enable Sensors*. Watch heading, filtered acceleration and step counts. Tests: walk 20 steps (the count should be about 20); walk slowly with pauses; stand still (nothing should be added); *Set forward direction*, walk 5 steps forward and 3 back (net about 2). |
-| **Audio test** | Turn audio on, pick EN/HE/AR, and play instructions, a floor change, a warning and arrival. Lists the installed voices per language (on-device or online). |
+| **Audio test** | Turn audio on, pick EN/HE/AR/RU, and play instructions, a floor change, a warning and arrival. Lists the installed voices per language (on-device or online). |
 | **Mic test** | Checks secure context, microphone permission and input level. Nothing is recorded. |
 
 ## 7. Debugging the campus map
@@ -123,7 +127,7 @@ rabin: [
 |---|---|
 | Coordinates | Open `index.html?debug` and click the map |
 | Outdoor graph overlay | In the browser console: `showOutdoorDebugGraph()` |
-| Simulate status | Edit `app/data/campus-status.json`, or intercept it in DevTools; e.g. an outage for `{"building":"campus","elevator":"main-600-outdoor"}` |
+| Simulate status | While the cloud inbox can be reached, the app shows the status published there, so editing `app/data/campus-status.json` alone changes nothing. Instead start the PC server with a copy of the file, e.g. `node server/campusway-server.js --status-file ..status-test.json`, edit the copy (e.g. an outage for `{"building":"campus","elevator":"main-600-outdoor"}`) and reload <http://localhost:8080/>: opened from the PC server, the app reads that file and does not ask the inbox. The admin screen's **Live status** editors also preview the effect of a change before it is saved. Saving publishes to the live site when this PC is connected to the cloud inbox; to try saving safely, also pass `--db` with an empty folder |
 | Fresh state | DevTools → Application → *Clear site data* (removes caches, favourites and storage) |
 | Sensor emulation | DevTools → More tools → *Sensors* (orientation); motion events can be dispatched from the console |
 

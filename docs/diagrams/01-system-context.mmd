@@ -17,6 +17,8 @@ flowchart LR
 
     pages["GitHub Pages<br/>(static hosting)"]
     osm["OpenStreetMap<br/>tile server"]
+    inbox["Cloud inbox<br/>(Cloudflare Worker + D1)"]
+    pc["Admin PC server<br/>(Node.js + JSON files)"]
 
     user --> main
     main <-->|"journey hand-off"| indoor
@@ -25,6 +27,9 @@ flowchart LR
     sw -.->|"caches app files,<br/>graphs, floor plans"| main
     pages -->|"HTML, JS, JSON, SVG"| sw
     main -->|"base map tiles"| osm
+    main -->|"reports, anonymous counts"| inbox
+    inbox -->|"live status"| main
+    pc <-->|"fetch reports, publish status"| inbox
     indoor --> sensors
     main --> speech
     indoor --> speech

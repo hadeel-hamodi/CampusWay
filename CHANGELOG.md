@@ -1,30 +1,98 @@
 # Changelog
 
-The development history of CampusWay, grouped by milestone and summarised from the Git commit history. CampusWay is deployed continuously from `main`; the service-worker cache name (`campusway-vNN`) changes with each release (currently `campusway-v41`).
+The development history of CampusWay, grouped by milestone and summarised from the Git commit history. CampusWay is deployed continuously from `main`; the service-worker cache name (`campusway-vNN-…`) changes with each release (currently `campusway-v68-fresh-maps`).
 
-## 2026-10-09 · Admin screen and local server
+## 2026-10-11 · Arrival screen, vibration, screen-reader names and fresh maps
 
 **Added**
-- `admin.html`: reports inbox, live status editor (elevator outages, indoor closures on the floor plan, outdoor zones, noisy areas) with route-impact previews, announcements and emergency mode, place names and opening hours, map data-health checks, usage insights, admin accounts with roles, activity log and status-file history.
+- *You have arrived!* screen at the end of an outdoor journey, with *Done* and *New route from here* (pull request #19).
+- Vibration for the Visual Impairment profile: one pulse before a turn, two for a floor change, three on arrival (`app/ui/haptics.js`; Android only, iPhones do not support it) (#18).
+- Map icons have names for screen readers, also after an icon or the language changes (#17).
+- Routes start from the phone's position when it is on campus and no start was chosen, also for the shelter button, shared links and schedule reminders; otherwise from the gate, with a message (#15).
+- Voices per language (`app/ui/speech-voice.js`): the app picks the best installed voice (including Android's Hebrew "iw" voices), explains how to add a missing one, and reads distances as words (#11).
+- Favourites from service popups; problem reports for the Multi-Purpose Building.
+- Building-journey regression tests for every building and profile (`building-journeys.test.cjs`). The suite now has 539 tests in 39 files, all passing.
+
+**Changed**
+- Indoor maps and floor plans are fetched network-first, so map fixes reach phones at once (cache `campusway-v68-fresh-maps`, #12).
+- Updated indoor graphs (Terrace, Main, Multi-Purpose, Education); the unconnected Multi-Purpose floor 0 nodes were removed.
+- Improved spoken guidance indoors and outdoors and the demo pacing; the indoor directions panel is shorter and keeps the current step centred.
+- README and app screenshots updated.
+
+**Fixed**
+- Indoor routes no longer leave a floor and come back to save a few metres: a floor change now costs 12 m by elevator and 36 m by stairs, as in the campus planner (#13).
+- When motion sensors are refused or send no readings, indoor guidance continues with tap-to-confirm checkpoints on the same route instead of stopping (#14); the reminder to confirm only on arrival is shown at the first point only (#16).
+- Terrace → Rabin → Main journeys through the shared elevator; Rabin outdoor routes are kept.
+- Gym and service destinations use an entrance from which they can really be reached.
+- Journey stages, indoor guidance timing and step highlights; schedule room labels and suggestion ranking.
+- Navigation test fixtures updated to the new screens, with more shelter coverage (by Jasmin).
+
+## 2026-10-10 · Journey polish and the outdoor shelter
+
+**Added**
+- An outdoor shelter on the map; the shelter button can route to it without an indoor hand-off.
+- Confirmation dialogs before a journey is cancelled; demonstrations pause while a dialog is open.
+
+**Changed**
+- Rabin ↔ Terrace transfers use the shared elevator for every profile; simpler journey labels.
+- Mobile guidance and demo journey transitions; indoor route preview layout and endpoint labels; schedule form spacing and the *Add class* button.
+
+**Fixed**
+- Journey hand-offs, indoor speech and route time previews.
+- Audio cancellation and phone speech recovery; an entrance connection and the search controls; continuous outdoor demo movement.
+
+## 2026-10-09 · Admin screen, local server and cloud inbox
+
+**Added**
+- `admin.html` (pull request #9): reports inbox, live status editor (elevator outages, indoor closures on the floor plan, outdoor zones, noisy areas) with route-impact previews, announcements and emergency mode, place names and opening hours, map data-health checks, usage insights, admin accounts with roles, activity log and status-file history.
 - `server/campusway-server.js`: a local server with no dependencies that serves the app and saves reports, admin accounts, usage counts and the audit log as JSON files in `server/db/` (git-ignored). `start-admin.bat` starts it on Windows.
-- The app sends problem reports and anonymous usage counts to the local server when it is opened from it, and shows reporters the status of their reports; nothing changes on GitHub Pages.
+- The app sends problem reports and anonymous usage counts to the local server when it is opened from it (and, from GitHub Pages, to the cloud inbox below), and shows reporters the status of their reports.
 - Announcement and emergency banners on the campus map and indoor pages; name corrections from the status file.
-- 55 new tests: emergency shelter routing, live status in routing, campus reachability, map data integrity, shared links, opening hours and offline caching (320 in total).
+- 55 new tests: emergency shelter routing, live status in routing, campus reachability, map data integrity, shared links, opening hours and offline caching.
 - Admin **Tests** page: runs the automated tests on the PC and shows passes, failures and error details (administrators only).
 - Admin **Storage** page with a 10 GB limit for the PC's data and storage and daily caps for the cloud inbox.
 - Cloud inbox (`cloud/`): a free Cloudflare Worker + D1 that collects reports and usage counts from the public site. The PC server fetches them every 5 minutes and sends report statuses back; the admin screen's **Cloud inbox** page walks through the setup.
 
-- Live status without commits: saving in the admin publishes announcements, emergency mode, outages, closures, names and hours to the cloud inbox, and the app reads them from there (the repository file stays as the offline copy). Failed publishes retry automatically; **Publish now** on the Overview page.
+- Live status without commits (#10): saving in the admin publishes announcements, emergency mode, outages, closures, names and hours to the cloud inbox, and the app reads them from there (the repository file stays as the offline copy). Failed publishes retry automatically; **Publish now** on the Overview page.
+
+**Changed**
+- Indoor phone layout: a simpler navigation card with expandable directions, zoom controls and a distance-based progress line.
+- Settings layout with compact language and profile pickers.
 
 **Fixed**
 - Nearest shelter for the Mobility profile: no longer picks an entrance or shelter that has no step-free route (it used to fall back to a straight-line guess, sending wheelchair users towards routes the app then refused to draw); says honestly when no step-free shelter exists.
 - Nearest shelter and journey times now respect live elevator outages and closures, like the indoor page; closed shelters are never offered.
 - Searching for a route that only stairs could reach took over a second each time (a mapping diagnostic compared every pair of path points); the shelter search is about 14× faster.
 - Shared links to a place with several branches (Pilpelet Cafe) opened the wrong branch; such links now name the building (old links still work).
+- Indoor demo-mode hand-off; duplicate highlighting in the indoor direction steps.
+
+## 2026-10-07 – 2026-10-08 · Russian, outdoor GPS guidance, reminders and journey plans
+
+**Added**
+- Complete Russian localisation: interface, search, indoor directions, sharing, campus status and the audio guide (`ru-RU`) (by Hadeel).
+- Live outdoor GPS guidance along the route, and a demonstration mode (`?demo=1`) with simulated movement that hands over to the indoor arrival.
+- Optional schedule reminders in Settings that start the route to a class (by Hadeel).
+- *Share my location* (a one-time link), Arabic building names with the Hebrew name in brackets, and more flexible multilingual search (by Hadeel).
+- Multi-stage journey plans that adapt to each route and advance across building transfers, with the user deciding when to continue; mobile directions in a compact side drawer; *New route from here* after arriving indoors (pull requests #7 and #8, by Hadeel).
+- *Plan route by voice* for the Visual Impairment profile.
+- Quiet spaces and the *I need a break* button for the Sensory & Wellbeing Support profile, whose routes now prefer quieter paths (emergency routes keep shelter priority); updated smoking areas and condition reports.
+- Project documentation in `docs/` (pull request #6).
+
+**Changed**
+- The *Mental Health Support* profile is now called *Sensory & Wellbeing Support* (its internal id `mental` is unchanged).
+- The indoor navigation mode is chosen automatically, and the audio setting is shared across the journey.
+- Finished Terrace indoor graph; updated Main, Education and Student House indoor graphs.
+- Simpler report dialogs (with elevator and rest-space reports) and indoor arrival actions; the retired indoor prototype and duplicate indoor controls were removed.
+- A manual high-contrast choice is kept when the profile changes.
+
+**Fixed**
+- Restrooms, shelters, food places and shops chosen from *Services near me* or *Navigate here* keep their indoor destination when continuing indoors; in Phone Sensors mode the user now confirms arrival.
+- Terrace hand-off, arrival and map controls; the indoor route card for room journeys.
 
 ## 2026-10-04 – 2026-10-06 · Polish, integration and documentation
 
 **Added**
+- First-run setup that saves the language and profile on the device; display controls moved to Settings; persistent text size and complete high contrast (by Hadeel, merged on 7 October in pull request #3).
 - Finished Education and Science indoor graph; updated Multi-Purpose indoor graph.
 - Voice search for the starting point; rest-space previews on the map.
 - Project README.
@@ -33,6 +101,7 @@ The development history of CampusWay, grouped by milestone and summarised from t
 
 **Changed**
 - Merged the *Enhance-UI-UX* branch (interface and experience improvements).
+- Pages, scripts and styles are fetched network-first, so an old cached page cannot miss new preferences or styles (by Hadeel).
 - Favourites are the default tab; standalone indoor shortcuts hidden from the campus screen.
 - Compact shelter button on phones; building labels shown at closer zoom.
 - Simplified indoor route controls; manual destination arrival needs one confirmation; removed redundant outdoor exit confirmations.

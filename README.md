@@ -110,7 +110,22 @@ Automated tests cover routing, search, sensor logic and journey transitions. The
 - `wayframe/` — route planning, sensor and checkpoint helpers.
 - `tests/` — automated tests.
 - `service-worker.js` — offline caching and app updates.
+- `admin.html`, `app/admin/` — the admin screen for the campus team.
+- `server/` — the PC server for the admin screen (Node.js); its data lives in `server/db/`, which is never committed.
+- `cloud/` — the cloud inbox (Cloudflare Worker and its D1 database tables).
+- `start-admin.bat` — starts the PC server and opens the admin screen on Windows.
 - `docs/` — project documentation, diagrams and screenshots.
+
+## Data and servers
+
+CampusWay runs on the phone and relies mostly on its offline copy: after the first visit the service worker keeps the whole app, every indoor map and every floor plan on the phone (about 75 MB), and all routes are calculated there. There are no user accounts.
+
+Two small services exist only for the campus team:
+
+- **Cloud inbox:** a free Cloudflare Worker with a D1 (SQLite) database. Phones send it problem reports and anonymous daily counts (no names, device ids, locations or times of day) and read the live campus status from it. Report text is deleted once the PC has fetched it.
+- **PC server:** `server/campusway-server.js` (Node.js) on one PC, with the admin screen. It stores reports, admin accounts (hashed passwords), counts and the activity log as JSON files in `server/db/`, fetches from the inbox every 5 minutes and publishes the live status to it.
+
+Navigation keeps working when either is unreachable. Exactly what is stored where and what is sent: [Data, servers and offline use](docs/18-data-servers-and-offline.md).
 
 ## Development notes
 
@@ -144,6 +159,8 @@ Full project documentation is in the [`docs/`](docs/README.md) folder:
 | What is missing and what is next | [Limitations and future work](docs/14-limitations-and-future-work.md) |
 | Terms | [Glossary](docs/15-glossary.md) |
 | People and third-party credits | [Team and credits](docs/16-team-and-credits.md) |
+| Admin screen, PC server and cloud inbox | [Admin screen and local server](docs/17-admin-screen.md) |
+| What is stored where, what is sent, offline design | [Data, servers and offline use](docs/18-data-servers-and-offline.md) |
 
 See also [`CHANGELOG.md`](CHANGELOG.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
