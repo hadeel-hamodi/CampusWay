@@ -15,6 +15,7 @@
 <script src="app/ui/qr-code.js"></script>
 <script src="app/ui/share.js"></script>
 <script src="app/ui/campus-status.js"></script>
+<script src="app/ui/speech-voice.js"></script>
 
 <link rel="stylesheet" href="app/ui/campusway.css">
 <link rel="stylesheet" href="app/ui/campus-map.css">
@@ -1224,6 +1225,8 @@ function applyLanguagePreference(l, _dir, {persist = true} = {}){
   if(window.CampusUI) window.CampusUI.refresh();
   if(typeof refreshRouteSteps === 'function') refreshRouteSteps();
   renderSettingsLanguageChoices();
+  if(audioOn) CampusSpeech.checkVoice(l);
+  else CampusSpeech.hideMissingVoice();
 
   return true;
 }
@@ -2410,15 +2413,7 @@ if(appleMobile) return null;
     saved = sessionStorage.getItem(key);
   }catch(error){}
 
-  const voice =
-    voices.find(v => v.voiceURI === saved) ||
-    voices.find(v =>
-      v.lang.toLowerCase().startsWith(prefix + '-') &&
-      /google|natural/i.test(v.name)
-    ) ||
-    voices.find(v => v.lang.toLowerCase() === locale.toLowerCase()) ||
-    voices.find(v => v.lang.toLowerCase().startsWith(prefix)) ||
-    null;
+  const voice = CampusSpeech.pickVoice(voices, lang, saved);
 
   if(voice){
     try{
@@ -2436,11 +2431,20 @@ function hasNativeLangVoice(){
   return voices.some(v=>v.lang.startsWith(prefix));
 }
 
+// No voice for the app language: an English voice would read only the
+// numbers, so say nothing and show how to add a voice instead.
+function speechVoiceMissing(){
+  if(CampusSpeech.voiceState(lang) !== 'missing') return false;
+  CampusSpeech.showMissingVoice(lang);
+  return true;
+}
+
 function speak(text){
   if(!audioOn) return;
   if(!('speechSynthesis' in window)) return;
+  if(speechVoiceMissing()) return;
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
+  const utter = new SpeechSynthesisUtterance(CampusSpeech.speechText(text, lang));
   utter.rate = 0.97; utter.pitch = 1;
   const v = getVoice();
   const appSpeechLang = languageSpeechLocale();
@@ -2450,6 +2454,9 @@ function speak(text){
   } else {
     utter.lang = appSpeechLang;
   }
+  utter.onerror = event => {
+    if(CampusSpeech.isVoiceError(event)) CampusSpeech.showMissingVoice(lang);
+  };
   window.speechSynthesis.speak(utter);
 }
 
@@ -2468,6 +2475,14 @@ function setAudioEnabled(enabled, {persist = true, announce = true} = {}){
 
   if(voiceArea){
     voiceArea.classList.toggle('show', audioOn);
+  }
+
+  if(audioOn){
+    // Turning the guide on shows the notice again; a restored setting
+    // shows it once per visit.
+    CampusSpeech.checkVoice(lang, {force: announce});
+  }else{
+    CampusSpeech.hideMissingVoice();
   }
 
   if(audioOn && announce){
@@ -8202,6 +8217,7 @@ function speakRouteSteps(index = 0, options = {}){
     : {text: routeStepTexts[index], minor: false};
 
   if(!guidance?.text) return;
+  if(speechVoiceMissing()) return;
 
   if(
     options.automatic &&
@@ -8220,7 +8236,7 @@ function speakRouteSteps(index = 0, options = {}){
   const token = ++outdoorSpeechToken;
   const speechState = outdoorGuidance;
   const utterance = new SpeechSynthesisUtterance(
-    guidance.text
+    CampusSpeech.speechText(guidance.text, lang)
   );
   const voice = getVoice();
   utterance.rate = 0.95;
@@ -8313,6 +8329,8 @@ if(
 };
   utterance.onerror = event => {
     finish();
+
+    if(CampusSpeech.isVoiceError(event)) CampusSpeech.showMissingVoice(lang);
 
     if(event.error === 'not-allowed'){
 
@@ -11352,7 +11370,12 @@ function speakVisualQuestion(text){
     if(cancelVisualSpeaking) cancelVisualSpeaking();
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    if(speechVoiceMissing()){
+      resolve(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(CampusSpeech.speechText(text, lang));
     const voice = getVoice();
     let finished = false;
 
@@ -11382,7 +11405,10 @@ function speakVisualQuestion(text){
     }
 
     utterance.onend = () => finish(true);
-    utterance.onerror = () => finish(false);
+    utterance.onerror = event => {
+      if(CampusSpeech.isVoiceError(event)) CampusSpeech.showMissingVoice(lang);
+      finish(false);
+    };
 
     try{
       window.speechSynthesis.speak(utterance);

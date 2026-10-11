@@ -251,6 +251,7 @@
 
 <script src="../app/ui/qr-code.js"></script>
 <script src="../app/ui/campus-status.js"></script>
+<script src="../app/ui/speech-voice.js"></script>
 <script src="step-detector.js"></script>
 <script src="heading-tracker.js"></script>
 <script src="route-progress.js"></script>
@@ -601,16 +602,38 @@ function russianIndoorNodeLabel(label,type=''){
   return raw;
 }
 
+// English place labels from the floor graphs, so Arabic and Hebrew
+// directions (and the voice reading them) do not switch to English.
+const INDOOR_PLACE_LABELS={
+  ar:{entrance:'المدخل',elevators:'المصاعد',elevator:'المصعد',stairs:'الدرج',restroom:'المراحيض',shelter:'الملجأ',
+    terrace:'الشرفة',gym:'الصالة الرياضية',library:'المكتبة',clinic:'العيادة',cafeteria:'الكافتيريا',
+    'parking lot':'موقف السيارات','emergency exit':'مخرج الطوارئ',hall:'القاعة',auditorium:'القاعة الكبرى',
+    'hecht museum':'متحف هيخت','teachers room buffet':'بوفيه غرفة المعلمين','main entrance':'المدخل الرئيسي'},
+  he:{entrance:'כניסה',elevators:'מעליות',elevator:'מעלית',stairs:'מדרגות',restroom:'שירותים',shelter:'מרחב מוגן',
+    terrace:'מרפסת',gym:'חדר כושר',library:'ספרייה',clinic:'מרפאה',cafeteria:'קפטריה',
+    'parking lot':'חניון','emergency exit':'יציאת חירום',hall:'אולם',auditorium:'אודיטוריום',
+    'hecht museum':'מוזיאון הכט','teachers room buffet':'מזנון חדר המורים','main entrance':'כניסה ראשית'}
+};
+
+function translatedPlaceLabel(raw,language){
+  const names=INDOOR_PLACE_LABELS[language];
+  if(!names) return raw;
+  const normalized=raw.trim().toLowerCase();
+  if(names[normalized]) return names[normalized];
+  // "Elevator 2", "stair 3" (and the graph's "staris"/"starirs" typos), "Main entrance 1".
+  const numbered=normalized.match(/^(elevators?|stairs?|staris|starirs|main entrance)\s*(\d+)$/);
+  if(numbered){
+    const key=numbered[1].startsWith('elevator') ? 'elevator'
+      : numbered[1]==='main entrance' ? 'main entrance' : 'stairs';
+    return `${names[key]} ${numbered[2]}`;
+  }
+  if(/^(staris|starirs)$/.test(normalized)) return names.stairs;
+  return raw;
+}
+
 function localizedNodeLabel(label,type=''){
   const raw=String(label??'');
-  if(indoorLang==='ar'){
-    if(raw.toLowerCase()==='entrance') return 'المدخل';
-    if(raw.toLowerCase()==='elevators') return 'المصاعد';
-  }
-  if(indoorLang==='he'){
-    if(raw.toLowerCase()==='entrance') return 'כניסה';
-    if(raw.toLowerCase()==='elevators') return 'מעליות';
-  }
+  if(indoorLang==='ar' || indoorLang==='he') return translatedPlaceLabel(raw,indoorLang);
   if(indoorLang==='ru'){
     return russianIndoorNodeLabel(raw,type);
   }
@@ -5776,6 +5799,10 @@ async function speakIndoor(text, force = false, options = {}){
     : 'en-US';
 
   const prefix = locale.split('-')[0];
+  const spokenText = CampusSpeech.speechText(text, indoorLang);
+  const onVoiceError = event => {
+    if(CampusSpeech.isVoiceError(event)) CampusSpeech.showMissingVoice(indoorLang);
+  };
 
   synth.cancel();
 
@@ -5784,10 +5811,15 @@ async function speakIndoor(text, force = false, options = {}){
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 if(appleMobile){
-  const utterance = new SpeechSynthesisUtterance(text);
+  if(CampusSpeech.voiceState(indoorLang, synth) === 'missing'){
+    CampusSpeech.showMissingVoice(indoorLang);
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(spokenText);
   utterance.lang = locale;
   utterance.rate = 0.97;
   utterance.pitch = 1;
+  utterance.onerror = onVoiceError;
   synth.speak(utterance);
   return;
 }
@@ -5814,15 +5846,14 @@ try{
   saved = sessionStorage.getItem(key);
 }catch(error){}
 
-const voice =
-  voices.find(v => v.voiceURI === saved) ||
-  voices.find(v =>
-    v.lang.toLowerCase().startsWith(prefix.toLowerCase() + '-') &&
-    /google|natural/i.test(v.name)
-  ) ||
-  voices.find(v => v.lang.toLowerCase() === locale.toLowerCase()) ||
-  voices.find(v => v.lang.toLowerCase().startsWith(prefix.toLowerCase())) ||
-  null;
+const voice = CampusSpeech.pickVoice(voices, indoorLang, saved);
+
+// The device lists voices but none for this language: an English voice
+// would read only the numbers, so explain how to add one instead.
+if(!voice && voices.length){
+  CampusSpeech.showMissingVoice(indoorLang);
+  return;
+}
 
 if(voice){
   try{
@@ -5830,14 +5861,15 @@ if(voice){
   }catch(error){}
 }
 
-  const utterance = new SpeechSynthesisUtterance(text);
+  const utterance = new SpeechSynthesisUtterance(spokenText);
   if(voice) utterance.voice = voice;
   utterance.lang = voice?.lang || locale;
   utterance.rate = 0.97;
   utterance.pitch = 1;
+  utterance.onerror = onVoiceError;
 
 console.log('[Indoor speech]', {
-  text,
+  text: spokenText,
   voice: voice?.name || 'browser default',
   language: utterance.lang
 });
@@ -5851,6 +5883,8 @@ function setIndoorVoice(on, announce=true){
     localStorage.setItem(SHARED_AUDIO_KEY,String(on));
   }catch(error){ /* storage blocked */ }
   try{ sessionStorage.setItem(SHARED_AUDIO_KEY,String(on)); }catch(error){ /* storage blocked */ }
+  if(on) CampusSpeech.checkVoice(indoorLang, {force: announce});
+  else CampusSpeech.hideMissingVoice();
   if(on && announce){
     lastSpokenGuidance='';
     speakIndoor(routeNodes.length ? currentGuidanceText() : it('voiceOn'));
