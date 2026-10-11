@@ -395,7 +395,9 @@ test('Auto to Sensors cancels automatic movement and waits for calibration', asy
   near(travelled(h), before);
   assert.equal(h.run('navigationActive'), false);
 
-  // With no compass readings, calibration should time out.
+  // Sensors work but give no stable compass reading, so calibration times out
+  // (a device with no readings at all switches to tap-to-confirm instead).
+  h.run('usableMotionReadings=1;usableHeadingReadings=1;');
   await h.advanceTime(3000);
   await starting;
 
@@ -429,9 +431,34 @@ test('late permission after route replacement leaves the new route stopped',asyn
   const status=h.element('status').textContent;resolve('granted');await waiting;assert.equal(h.run('navigationActive'),false);assert.equal(h.frames.size,0);assert.equal(h.element('status').textContent,status);
 });
 
-test('denied permission leaves Start available without motion',async()=>{
-  const h=harness(false,async()=>'denied');h.run("sensorsEnabled=false;setNavigationMode('sensor')");await h.run('startNavigation()');
-  assert.equal(h.run('navigationActive'),false);assert.equal(h.element('startBtn').disabled,false);assert.equal(h.timers.size,0);assert.equal(h.frames.size,0);
+test('denied permission continues with tap-to-confirm checkpoints on the same route',async()=>{
+  const h=harness(false,async()=>'denied');h.run("sensorsEnabled=false;setNavigationMode('sensor')");const routes=h.run('dijkstraCalls');
+  await h.run('startNavigation()');
+  assert.equal(h.run('navMode'),'wheelchair');assert.equal(h.run('manualFallbackActive'),true);assert.equal(h.run('navigationActive'),true);
+  // The route is kept as it was: no stair-free recalculation for a non-Mobility profile.
+  assert.equal(h.run('dijkstraCalls'),routes);assert.notEqual(h.element('accessibleRoute').checked,true);
+  assert.equal(h.element('wheelchairNextBtn').disabled,false);assert.equal(h.element('wheelchairTitle').textContent,'Tap-to-confirm navigation');
+  assert.match(h.element('status').textContent,/Motion sensors are off/);
+  assert.equal(h.run("sessionStorage.getItem('campusway.indoorManualCheckpoints')"),'true');
+  assert.equal(h.timers.size,0);assert.equal(h.frames.size,0);
+});
+
+test('a device that sends no sensor readings also continues with tap-to-confirm',async()=>{
+  const h=harness();h.run("setNavigationMode('sensor')");
+  h.setRoute([{id:'a',label:'A',floor:'floor500',x:0,y:1},{id:'b',label:'B',floor:'floor500',x:0,y:0},{id:'c',label:'C',floor:'floor500',x:1,y:0}]);
+  const starting=h.run('startNavigation()');await h.advanceTime(3000);await starting;
+  assert.equal(h.run('navMode'),'wheelchair');assert.equal(h.run('navigationActive'),true);
+  assert.equal(h.element('wheelchairNextBtn').disabled,false);
+  assert.equal(h.run('wheelchairTarget(1)'),1,'the next point to confirm is the turn');
+});
+
+test('unclear readings from working sensors keep Phone Sensors and ask to try again',async()=>{
+  const h=harness();h.run("setNavigationMode('sensor')");
+  // Sensors exist but never give a stable compass reading.
+  h.run('usableMotionReadings=1;usableHeadingReadings=1;');
+  const starting=h.run('startNavigation()');await h.advanceTime(3000);await starting;
+  assert.equal(h.run('navMode'),'sensor');assert.equal(h.run('manualFallbackActive'),false);
+  assert.equal(h.run('navigationActive'),false);assert.equal(h.element('startBtn').disabled,false);
 });
 
 test('background, screen rotation or reference change cancels movement for recalibration',async()=>{
