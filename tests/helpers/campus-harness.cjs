@@ -89,6 +89,8 @@ function campusHarness(options = {}){
       sharedLocation:'Shared location', sharedLocationHint:'Shared hint', room:'Room', legendClinic:'Clinic'
     };
     function getStart(){ return startOverride || {lat:32.758920626688536, lng:35.02135898321563, label:'Carmel Gate'}; }
+    // The phone's position is not used here; tests choose the start with startAt().
+    async function startFromPhoneWhenUnset(){ __calls.phoneStart = (__calls.phoneStart || 0) + 1; return Boolean(startOverride); }
     function notify(message){ __calls.notify.push(message); }
     async function routeTo(name, lat, lng, options = {}){ __calls.routeTo.push({name, lat, lng, options}); }
     function localizedBuildingName(building){ return building ? building.name : ''; }

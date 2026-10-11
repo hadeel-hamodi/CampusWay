@@ -65,14 +65,19 @@ test('saved schedule data rejects malformed entries before it is shown or schedu
 test('a reminder starts the exact saved building or room route', async () => {
   const calls = [];
   const context = vm.createContext({
-    scheduleReminderEntry:{target:{kind:'room', nodeId:'r5013', label:'5013', buildingKey:'rabin'}},
+    scheduleReminderEntry:{target:{kind:'room', nodeId:'r5013', label:'5013', buildingKey:'rabin', buildingName:'Rabin Building'}},
+    CAMPUS_DATA:{buildings:[{name:'Rabin Building'}]},
+    t:{room:'Room'},
+    localizedBuildingName(building){ return building.name; },
     dismissScheduleReminder(){ calls.push(['dismiss']); },
+    startFromPhoneWhenUnset(){ calls.push(['phone start']); return Promise.resolve(true); },
     pickIndoorDestination(...args){ calls.push(['room', ...args]); return Promise.resolve(); },
     pickDestination(...args){ calls.push(['building', ...args]); return Promise.resolve(); }
   });
   vm.runInContext(between(index, 'async function startReminderRoute(){', 'function setupPreferenceUI(){'), context);
   await vm.runInContext('startReminderRoute()', context);
+  // The route starts from the student's position before the destination is set.
   assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
-    ['dismiss'], ['room', 'r5013', '5013', 'rabin', '5013']
+    ['dismiss'], ['phone start'], ['room', 'r5013', '5013', 'rabin', 'Room 5013 · Rabin Building']
   ]);
 });
