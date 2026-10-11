@@ -9,7 +9,7 @@ function between(source,start,end){
 }
 function harness(testPage=false,permission){
   const elements=new Map(),listeners=new Map(),timers=new Map(),frames=new Map();let clock=0,serial=0;
-  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,hidden:false,className:'',attributes:{},setAttribute(name,value){this.attributes[name]=String(value);}});return elements.get(id);};
+  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,hidden:false,className:'',attributes:{},setAttribute(name,value){this.attributes[name]=String(value);},addEventListener(){}});return elements.get(id);};
   const bodyClasses = new Set();
 const document = {
   body: {

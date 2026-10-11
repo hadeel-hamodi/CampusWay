@@ -1321,6 +1321,14 @@ body.hc.emergency-route .route-flow{stroke:#FFF;}
   display: none;
 }
 
+/* Phones: zoom buttons sit below the floor buttons so every floor stays
+   tappable; a long floor list scrolls sideways instead. */
+@media (max-width:640px){
+  .zoomPill{top:72px;}
+  .floorPill{max-width:calc(100% - 28px);box-sizing:border-box;}
+  #floorButtons{min-width:0;overflow-x:auto;scrollbar-width:none;}
+}
+
 @media (max-width:900px){
   #indoorNavigationPanel > #routeCard{
     margin:0;
