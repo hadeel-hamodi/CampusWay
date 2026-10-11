@@ -13,7 +13,6 @@
 | Phone must be held upright in portrait | Position updates pause when the phone is pocketed or tilted | The heading is only reliable in this posture |
 | Walking backwards without turning around is not supported | Steps are treated as ambiguous | Direction comes from the phone's heading |
 | Live outdoor guidance depends on GPS accuracy | Guidance pauses while the position is less accurate than 30 m; when the user leaves the route the app says so, but it does not plan a new route | Phone GPS is often imprecise between buildings |
-| The shared Rabin ↔ Terrace elevator is always used for that transfer | A reported outage of that elevator is not applied to journeys between the two buildings | The transfer is a fixed connection between the two graphs |
 
 ### Map data and coverage
 
@@ -50,7 +49,7 @@
 
 - [ ] Finish the Multi-Purpose Building graph (floors −1, 0 and 2, connector IDs).
 - [ ] Map an elevator for Terrace floors 0 and −1, or document the step-free alternative.
-- [ ] Apply a reported outage of the shared Rabin ↔ Terrace elevator to journeys between the two buildings.
+- [x] Apply a reported outage of the shared Rabin ↔ Terrace elevator to journeys between the two buildings (they go around it outdoors).
 - [x] Arabic names for buildings (food places and shops still to do).
 - [x] Remember language, profile, high contrast, the audio guide and text size between visits.
 - [x] Load the JSON graphs directly; the JS graph copies are no longer used by the app.

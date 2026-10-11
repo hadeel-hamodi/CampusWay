@@ -2,6 +2,25 @@
 
 The development history of CampusWay, grouped by milestone and summarised from the Git commit history. CampusWay is deployed continuously from `main`; the service-worker cache name (`campusway-vNN-…`) changes with each release (currently `campusway-v68-fresh-maps`).
 
+## 2026-10-11 (evening) · Smoke-test fixes, phone panel and documentation
+
+**Added**
+- A resizable route panel on phones: drag the blue handle to make the panel collapsed, half open or expanded; choosing a service in *Services near me* collapses it so the route shows on the map (by Jasmin, `2996f11`).
+- [18 · Data, servers and offline use](docs/18-data-servers-and-offline.md): what is stored on the phone, in the cloud inbox and on the PC, and how (#21).
+
+**Changed**
+- On phones, the panel keeps its size while *From* or *To* is being typed and the inputs use 16 px text, so the page no longer zooms in or jumps when the keyboard opens (`1558574`).
+- The documentation was brought up to date with the app: four languages, the Sensory & Wellbeing Support profile name, the automatic indoor mode, the service worker, recomputed map statistics, new features, diagrams and all screenshots (#21).
+- Correctly sized install icons for Android and iPhone, with navy corners (#20).
+
+**Fixed**
+- While the shared Rabin ↔ Terrace elevator is out of service, journeys go around it outdoors instead of using it (#20).
+- Trips inside one building show one journey stage; a new route no longer reuses the start room of an unfinished journey; *Services near me* puts the chosen service in *To* (#20).
+- Phone layout: the zoom buttons sit above the direction strip, the directions list opens below *Map key*, and a new indoor route is zoomed to fit (#20).
+- The indoor page opened directly (bookmark, QR code) shows the room search instead of a dead end (#20).
+- Russian route titles, the gym and library names, *Stop voice planning* shown only while voice planning runs, and debug messages removed from the console (#20).
+- The docs no longer claim there is no server or that reports stay on the device (#21). The suite has 542 tests in 39 files, all passing.
+
 ## 2026-10-11 · Arrival screen, vibration, screen-reader names and fresh maps
 
 **Added**

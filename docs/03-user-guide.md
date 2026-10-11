@@ -40,7 +40,7 @@ Both choices are saved on your device, so next time CampusWay opens straight on 
 | Favourites | Your saved places |
 | Map | Buildings (dark markers), gates, food (green), shops (orange), clinic (red +), elevators, stairs, smoking areas and the outdoor shelter (🛡️). Use **Map key** to see the legend. |
 
-On a phone the map is at the top and the panels are below it; scroll down to see them.
+On a phone the map is at the top and the route planner and the other panels are in a panel below it; scroll inside the panel to see them. To change its size, drag the blue handle at the top of the panel: up to see more of the panel (up to almost the whole screen), down to see more of the map. A new route opens the panel half way, and choosing a service in **Services near me** makes it small so you can see the route on the map.
 
 ## 4. Plan a route
 

@@ -66,7 +66,7 @@ This is hardest for:
 | Interface languages | 4 (English, Hebrew, Arabic, Russian) |
 | Accessibility profiles | 5 |
 | Indoor navigation modes | 3 (Auto, Phone Sensors, Manual / Wheelchair), chosen automatically |
-| Automated tests | 539 in 39 test files, all passing |
+| Automated tests | 542 in 39 test files, all passing |
 
 ## How it works at a glance
 

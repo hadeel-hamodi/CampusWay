@@ -131,8 +131,9 @@ This is an approximation. Floor plans of different real sizes give proportionall
 2. **Score every exit × entrance pair**: indoor time from the start room to the exit plus the outdoor route time. When the start is outdoors, entrances are compared by outdoor time alone. The destination-side indoor walk is not part of the choice; it is added afterwards to the ETA that is shown.
 3. **Choose the cheapest pair**, draw the outdoor route, and store the chosen exit and entrance for the indoor page.
 4. **Special connections** replace the outdoor leg where buildings connect directly:
-   - *Rabin ↔ Terrace*: stairs (Terrace floor 4 ↔ Rabin floor 5) or the shared elevator. The Mobility profile always uses the elevator. Otherwise, when the exact start and destination rooms are known, both options are compared by ETA; if not, the stairs connection is used.
-   - *Main ↔ Terrace*: Main floor 600 exit → bridge → Rabin floor 7 → Rabin floor 5 (elevator for step-free trips, otherwise the stairs connection) → Terrace floor 4.
+   - *Rabin ↔ Terrace*: the shared elevator (Terrace floor 4 ↔ Rabin floor 5), for every profile.
+   - *Main ↔ Terrace*: Main floor 600 exit → bridge → Rabin floor 7 → Rabin floor 5 → shared elevator → Terrace floor 4.
+   - While the shared elevator (elevator 1 in both buildings' graphs) is out of service in either building's live status, or the user reported it in the last 24 hours, `sharedElevatorOutOfService()` turns both connections off: Rabin ↔ Terrace is planned like any other pair of buildings, with an outdoor leg, and Main ↔ Terrace takes the normal outdoor route. If the Mobility profile then has no step-free route, the app says so.
    - From Terrace to other buildings, leaving directly is compared with leaving through Rabin, and the cheaper option wins.
 5. **Building-pair rules.** A few pairs use fixed exits or entrances hard-coded in `routeTo()`, e.g. Main → Eshkol / Welfare / Bloom / Arts uses Main's primary exit, Rabin → Main uses the floor 7 bridge exit, and Terrace → Main uses Main's floor 600 entrance.
 
@@ -144,7 +145,7 @@ This is an approximation. Floor plans of different real sizes give proportionall
 | Indoor walking | distance ÷ 1.2 m/s (all profiles) |
 | Elevator ride | 30 s waiting + 10 s per floor |
 | Stairs | 30 s per floor |
-| Rabin ↔ Terrace shared transfer | 40 s (elevator) or 30 s (stairs) |
+| Rabin ↔ Terrace shared elevator | 40 s |
 | Display | Campus map: minutes, rounded, at least 1 ("3 min walk"); hours with one decimal above 60 minutes. Indoor page: minutes rounded up, at least 1 |
 
 For the nearest-shelter search, an unreachable outdoor leg is estimated as straight-line distance × 1.3, and an unknown indoor leg adds 60 s.

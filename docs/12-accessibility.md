@@ -44,7 +44,7 @@ The profile is chosen in the two-step first-run setup (language, then profile) a
 | Outdoor paths | All `steps` edges (OpenStreetMap and hand-mapped stairs) |
 | Building entrances | Entrances marked `requiresStairs` or `avoidForMobility` |
 | Indoor graph | Every stairs node and every stair link between floors |
-| Building transfers | Rabin ↔ Terrace uses the shared elevator (Rabin floor 5 ↔ Terrace floor 4), for every profile |
+| Building transfers | Rabin ↔ Terrace uses the shared elevator (Rabin floor 5 ↔ Terrace floor 4), for every profile; while it is out of service, journeys go around it outdoors |
 | Live status | Elevators reported out of service (official status or user reports) |
 
 When the filtered graph has no path, the user sees *"No step-free outdoor route found"* or *"No step-free route found"*, and the ETA shows "—". Automated tests check that no fallback line is drawn in this case.
@@ -87,7 +87,6 @@ When the filtered graph has no path, the user sees *"No step-free outdoor route 
 
 - Accessibility depends on how complete and accurate the mapping is. A calculated route does not check current conditions (construction, crowds, a broken door) unless they are entered in the live status or reported.
 - Some areas have no step-free connection mapped, e.g. Terrace Building floors 0 and −1 have no mapped elevator.
-- A reported outage of the shared Rabin ↔ Terrace elevator is not yet applied to the transfer between the two buildings: journeys between them still use it.
 - Phone Sensors mode is an estimate. It does not detect leaving the route, and it is not recommended for wheelchair use (Manual mode is used instead).
 - Vibration works only in Android browsers; iPhones do not support it, so it only adds to the spoken and on-screen guidance.
 - In Arabic, food places and shops are shown with their Hebrew names.

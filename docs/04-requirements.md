@@ -65,7 +65,7 @@ The indoor mode is chosen automatically, not by the user: the Mobility profile g
 |---|---|---|
 | FR-28 | The system shall support journeys from a room in one building to a room in another, split into indoor, outdoor and indoor legs. | ✅ |
 | FR-29 | On leaving the origin building, the system shall return to the campus map with the outdoor leg ready. | ✅ in every mode, after the user confirms the exit (*Continue outdoors*) |
-| FR-30 | The system shall support the direct indoor transfer between Rabin and Terrace buildings (stairs or shared elevator). | ✅ |
+| FR-30 | The system shall support the direct indoor transfer between Rabin and Terrace buildings (shared elevator), and route around it while it is out of service. | ✅ |
 | FR-31 | A journey shall survive a page reload. | ✅ |
 
 ### 1.6 Services, safety and sharing
@@ -103,7 +103,7 @@ The indoor mode is chosen automatically, not by the user: the Mobility profile g
 | NFR-09 | Security | Served over HTTPS (required for sensors, microphone, clipboard and service worker). | ✅ (GitHub Pages) |
 | NFR-10 | Portability | Runs in current Chromium-based browsers and Safari on Android, iOS, Windows and macOS without installation. | ✅ |
 | NFR-11 | Maintainability | Indoor maps are data files (JSON) edited with a visual tool; shared logic lives in standalone modules covered by automated tests. | 🟡 much of the journey logic is still inline in the HTML pages |
-| NFR-12 | Testability | Core algorithms and journey hand-offs have automated tests that run with plain Node.js. | ✅ 539 tests in 39 files, all passing (`node --test tests/*.test.cjs`) |
+| NFR-12 | Testability | Core algorithms and journey hand-offs have automated tests that run with plain Node.js. | ✅ 542 tests in 39 files, all passing (`node --test tests/*.test.cjs`) |
 | NFR-13 | Deployability | No build step; the app can be served as-is by any static web server. The cloud inbox and the admin PC server are separate and optional for navigation. | ✅ |
 
 ## 3. User device and browser requirements
