@@ -5998,7 +5998,9 @@ let activeSharedTransfer = null;
 // ==================================================
 // Declared here so it remains available after the
 // destination-entrance selection block.
+
 let selectedOutdoorRoute = null;
+let usesMadrigaRabinRoute = false;
 
 // ==================================================
 // MAIN ↔ MADRIGA TRANSFER CHAIN
@@ -6397,7 +6399,6 @@ let bestMadrigaRabinCandidate = null;
 // the original Madriga starting position afterward.
 // ==================================================
 
-let usesMadrigaRabinRoute = false;
 // ==================================================
 // MADRIGA → RABIN TRANSFER ROUTE CANDIDATE
 // ==================================================
@@ -7079,7 +7080,7 @@ let outdoorResult = selectedOutdoorRoute || null;
 const outdoorLegRequired =
   !activeSharedTransfer && !sameBuilding && !usesMainToMadrigaChain;
 
-if(outdoorLegRequired){
+if(outdoorLegRequired && !usesMadrigaRabinRoute){
   try{
     outdoorResult = await CampusOutdoorRouting.route(
       start.lat, start.lng, lat, lng,
@@ -7355,19 +7356,45 @@ if(usesMainToMadrigaChain){
 
   if(startingBuildingKey === 'madriga'){
 
-    // Madriga → Rabin → Main
-    sessionStorage.setItem(
-      'intermediateIndoorTransfer',
-      JSON.stringify({
-        building: 'rabin',
-        startNodeId:
-          currentProfile === 'mobility'
-            ? 'floor5_n104'
-            : 'floor5_n204',
-        destinationNodeId: 'floor7_n108',
-        destinationBuilding: 'main'
-      })
-    );
+// Terrace → shared elevator → Rabin → Main.
+let startContext = {};
+
+try{
+  startContext = JSON.parse(
+    sessionStorage.getItem('indoorStartContext') || '{}'
+  );
+}catch(error){
+  startContext = {};
+}
+
+startContext.buildingKey = 'madriga';
+startContext.startNodeId =
+  startContext.startNodeId || customStart?.nodeId;
+startContext.exitEntranceId = 'floor4_n43';
+
+sessionStorage.setItem(
+  'indoorStartContext',
+  JSON.stringify(startContext)
+);
+
+sessionStorage.setItem(
+  'sharedIndoorTransfer',
+  JSON.stringify({
+    originBuilding: 'madriga',
+    destinationBuilding: 'rabin',
+    method: 'elevator'
+  })
+);
+
+sessionStorage.setItem(
+  'intermediateIndoorTransfer',
+  JSON.stringify({
+    building: 'rabin',
+    startNodeId: 'floor5_n104',
+    destinationNodeId: 'floor7_n108',
+    destinationBuilding: 'main'
+  })
+);
 
   }else{
 
