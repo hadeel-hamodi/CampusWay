@@ -1442,3 +1442,55 @@ dialog.cancel-journey-dialog h2{
   outline:3px solid var(--primary);
   outline-offset:3px;
 }
+
+/* Outdoor arrival: shown when the outdoor walk ends the journey (matches the indoor arrival message). */
+dialog.outdoor-arrival-dialog{
+  box-sizing:border-box;
+  width:min(420px, calc(100% - 32px));
+  max-height:90dvh;
+  margin:auto;
+  padding:28px 24px 20px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:var(--surface);
+  color:var(--ink);
+  box-shadow:0 24px 60px rgba(13,27,62,.3);
+  text-align:center;
+}
+dialog.outdoor-arrival-dialog[open]{animation:outdoor-arrival-in .28s cubic-bezier(.2,.9,.3,1.2);}
+dialog.outdoor-arrival-dialog::backdrop{background:rgba(13,27,62,.45);}
+@keyframes outdoor-arrival-in{from{opacity:0;transform:translateY(10px) scale(.96);}to{opacity:1;transform:none;}}
+.outdoor-arrival-icon{
+  position:relative;
+  width:68px;
+  height:68px;
+  margin:0 auto 14px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:var(--mint);
+  color:#fff;
+}
+.outdoor-arrival-icon::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:3px solid var(--mint);
+  animation:outdoor-arrival-ring 1.6s ease-out infinite;
+}
+@keyframes outdoor-arrival-ring{from{transform:scale(1);opacity:.6;}to{transform:scale(1.7);opacity:0;}}
+.outdoor-arrival-check{stroke-dasharray:24;stroke-dashoffset:24;animation:outdoor-arrival-check .45s .15s ease-out forwards;}
+@keyframes outdoor-arrival-check{to{stroke-dashoffset:0;}}
+dialog.outdoor-arrival-dialog h2{margin:0 0 6px;font-family:inherit;font-size:1.375rem;font-weight:800;color:var(--ink);}
+dialog.outdoor-arrival-dialog p{margin:0 0 20px;font-size:.9375rem;line-height:1.45;color:var(--mid);}
+.outdoor-arrival-actions{display:flex;flex-direction:column;gap:8px;}
+.outdoor-arrival-actions .btn{width:100%;min-height:48px;font-size:1rem;}
+body.hc .outdoor-arrival-icon{color:#000;}
+body.hc dialog.outdoor-arrival-dialog{border:2px solid #FFD400;box-shadow:none;}
+body.hc dialog.outdoor-arrival-dialog::backdrop{background:rgba(0,0,0,.88);}
+@media (prefers-reduced-motion: reduce){
+  dialog.outdoor-arrival-dialog[open],
+  .outdoor-arrival-icon::after{animation:none!important;}
+  .outdoor-arrival-check{animation:none!important;stroke-dashoffset:0;}
+}
