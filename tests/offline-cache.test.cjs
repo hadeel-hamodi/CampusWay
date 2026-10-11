@@ -75,3 +75,36 @@ test('the worker never answers API or admin requests from its cache', () => {
   assert.equal(handled('https://ja4smin.github.io/CampusWay/buildings/main/main-indoor-graph.json'), true, 'app files are still served offline');
   assert.equal(handled('https://campusway-inbox.example.workers.dev/api/reports'), false, 'other sites, such as the cloud inbox, are never cached');
 });
+
+// A phone that cached an old map must get the fixed one as soon as it is
+// online; otherwise search offers rooms the current map has moved and the
+// route fails ("No mapped indoor route was found").
+test('maps and floor plans come from the network first, and from the saved copy offline', async () => {
+  const listeners = new Map();
+  let online = true;
+  const saved = {body:'old map'};
+  const context = vm.createContext({
+    URL, Promise,
+    caches:{open:async () => ({addAll:async () => {}, put:async () => {}}), match:async () => saved, keys:async () => [], delete:async () => true},
+    fetch:async () => {
+      if(!online) throw new TypeError('offline');
+      return {ok:true, body:'new map', clone(){ return this; }};
+    },
+    self:{location:{origin:'https://ja4smin.github.io'}, addEventListener:(type, listener) => listeners.set(type, listener), skipWaiting:() => Promise.resolve(), clients:{claim:() => Promise.resolve()}}
+  });
+  vm.runInContext(worker, context);
+  const answer = url => new Promise(resolve => {
+    listeners.get('fetch')({request:{method:'GET', url, mode:'cors', destination:''}, respondWith:resolve});
+  });
+
+  for(const url of [
+    'https://ja4smin.github.io/CampusWay/buildings/main/main-indoor-graph.json',
+    'https://ja4smin.github.io/CampusWay/buildings/main/floors/600-Model.svg',
+    'https://ja4smin.github.io/CampusWay/app/data/campus-status.json'
+  ]){
+    online = true;
+    assert.equal((await answer(url)).body, 'new map', `${url} online`);
+    online = false;
+    assert.equal((await answer(url)).body, 'old map', `${url} offline`);
+  }
+});
