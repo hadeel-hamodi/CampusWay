@@ -441,7 +441,25 @@ function updateMobileIndoorProgress(){
 
   fill.style.transform=`scaleX(${fraction})`;
 }
+const floorPlanToggle = $('showFloorPlan');
+const floorPlanPreferenceKey = 'campusway.showFloorPlan';
 
+// Off by default; restore the user's saved choice.
+floorPlanToggle.checked = false;
+
+try {
+  floorPlanToggle.checked =
+    localStorage.getItem(floorPlanPreferenceKey) === 'true';
+} catch (_) {}
+
+floorPlanToggle.addEventListener('change', function () {
+  try {
+    localStorage.setItem(
+      floorPlanPreferenceKey,
+      String(floorPlanToggle.checked)
+    );
+  } catch (_) {}
+});
 const svg=$('mapSvg');
 const floorPlanMarkupCache = new Map();
 
