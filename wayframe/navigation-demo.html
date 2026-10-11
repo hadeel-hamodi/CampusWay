@@ -317,6 +317,9 @@ let progressT=0;
 let navigationActive=false;
 let sensorsEnabled=false;
 let sensorEvents=0;
+// Readings that carry real values (devices without sensors send none, or only empty ones).
+let usableMotionReadings=0;
+let usableHeadingReadings=0;
 
 let detectedSteps=0;
 let stepLength=0.65; // estimated meters per detected step
@@ -3209,10 +3212,15 @@ function updateWheelchairInstruction(){
 
   if(progressT===0 && current && next && current.floor!==next.floor){
     if($('turnIcon')) $('turnIcon').textContent = '↕';
-    const usesElevator=routeNodes.slice(progressIndex,targetIndex+1).some(node=>node.type==='elevator');
+    const connectorNodes=routeNodes.slice(progressIndex,targetIndex+1);
+    const usesElevator=connectorNodes.some(node=>node.type==='elevator');
+    // Tap-to-confirm without sensors keeps stairs in the route for non-Mobility profiles.
+    const usesStairs=!usesElevator && connectorNodes.some(node=>node.type==='stairs');
     const method=usesElevator
       ? localizedInstruction('elevator','المصعد','מעלית','лифт')
-      : localizedInstruction('accessible connector','الممر المهيأ','מעבר נגיש','доступный переход');
+      : usesStairs
+        ? localizedInstruction('stairs','الدرج','מדרגות','лестницу')
+        : localizedInstruction('accessible connector','الممر المهيأ','מעבר נגיש','доступный переход');
     $('instruction').textContent=localizedInstruction(
       `Take the ${method} to Floor ${floorLabel(target.floor)}`,
       `استخدم ${method} إلى ${localizedFloor(target.floor)}`,
@@ -4724,6 +4732,7 @@ function updateSensorDirectionStatus(now=performance.now()){
 
 function updateDeviceHeading(e){
   const now=performance.now();
+  if(e && (e.alpha!=null || e.webkitCompassHeading!=null)) usableHeadingReadings++;
   headingTracker.update(e,now,screenOrientationAngle());
 
   const mappedHeading = headingTracker.mapHeading(now);
@@ -4742,6 +4751,8 @@ function updateDeviceHeading(e){
 
 function updateDeviceMotion(e){
   sensorEvents++;
+  const reading=e && (e.accelerationIncludingGravity || e.acceleration);
+  if(reading && reading.x!=null) usableMotionReadings++;
 
   const now = performance.now();
   const result = stepDetector.updateMotion(e, now);
@@ -5039,14 +5050,18 @@ async function startNavigation(){
     // Permission may finish after a route, building or mode change.
     if(token !== navigationStartToken || requestedMode !== navMode || requestedRoute !== routeNodes) return;
     if(!sensorsEnabled){
-      $('startBtn').disabled=false;
-      return;
+      useManualCheckpoints();
+      return startNavigation();
     }
   }
 
   if(requestedMode === 'sensor' && !headingTracker.isCalibrated){
     const calibrated=await calibrateHeadingAutomatically(token);
     if(token !== navigationStartToken || requestedMode !== navMode || requestedRoute !== routeNodes) return;
+    if(!calibrated && !sensorReadingsAvailable()){
+      useManualCheckpoints();
+      return startNavigation();
+    }
     if(!calibrated){
       $('startBtn').disabled=false;
       updateDirectionControls();
@@ -5086,7 +5101,14 @@ async function startNavigation(){
   }else{
     followCamera=true;
     $('mapViewport').scrollIntoView?.({block:'start',behavior:'smooth'});
-    $('status').textContent=localizedInstruction('Manual wheelchair navigation started.','بدأت الملاحة اليدوية للكرسي المتحرك.','הניווט הידני לכיסא גלגלים התחיל.','Ручная навигация для кресла-коляски запущена.');
+    $('status').textContent=manualFallbackActive
+      ? localizedInstruction(
+          'Motion sensors are off, so your steps are not tracked. Tap ✓ each time you reach the next point.',
+          'حساسات الحركة غير مفعّلة، لذلك لا يتم تتبّع خطواتك. اضغط ✓ كلما وصلت إلى النقطة التالية.',
+          'חיישני התנועה כבויים, ולכן הצעדים שלך לא נספרים. לחץ ✓ בכל פעם שאתה מגיע לנקודה הבאה.',
+          'Датчики движения отключены, поэтому шаги не отслеживаются. Нажимайте ✓ каждый раз, когда доходите до следующей точки.'
+        )
+      : localizedInstruction('Manual wheelchair navigation started.','بدأت الملاحة اليدوية للكرسي المتحرك.','הניווט הידני לכיסא גלגלים התחיל.','Ручная навигация для кресла-коляски запущена.');
     $('wheelchairStatus').textContent=localizedInstruction('Move along the highlighted route and confirm the next point after reaching it.','تحرّك على المسار المحدد وأكّد النقطة التالية بعد وصولك إليها.','התקדם במסלול המסומן ואשר את הנקודה הבאה לאחר ההגעה.','Двигайтесь по выделенному маршруту и подтвердите следующую точку после прибытия к ней.');
   }
   updateTurnInstruction();
@@ -5127,6 +5149,26 @@ const indoorDemoMode =
 
 let navMode = indoorDemoMode ? 'auto' : 'sensor';
 
+// Without motion sensors (permission refused, or a device that has none) steps and
+// heading cannot be tracked. Instead of stopping, guide with the tap-to-confirm
+// checkpoints the Mobility profile uses, on the same route (stairs stay allowed).
+const MANUAL_FALLBACK_KEY='campusway.indoorManualCheckpoints';
+let manualFallbackActive=false;
+
+function sensorReadingsAvailable(){
+  return usableMotionReadings>0 && usableHeadingReadings>0;
+}
+
+function useManualCheckpoints(){
+  stopNavigationMotion();
+  navMode='wheelchair';
+  manualFallbackActive=true;
+  progressT=0;
+  try{ sessionStorage.setItem(MANUAL_FALLBACK_KEY,'true'); }catch(error){ /* storage unavailable */ }
+  syncNavigationModeUI();
+  updateDirectionControls();
+}
+
 function syncNavigationModeUI(){
   $('autoModeBtn').className=navMode==='auto'?'primary':'secondary';
   $('sensorModeBtn').className=navMode==='sensor'?'primary':'secondary';
@@ -5134,7 +5176,20 @@ function syncNavigationModeUI(){
   $('autoModeBtn').setAttribute('aria-pressed',String(navMode==='auto'));
   $('sensorModeBtn').setAttribute('aria-pressed',String(navMode==='sensor'));
   $('wheelchairModeBtn').setAttribute('aria-pressed',String(navMode==='wheelchair'));
-  $('wheelchairMapControls').setAttribute('aria-label',it('wheelchairControls'));
+  const manualOnly=navMode==='wheelchair' && manualFallbackActive && !accessibilityLockedByProfile;
+  const controlsTitle=manualOnly
+    ? localizedInstruction('Tap-to-confirm navigation','ملاحة بالتأكيد اليدوي','ניווט באישור ידני','Навигация с подтверждением точек')
+    : it('wheelchairControls');
+  $('wheelchairTitle').textContent=controlsTitle;
+  $('wheelchairHelp').textContent=manualOnly
+    ? localizedInstruction(
+        'Phone motion sensors are not available, so steps are not counted. Walk along the highlighted route and confirm each point only after reaching it.',
+        'حساسات الحركة في الهاتف غير متاحة، لذلك لا يتم عدّ الخطوات. امشِ على المسار المحدد وأكّد كل نقطة فقط بعد وصولك إليها.',
+        'חיישני התנועה של הטלפון אינם זמינים, ולכן הצעדים לא נספרים. לך לאורך המסלול המסומן ואשר כל נקודה רק אחרי שהגעת אליה.',
+        'Датчики движения телефона недоступны, поэтому шаги не подсчитываются. Идите по выделенному маршруту и подтверждайте каждую точку только после прибытия к ней.'
+      )
+    : it('wheelchairHelp');
+  $('wheelchairMapControls').setAttribute('aria-label',controlsTitle);
   $('livePositionTitle').textContent=navMode==='wheelchair'
     ? localizedInstruction('Last confirmed position','آخر موقع مؤكّد','מיקום אחרון שאושר','Последняя подтверждённая позиция')
     : it('livePosition');
@@ -5146,6 +5201,7 @@ function setNavigationMode(mode){
   clearPendingSharedElevatorRide();
   stopNavigationMotion();
   navMode=mode;
+  manualFallbackActive=false;
   const wheelchairMode=mode==='wheelchair';
   const forceAccessible=wheelchairMode && !$('accessibleRoute').checked;
   const resetManualPosition=wheelchairMode && routeNodes.length>0 && (progressIndex!==0 || progressT!==0);
@@ -6384,10 +6440,10 @@ function openIndoorNavigationInfo(){
       'При нечётких показаниях датчиков обновление позиции приостанавливается и возобновляется при подходящих показаниях. Подтверждайте смену этажа и прибытие только после фактического достижения.'
     )),
     paragraph(text(
-      'For mobility assistance, confirm each checkpoint after reaching it. Demonstration mode simulates movement.',
-      'במצב סיוע בניידות, אשר כל נקודת ביקורת לאחר שהגעת אליה. מצב הדגמה מדמה תנועה.',
-      'في وضع المساعدة على التنقّل، أكّد كل نقطة تحقق بعد الوصول إليها. وضع العرض يحاكي الحركة.',
-      'В режиме помощи при передвижении подтверждайте каждую контрольную точку после её достижения. Демонстрационный режим имитирует движение.'
+      'For mobility assistance, or when motion sensors are unavailable, confirm each checkpoint after reaching it. Demonstration mode simulates movement.',
+      'במצב סיוע בניידות, או כשחיישני התנועה אינם זמינים, אשר כל נקודת ביקורת לאחר שהגעת אליה. מצב הדגמה מדמה תנועה.',
+      'في وضع المساعدة على التنقّل، أو عندما تكون حساسات الحركة غير متاحة، أكّد كل نقطة تحقق بعد الوصول إليها. وضع العرض يحاكي الحركة.',
+      'В режиме помощи при передвижении или когда датчики движения недоступны подтверждайте каждую контрольную точку после её достижения. Демонстрационный режим имитирует движение.'
     )),
     paragraph(text(
       'Position is estimated along the planned route. The app cannot detect if you leave the route.',
@@ -6550,6 +6606,13 @@ if(savedAccessibilityProfile === 'mobility'){
     'פרופיל ניידות משאיר מסלול ללא מדרגות פעיל.',
     'Профиль ограниченной мобильности всегда использует маршруты без лестниц.'
   );
+}
+
+// Motion sensors were unavailable earlier in this visit (for example in the
+// previous building): keep tap-to-confirm instead of asking again.
+if(navMode === 'sensor'){
+  try{ manualFallbackActive=sessionStorage.getItem(MANUAL_FALLBACK_KEY) === 'true'; }catch(error){ /* storage unavailable */ }
+  if(manualFallbackActive) navMode='wheelchair';
 }
 
 applyIndoorTranslations();
