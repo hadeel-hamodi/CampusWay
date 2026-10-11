@@ -8,6 +8,9 @@ const APP_FILES = [
   './app/vendor/leaflet.css',
   './app/vendor/leaflet.js',
   './app/vendor/images/cw2.png',
+  './app/vendor/images/icon-192.png',
+  './app/vendor/images/icon-512.png',
+  './app/vendor/images/apple-touch-icon.png',
 
   './app/ui/campusway.css',
   './app/ui/campus-map.css',

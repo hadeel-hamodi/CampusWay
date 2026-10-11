@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0D1B3E">
 <title>CampusWay Live Indoor Navigation</title>
+<link rel="icon" type="image/png" sizes="192x192" href="../app/vendor/images/icon-192.png">
+<link rel="apple-touch-icon" href="../app/vendor/images/apple-touch-icon.png">
 <link rel="stylesheet" href="../app/ui/campusway.css">
 <link rel="stylesheet" href="../app/ui/indoor-nav.css">
 </head>
@@ -372,6 +374,8 @@ let lastMovementFrameTime=0;
 const STEP_ANIMATION_MS=340;
 
 let camera={x:500,y:350,scale:2.5};
+// Zoom picked by fitRouteInView() for a new route; Start returns to 2.5.
+let routeOverviewScale=null;
 let headingDeg=0;
 let followCamera=true;
 let isPanning=false;
@@ -664,7 +668,7 @@ const buildingName = key =>
       )
     : indoorBuildingName(key);
   const label=leg=>{
-    if(leg.kind==='indoor') return `${localizedInstruction('Inside','داخل','בתוך','Внутри')} ${buildingName(leg.building)}`;
+    if(leg.kind==='indoor') return `${localizedInstruction('Inside','داخل','בתוך','Внутри:')} ${buildingName(leg.building)}`;
     if(leg.kind==='outdoor') return localizedInstruction('Walk outdoors','المشي خارج المباني','הליכה בחוץ','Маршрут снаружи');
     return `${buildingName(leg.fromBuilding)} → ${buildingName(leg.toBuilding)}`;
   };
@@ -810,6 +814,17 @@ async function loadGraph(){
   BUILDING = $('building').value;
   $('currentBuildingName').textContent =
   $('building').selectedOptions[0]?.textContent || BUILDING;
+
+  // Opened without a route from the campus map (bookmark, QR code, WayFrame
+  // tools): show the From / To search, plus the building list when the link
+  // names no known building, so the page is never a dead end.
+  const plannedOnMap=['indoorContext','indoorStartContext','sharedIndoorTransfer','intermediateIndoorTransfer']
+    .some(key=>sessionStorage.getItem(key));
+  const chooseBuilding=!plannedOnMap && requestedBuilding!==BUILDING;
+  document.querySelector('.card.controls').style.display=plannedOnMap ? 'none' : '';
+  $('building').style.display=chooseBuilding ? '' : 'none';
+  $('building').disabled=!chooseBuilding;
+  $('currentBuildingName').hidden=chooseBuilding;
 
   const graphUrl=new URL(
     `../buildings/${BUILDING}/${BUILDING}-indoor-graph.json`,
@@ -1848,12 +1863,17 @@ svgEl('path', {
 
 const FLOOR_MAP_BOUNDS={x:80,y:55,width:840,height:570};
 
+// Buildings whose plans are not named floor<N>.svg. Their real name is tried
+// first, so loading a floor does not log a 404.
+const FLOOR_PLAN_FILE_NAMES={main:floorNumber=>`${floorNumber}-Model.svg`};
+
 function floorPlanUrls(building, floorId){
   const floorNumber=floorId === 'floorminus1'
     ? '-1'
     : floorId.replace(/^floor/, '');
   const repositoryRoot=new URL('../', window.location.href);
   const filenames=[
+    FLOOR_PLAN_FILE_NAMES[building]?.(floorNumber),
     `${floorId}.svg`,
     `floor${floorNumber}.svg`,
     `${floorNumber}-Model.svg`,
@@ -1861,7 +1881,7 @@ function floorPlanUrls(building, floorId){
     `Floor${floorNumber}.svg`
   ];
 
-  return [...new Set(filenames)].map(filename=>
+  return [...new Set(filenames.filter(Boolean))].map(filename=>
     new URL(`buildings/${building}/floors/${filename}`, repositoryRoot).href
   );
 }
@@ -1871,15 +1891,8 @@ async function loadFloorPlan(building, floorId){
   if(!floorPlanMarkupCache.has(cacheKey)){
     floorPlanMarkupCache.set(cacheKey, (async()=>{
       for(const url of floorPlanUrls(building, floorId)){
-        console.log('[Indoor floor plan] Loading', {building, floorId, url});
         try{
           const response=await fetch(url);
-          console.log('[Indoor floor plan] Fetch status', {
-            url,
-            status:response.status,
-            ok:response.ok
-          });
-
           if(response.ok) return {sourceUrl:url, markup:await response.text()};
 
           console.warn('[Indoor floor plan] Candidate unavailable', {
@@ -2814,7 +2827,6 @@ for(let i = 0; i < routeNodes.length - 1; i++){
 
   routeMeters += indoorDistanceMeters(a, b);
 }
-console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
   activeFloor=routeNodes[0].floor;
   progressIndex=0;progressT=0;
@@ -2833,11 +2845,53 @@ console.log(`Route distance: ${routeMeters.toFixed(2)} m`);
 
   floorButtons();
   drawBaseMap();
+  fitRouteInView();
   updateProgressUI();
 
   if(typeof showIndoorStatusNote === 'function'){
   showIndoorStatusNote();
 }
+}
+
+// Show the new route on its first floor, end labels included, between the
+// floor / zoom buttons and the bottom of the map. Zooms out only when the
+// normal zoom cannot fit it, never past the zoom-out limit (0.8).
+function fitRouteInView(){
+  const box=$('mapSvg').getBoundingClientRect?.();
+  if(!box?.width || !box.height) return;
+  const points=routeNodes.filter(node=>node.floor===activeFloor).map(mapPoint);
+  if(points.length<2) return;
+
+  // In Phone Sensors mode the map is turned to the walking direction.
+  const angle=(navMode==='sensor' ? headingDeg : 0)*Math.PI/180;
+  const cos=Math.cos(angle), sin=Math.sin(angle);
+  const xs=points.map(p=>p.x*cos-p.y*sin), ys=points.map(p=>p.x*sin+p.y*cos);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+
+  // Screen pixels kept free: half the widest label at each side; the label
+  // above a pin plus the floor buttons at the top; the banner at the bottom.
+  const labelWidth=Math.max(44,...[mapLayers.destLabelBg,...mapLayers.badges.querySelectorAll('rect')]
+    .map(rect=>Number(rect.getAttribute('width'))||0));
+  const banner=document.querySelector('.navStack').getBoundingClientRect();
+  const padX=labelWidth/2+12;
+  const padTop=document.querySelector('.floorPill').getBoundingClientRect().bottom-box.top+74;
+  const padBottom=Math.max(48, banner.height ? box.bottom-banner.top+24 : 0);
+
+  const base=Math.min(box.width/CAMERA_W, box.height/CAMERA_H);
+  const fit=(room,size)=>size>0 ? room/(size*base) : Infinity;
+  camera.scale=Math.max(0.8, Math.min(2.5,
+    fit(box.width-2*padX, maxX-minX),
+    fit(box.height-padTop-padBottom, maxY-minY)));
+  routeOverviewScale=camera.scale;
+  $('zoomReset').textContent=Math.round(camera.scale/2.5*100)+'%';
+
+  // Centre the route in the free space, then undo the map's turn.
+  const k=camera.scale*base;
+  const cx=(minX+maxX)/2, cy=(minY+maxY)/2-(padTop-padBottom)/(2*k);
+  camera.x=cx*cos+cy*sin;
+  camera.y=cy*cos-cx*sin;
+  drawBaseMap();
 }
 
 function spatialDistanceText(distance){
@@ -4023,6 +4077,14 @@ function announceArrival(){
   }
 }
 
+// Terrace floor 4 and Rabin floor 5 share one elevator (elevator 1 in both
+// graphs). The campus map plans around it while either building lists it out
+// of service; a journey planned before the outage must not ride it either.
+function sharedElevatorOutOfService(){
+  return typeof CampusStatus!=='undefined' &&
+    ['madriga','rabin'].some(building=>CampusStatus.isElevatorOut(building,'elevator1'));
+}
+
 function completeNavigation(){
   if(isSharedElevatorTransferEnd() && beginSharedElevatorRide()){
   return;
@@ -4069,7 +4131,8 @@ if(
     }
 
     const currentBuilding=new URLSearchParams(window.location.search).get('building') || BUILDING;
-    const usesSharedTransfer=sharedTransfer && sharedTransfer.originBuilding===currentBuilding;
+    const usesSharedTransfer=sharedTransfer && sharedTransfer.originBuilding===currentBuilding &&
+      !sharedElevatorOutOfService();
 
     if(usesSharedTransfer){
       const destinationBuilding=sharedTransfer.destinationBuilding;
@@ -4164,7 +4227,7 @@ return;
       console.warn('Could not read the intermediate indoor transfer:',error);
     }
 
-    if(intermediateTransfer?.destinationBuilding==='madriga'){
+    if(intermediateTransfer?.destinationBuilding==='madriga' && !sharedElevatorOutOfService()){
       sessionStorage.setItem('madrigaTransferEntrance','floor4_n43');
       sessionStorage.setItem('journeyStage','destination');
       sessionStorage.setItem('indoorBuilding','madriga');
@@ -4626,7 +4689,7 @@ function showSharedElevatorEntry(){
 function isSharedElevatorTransferEnd(){
   const lastNode = routeNodes.at(-1);
 
-  if(!lastNode || lastNode.type !== 'elevator'){
+  if(!lastNode || lastNode.type !== 'elevator' || sharedElevatorOutOfService()){
     return false;
   }
 
@@ -5102,6 +5165,11 @@ async function startNavigation(){
   }
   stopNavigationMotion(false);
   navigationActive=true;
+  // Leave the route overview: normal zoom (unless the user zoomed), centred on the walker.
+  if(camera.scale===routeOverviewScale) camera.scale=2.5;
+  routeOverviewScale=null;
+  $('zoomReset').textContent=Math.round(camera.scale/2.5*100)+'%';
+  followNode(currentInterpolated());
   
   if(typeof CampusStatus!=='undefined') CampusStatus.track('indoor-mode', navMode);
   document.body.classList.add('indoor-navigation-active');
@@ -5437,7 +5505,7 @@ function handleWheelZoom(e){
 
   const oldScale=camera.scale;
   const nextScale=Math.max(
-    1.25,
+    0.8,
     Math.min(
      15,
       oldScale*Math.exp(-Math.max(-100,Math.min(100,pixels))*0.002)
@@ -5523,7 +5591,7 @@ $('zoomIn').onclick=()=>{
   drawBaseMap();
 };
 $('zoomOut').onclick=()=>{
-  camera.scale=Math.max(1.25,camera.scale/1.15);
+  camera.scale=Math.max(0.8,camera.scale/1.15);
   $('zoomReset').textContent=Math.round(camera.scale/2.5*100)+'%';
   drawBaseMap();
 };
@@ -6036,11 +6104,6 @@ utterance.onerror = event => {
   options.onfinish?.();
 };
 
-console.log('[Indoor speech]', {
-  text: spokenText,
-  voice: voice?.name || 'browser default',
-  language: utterance.lang
-});
   synth.speak(utterance);
 }
 

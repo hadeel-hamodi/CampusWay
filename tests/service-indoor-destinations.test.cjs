@@ -19,7 +19,11 @@ function between(source, start, end) {
 function serviceHarness() {
   const storage = new Map();
   const routeCalls = [];
-  const element = () => ({classList: {add() {}, remove() {}, contains() { return false; }}});
+  const elements = new Map();
+  const element = id => {
+    if(!elements.has(id)) elements.set(id, {value: '', classList: {add() {}, remove() {}, contains() { return false; }}});
+    return elements.get(id);
+  };
   const context = vm.createContext({
     console,
     sessionStorage: {
@@ -67,7 +71,7 @@ function serviceHarness() {
   run(between(index, 'function routeToShopPlace(shop){', 'CAMPUS_DATA.points.shops.forEach'));
   run(between(index, 'async function findNearbyService(type){', 'function showFoodPlaces(){'));
   const indoorContext = () => JSON.parse(storage.get('indoorContext') || 'null');
-  return {run, routeCalls, storage, indoorContext};
+  return {run, routeCalls, storage, indoorContext, element};
 }
 
 test('Navigate here for an indoor food place keeps the indoor destination', () => {
@@ -115,6 +119,7 @@ test('Restrooms service keeps the indoor restroom destination', async () => {
   assert.equal(context.destinationLabel, 'Restroom');
   assert.equal(context.destinationDisplayLabel, 'Nearest restroom');
   assert.equal(context.buildingKey, 'rabin');
+  assert.equal(h.element('searchInput').value, 'Nearest restroom', 'To shows the service, not the previous destination');
 });
 
 test('Shelters service keeps the indoor shelter destination', async () => {
@@ -127,4 +132,5 @@ test('Shelters service keeps the indoor shelter destination', async () => {
   assert.equal(context.destinationLabel, 'Shelter');
   assert.equal(context.destinationDisplayLabel, 'Nearest shelter');
   assert.equal(context.buildingKey, 'student');
+  assert.equal(h.element('searchInput').value, 'Nearest shelter');
 });
