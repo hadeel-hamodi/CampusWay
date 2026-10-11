@@ -1,6 +1,6 @@
 # 06 · User flows
 
-> Diagrams of the main journeys through CampusWay: planning a route, multi-building trips, the hand-off between pages, the three indoor navigation modes, the shared-elevator crossing, the emergency shelter route, and returning to the campus map. Each diagram's editable source and image export are in [`diagrams/`](diagrams/README.md).
+> Diagrams of the main journeys through CampusWay: planning a route, multi-building trips, the hand-off between pages, the three indoor navigation modes (chosen automatically), the shared-elevator crossing, the emergency shelter route, and returning to the campus map. Each diagram's editable source and image export are in [`diagrams/`](diagrams/README.md).
 
 **Contents:** [Plan a route](#1-plan-a-route) · [Page hand-off](#2-hand-off-between-the-campus-map-and-indoor-navigation) · [Multi-building journey stages](#3-multi-building-journey-stages) · [Indoor navigation modes](#4-indoor-navigation-modes) · [Shared-elevator crossing](#5-shared-elevator-crossing-rabin--terrace) · [Nearest shelter](#6-nearest-shelter) · [Example journeys](#7-example-journeys)
 
@@ -8,12 +8,12 @@
 
 ## 1. Plan a route
 
-From opening the app to a drawn route. The profile decides how the route is searched. The start and destination types decide whether indoor navigation is offered.
+From opening the app to a drawn route. On the first visit the user picks a language and a profile; both are saved on the device, so later visits open straight on the map. The profile decides how the route is searched. The start and destination types decide whether indoor navigation is offered.
 
 ```mermaid
 flowchart TD
-    A([Open CampusWay]) --> B{Language chosen<br/>this session?}
-    B -- No --> C[Language screen:<br/>English / עברית / العربية]
+    A([Open CampusWay]) --> B{Language and profile<br/>saved on this device?}
+    B -- No --> C["First-run screens:<br/>1. English / עברית #8206;/ العربية / Русский<br/>2. accessibility profile"]
     C --> D
     B -- Yes --> D[Campus map]
     D --> E["Optional: set From<br/>(type, voice, GPS or room)<br/>default = Carmel Gate"]
@@ -22,8 +22,8 @@ flowchart TD
     G -- General --> H[Shortest weighted route]
     G -- Mobility --> I[Exclude stairs and<br/>stair-only entrances]
     G -- Spatial --> J[Prefer fewer turns]
-    G -- Visual --> K[Turn voice guidance on]
-    G -- Mental health --> L[Show suggested rest spaces]
+    G -- Visual --> K[Voice guidance and<br/>high contrast on]
+    G -- Sensory and wellbeing --> L["Prefer quieter paths;<br/>'I need a break' finds<br/>a rest space"]
     H & I & J & K & L --> M[Compare every allowed exit ×<br/>entrance pair, pick the fastest]
     M --> N{Route found?}
     N -- No, Mobility --> O["Explain: no step-free<br/>route is mapped"]
@@ -81,7 +81,7 @@ stateDiagram-v2
     Planning --> Origin: start is a room
     Planning --> Outdoor: start is outdoors
 
-    Origin --> Outdoor: reached exit<br/>(auto return to map)
+    Origin --> Outdoor: reached exit,<br/>"Continue outdoors"
     Origin --> SharedTransfer: Rabin ↔ Terrace<br/>shared stairs / elevator
 
     Outdoor --> Intermediate: Main → Terrace chain<br/>(pass through Rabin)
@@ -110,13 +110,24 @@ stateDiagram-v2
 
 ## 4. Indoor navigation modes
 
+The user does not choose the mode; the indoor page picks it when it opens (the mode buttons are hidden):
+
+- **Mobility profile** → Manual / Wheelchair: tap-to-confirm checkpoints on a stair-free route.
+- **A `?demo=1` link** (for demonstrations) → Auto. The Mobility profile still gets Manual / Wheelchair.
+- **Everyone else** → Phone Sensors.
+- If motion-sensor permission is refused, or the phone has no motion sensors, the page switches to **tap-to-confirm checkpoints on the same route** (stairs stay allowed). This is remembered for the rest of the visit (`campusway.indoorManualCheckpoints`), so the next building does not ask again.
+
 ```mermaid
 stateDiagram-v2
-    [*] --> RouteReady: graph loaded, route planned
+    state Pick <<choice>>
+    [*] --> Pick: graph loaded, route planned
+    Pick --> Wheel: Mobility profile
+    Pick --> Auto: ?demo=1 link
+    Pick --> Sensors: everyone else
 
-    state "Auto mode (preview)" as Auto {
+    state "Auto mode (demo)" as Auto {
         [*] --> Moving
-        Moving --> FloorPause: floor change<br/>(2 s pause)
+        Moving --> FloorPause: floor change<br/>(elevator 3 s + 1 s per floor,<br/>stairs 4 s per floor)
         FloorPause --> Moving
         Moving --> [*]: end of route
     }
@@ -132,34 +143,36 @@ stateDiagram-v2
         Tracking --> FloorConfirm: reached stairs /<br/>elevator
         FloorConfirm --> Calibrating: user confirms floor
         Tracking --> EstimatedArrival: last node
+        EstimatedArrival --> [*]: "✓ I have arrived" /<br/>"✓ I reached the exit"
     }
 
-    state "Manual / Wheelchair mode" as Wheel {
+    state "Manual / Wheelchair mode (tap-to-confirm)" as Wheel {
         [*] --> Checkpoint
-        Checkpoint --> Checkpoint: "I reached the next point"
+        Checkpoint --> Checkpoint: "✓ I reached the next point"
         Checkpoint --> FloorStep: elevator checkpoint
-        FloorStep --> Checkpoint: "Reached floor X"
+        FloorStep --> Checkpoint: "✓ Reached Floor X"
         Checkpoint --> [*]: final checkpoint
     }
 
-    RouteReady --> Auto: Auto selected
-    RouteReady --> Sensors: Phone Sensors selected
-    RouteReady --> Wheel: Wheelchair selected<br/>(pre-selected for Mobility profile)
+    Sensors --> Wheel: permission refused or<br/>no motion sensors<br/>(same route, stairs allowed)
     Auto --> Arrived
+    Sensors --> Arrived
     Wheel --> Arrived
-    Arrived --> [*]: Done / continue journey
+    Arrived --> [*]: Done / Continue outdoors /<br/>New route from here
 ```
 
 <sub>Diagram source: [`diagrams/06-indoor-navigation-modes.mmd`](diagrams/06-indoor-navigation-modes.mmd) · Image: [PNG](diagrams/06-indoor-navigation-modes.png) · [SVG](diagrams/06-indoor-navigation-modes.svg)</sub>
 
 | | Auto | Phone Sensors | Manual / Wheelchair |
 |---|---|---|---|
-| Purpose | Preview or demonstration | Hands-free guidance while walking | Reliable guidance without sensors |
-| What moves the marker | A timer | Detected steps, about 0.65 m each, in the detected direction | The user's confirmation at each checkpoint |
-| Floor changes | Automatic, with a 2 s pause | User confirms (*I'm on Floor X*; elevator: *entered* then *exited*) | User confirms (*Reached Floor X*) |
-| Map orientation | North-up | Heading-up (rotates with the phone) | North-up |
-| Step-free route | Optional (locked on for Mobility) | Optional (locked on for Mobility) | Always |
-| Arrival | Arrival dialog, or automatic hand-off to the next leg | "Estimated arrival — check the room sign" (no automatic hand-off) | Arrival dialog, or automatic hand-off to the next leg |
+| Used for | Demonstrations (`?demo=1`) | Everyone except the Mobility profile | The Mobility profile, and as the fallback when motion sensors are unavailable |
+| What moves the marker | A timer: 0.5 m every 200 ms (0.2 m on segments at stairs or elevators) | Detected steps, about 0.65 m each, in the detected direction | The user's confirmation at each checkpoint |
+| Floor changes | Automatic pause: elevator 3 s + 1 s per floor, stairs 4 s per floor | User confirms (*I'm on Floor X*; elevator: *entered* then *exited*) | User confirms (*✓ Reached Floor X*) |
+| Map orientation | Turns with the route ahead | Heading-up (rotates with the phone) | Not rotated |
+| Step-free route | Optional | Optional | Always for Mobility; the sensor fallback keeps the original route, stairs allowed |
+| Arrival | Arrival dialog | The user confirms the estimated arrival (*✓ I have arrived*, or *✓ I reached the exit*), then the arrival dialog | Arrival dialog (the last checkpoint button reads *✓ I reached the exit — continue outdoors* on an origin leg) |
+
+The arrival dialog never moves on by itself. At the destination it offers **Done** and **New route from here**; at an exit it offers **Continue outdoors →**, which returns to the campus map with the outdoor leg ready; at a connection to the next building it offers **Continue →**.
 
 ## 5. Shared-elevator crossing (Rabin ↔ Terrace)
 
@@ -174,17 +187,21 @@ On the way from Main Building to Terrace, the journey passes through Rabin: Main
 
 ## 6. Nearest shelter
 
+If no start has been chosen, the app asks the phone for its position (about 4 s timeout). On campus, the route starts there; off campus, or without a position, it starts at Carmel Gate and a message says so. Every shelter node in the indoor maps (except shelters closed in the live status) and the outdoor shelter are compared by walking time. The same flow runs from the indoor page's emergency button and from a `?emergency=1` link.
+
 ```mermaid
 flowchart TD
-    A(["Press 'Nearest shelter'"]) --> B{Start point set?}
+    A(["Press 'Nearest shelter'"]) --> B{Start point chosen?}
     B -- Yes --> D
-    B -- No --> C{"Geolocation<br/>within 4 s?"}
-    C -- Yes --> D[Use position]
-    C -- No --> C2[Use default start<br/>Carmel Gate]
+    B -- No --> C{"Phone position<br/>(about 4 s)"}
+    C -- On campus --> C1[Start at the<br/>phone's position]
+    C -- "Off campus or<br/>no position" --> C2["Start at Carmel Gate<br/>(message shown)"]
+    C1 --> D
     C2 --> D
-    D --> E["For every mapped shelter node:<br/>outdoor route time + indoor path time"]
-    E --> F{"Shelter with indoor guidance<br/>vs. any shelter ≥ 60 s faster"}
-    F --> G["Draw red emergency route card<br/>🛡️ From X → Nearest shelter"]
+    D[Start point] --> E["Every mapped shelter that is not closed:<br/>outdoor route time + indoor path time;<br/>also the outdoor shelter"]
+    E --> F{"Fastest, but prefer a shelter<br/>with indoor guidance unless<br/>another is ≥ 60 s faster"}
+    F -- Outdoor shelter --> G2(["Outdoor route to<br/>the outdoor shelter"])
+    F -- Shelter in a building --> G["Draw red emergency route card<br/>🛡️ From X → Nearest shelter"]
     G --> H(["'Continue indoors' to the<br/>shelter room on the floor plan"])
 ```
 
@@ -194,8 +211,8 @@ flowchart TD
 
 | Example | Start | Destination | What happens |
 |---|---|---|---|
-| Building to building | Student House | Main Building | About 3 minutes outdoors, 6 directions ([screenshot](images/screenshots/main-03-outdoor-route.png)) |
+| Building to building | Student House | Main Building | About 3 minutes outdoors, with turn-by-turn directions ([screenshot](images/screenshots/main-03-outdoor-route.png)) |
 | Step-free | Student House (Mobility profile) | Rabin Building | Stairs avoided; slower walking speed in the ETA ([screenshot](images/screenshots/main-06-mobility-route.png)) |
 | Room to room | Room 521, Main Building | Room 1001, Terrace Building | *Start indoor route* from room 521 to the Main floor 600 exit, outdoor bridge to Rabin, then on to Terrace ([screenshot](images/screenshots/main-07-room-to-room-journey.png)) |
-| Indoor, multi-floor | Rabin entrance, floor 7 | Room 5007, floor 5 | Stairs down two floors; about 66 m ([screenshot](images/screenshots/indoor-02-route-floor-plan.png)) |
-| Emergency | Main Building | Nearest shelter | Shelter in Rabin Building, about 5 minutes ([screenshot](images/screenshots/main-10-nearest-shelter.png)) |
+| Indoor, multi-floor | Rabin entrance, floor 7 | Room 5007, floor 5 | Elevator down two floors; about 77 m of walking, about 2 minutes ([screenshot](images/screenshots/indoor-02-route-floor-plan.png), taken before floor changes were weighted by time, when this route used the stairs) |
+| Emergency | Main Building | Nearest shelter | The shelter inside Main Building, floor 500: from the Main Building start point (floor 700 entrance) by elevator, about 1½ minutes ([screenshot](images/screenshots/main-10-nearest-shelter.png), taken before Main Building had a mapped shelter, when the route went to Rabin Building) |

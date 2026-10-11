@@ -88,7 +88,7 @@ erDiagram
 | Floor plans | `buildings/<key>/floors/*.svg` | SVG drawings | External drawing tools |
 | Outdoor paths | `app/prototype/campus-osm.json` | Overpass API JSON | Re-export from OpenStreetMap |
 | Outdoor corrections | `app/prototype/outdoor-routing.js` | Code (`addCampusNode`, `addEdge`, `removeEdge`) | Text editor |
-| Live status | `app/data/campus-status.json` | JSON | Text editor |
+| Live status | Cloud inbox (live copy); `app/data/campus-status.json` (offline fallback) | JSON | Admin screen ([17](17-admin-screen.md)) |
 
 **Building keys** link the data together: `main`, `rabin`, `madriga` (Terrace Building), `student`, `multi-purpose`, `education`.
 
@@ -112,6 +112,7 @@ erDiagram
 | `gates` | 2 | Carmel Gate (south, default start) and Haifa (Denya) Gate (north) |
 | `clinic` | 1 | University Clinic |
 | `restrooms` | 73 | outdoor reference points per building |
+| `smoking` | 3 | `name` ("Smoking area"), `lat`, `lng`; shown by the *Smoking areas* service button |
 | `parking` | 0 | reserved |
 
 ```js
@@ -177,14 +178,14 @@ madriga: [
 
 | Type | Count (all buildings) | Role |
 |---|---|---|
-| `corridor` | 1,539 | Walkable junctions and bends |
-| `room` | 1,126 | Destinations (classrooms, offices, labs) |
-| `stairs` | 147 | Vertical connector (excluded in step-free routing) |
-| `restroom` | 63 | Service destination |
+| `corridor` | 1,484 | Walkable junctions and bends |
+| `room` | 1,018 | Destinations (classrooms, offices, labs) |
+| `stairs` | 159 | Vertical connector (excluded in step-free routing) |
+| `restroom` | 61 | Service destination |
 | `elevator` | 47 | Vertical connector |
-| `entrance` | 34 | Building doors; used for indoor ↔ outdoor hand-off |
-| `shelter` | 20 | Protected spaces for emergency routing |
-| `landmark` | 15 | Notable places; rest-space candidates |
+| `entrance` | 29 | Building doors; used for indoor ↔ outdoor hand-off |
+| `landmark` | 23 | Notable places; rest-space candidates |
+| `shelter` | 14 | Protected spaces for emergency routing |
 | `food` | 9 | Cafés and food counters |
 | `parking` | 3 | Parking entrances |
 | `gym`, `clinic`, `museum`, `library` | 1 each | Service destinations |
@@ -201,7 +202,12 @@ madriga: [
 
 ### 3.6 Duplicated graph copies
 
-`app/prototype/madriga-graph.js` and `multi-purpose-graph.js` hold JavaScript copies of two graphs (`MADRIGA_GRAPH`, `MULTI_PURPOSE_GRAPH`) that the campus page uses for search and services. When a JSON graph is updated, these copies must be updated too. At the time of writing the Terrace copy matches its JSON file, but the Multi-Purpose copy is older (305 nodes, no connections) than `multi-purpose-indoor-graph.json` (359 nodes, 307 connections).
+`app/prototype/madriga-graph.js` and `multi-purpose-graph.js` hold older JavaScript copies of two graphs (`MADRIGA_GRAPH`, `MULTI_PURPOSE_GRAPH`). The app does not use them: both the campus page and the indoor page load `buildings/<key>/<key>-indoor-graph.json`. The copies are still in the offline file list, the admin screen's map-data health check compares them with the JSON files, and one test reads `madriga-graph.js`. Both are out of date:
+
+| Copy | Nodes / connections in the copy | In the JSON file |
+|---|---|---|
+| `madriga-graph.js` | 484 / 476 | 390 / 388 |
+| `multi-purpose-graph.js` | 305 / 0 | 301 / 308 |
 
 ## 4. Outdoor path network
 
@@ -215,7 +221,7 @@ The data is © OpenStreetMap contributors, available under the Open Database Lic
 
 ## 5. Campus status file
 
-`app/data/campus-status.json` is maintained by hand. The app reads it every time it opens (network first) and keeps the last copy for offline use.
+The live campus status is edited in the admin screen and published to the cloud inbox; the PC server also writes it to `app/data/campus-status.json`, and the copy of that file on the site is the offline fallback. Every time the app opens it reads the file (network first), then asks the cloud inbox named in `reportEndpoint` for the live version (`GET /api/status`). It uses the inbox version when the inbox answers, otherwise the file (opened from the PC server, the PC's file is used directly), and keeps the result in `localStorage` (`campuswayStatusCache`) for offline use. See [18 · Data, servers and offline use](18-data-servers-and-offline.md).
 
 ```json
 {
@@ -232,7 +238,12 @@ The data is © OpenStreetMap contributors, available under the Open Database Lic
     "Cafe Aguda": { "sun": "07:30-18:00", "mon": "07:30-18:00", "tue": "07:30-18:00",
                     "wed": "07:30-18:00", "thu": "07:30-18:00", "fri": "07:30-12:00", "sat": "closed" }
   },
-  "reportEmail": "facilities@example.ac.il"
+  "noiseAreas": [
+    { "id": "garden-cafe", "label": "Garden Café", "outdoorNodeIds": ["campus_main_garden_path"],
+      "noisy": true, "crowded": true, "until": "2026-10-20T23:59:59+03:00" }
+  ],
+  "reportEmail": "facilities@example.ac.il",
+  "reportEndpoint": "https://campusway-inbox.campusway.workers.dev/"
 }
 ```
 
@@ -242,58 +253,78 @@ The data is © OpenStreetMap contributors, available under the Open Database Lic
 | `closures` | Indoor: `building` + `nodeIds`. Outdoor no-go zone: `area` polygon. |
 | `openingHours` | Keyed by the English place name or the indoor label. Several ranges are separated by commas; `"24/7"` is allowed. |
 | `reportEmail` | Shows an e-mail button after a problem report. Leave it empty to hide the button. |
-| `noiseAreas` | Outdoor path points the Rest-space profile avoids while `noisy` or `crowded`, until `until`. |
+| `reportEndpoint` | Address of the cloud inbox. The app fetches the live status from it and sends problem reports and anonymous usage counts to it. Leave it empty to keep reports on the device. |
+| `noiseAreas` | `{id, label, outdoorNodeIds, noisy, crowded, until}`: outdoor path points the Sensory & Wellbeing profile avoids (edge cost × 5) while `noisy` or `crowded`, until `until`. |
 | `announcements` | Banners: `{id, severity: "info" \| "warning" \| "critical", text: {en, he, ar, ru}, from, until}`. English is shown when a language is missing. |
 | `emergency` | `{active, message: {en, he, ar, ru}}`. When active, every page shows a red banner with a *Nearest shelter* button. |
 | `names` | Name corrections keyed by the English name: `{"Cafe Aguda": {"ar": "…"}}`. They replace the built-in name in that language. |
 
-The admin screen ([17 · Admin screen](17-admin-screen.md)) edits this file and checks it with `app/admin/status-schema.js` before saving.
+The admin screen ([17 · Admin screen](17-admin-screen.md)) edits the status, checks it with `app/admin/status-schema.js` before saving, and publishes it.
 
-The live file currently lists no outages, closures or hours.
+The file in the repository currently lists one noise area (the Garden Café path, until 20 October 2026) and the inbox address; it has no outages, closures, announcements or opening hours.
 
 ## 6. Browser storage keys
 
-### `sessionStorage` (per tab)
+Everything below stays in the browser on the phone. Only problem reports (`campuswayReports`) are ever sent, to the campus team's cloud inbox. What is stored and what is sent: [18 · Data, servers and offline use](18-data-servers-and-offline.md).
+
+### `localStorage` (kept until the user clears the site data)
 
 | Key | Written by | Content |
 |---|---|---|
-| `campuswayLanguage` | campus map | `en`, `he` or `ar` |
-| `accessibilityProfile` | campus map | `general`, `mobility`, `visual`, `spatial` or `mental` |
-| `journeyStage` | both | `origin`, `destination`, `same-building` or `intermediate` |
-| `indoorBuilding` | both | Building key for the indoor page |
-| `indoorContext` | campus map | Destination: `{destinationNodeId, destinationLabel, destinationDisplayLabel, destinationType, buildingKey, entranceId, startNodeId}` |
+| `campuswayLanguage` | campus map | `en`, `he`, `ar` or `ru` |
+| `accessibilityProfile` | campus map | `general`, `mobility`, `visual`, `spatial` or `mental` (`mental` = Sensory & Wellbeing Support) |
+| `campuswayOnboardingComplete` | campus map | `true` once the first-run language and profile screens are done |
+| `campusway.audioEnabled` | both pages | Audio guide `true` or `false` |
+| `campusway.highContrastEnabled` | campus map | High contrast `true` or `false` (the indoor page follows it) |
+| `campusway.textSize` | campus map | `normal` or `large` (the indoor page follows it) |
+| `campusway.scheduleRemindersEnabled` | campus map | Class reminders `true` or `false` |
+| `campusway.scheduleEntries` | campus map | Class reminders: up to 80 `{id, title, day (0–6), time ("HH:MM"), target}` |
+| `campusway.favourites.v1` | campus map | Array of `{kind: "place", name, lat, lng}` or `{kind: "indoor", name, nodeId, type, buildingKey, buildingName, floor}` |
+| `campusway.legendOpen` | campus map | Map key open or closed |
+| `campuswayIndoorVoice` | indoor page | Indoor voice guidance `on` or `off` |
+| `campuswayReports` | both pages | Problem reports made on this device (the last 50, kept 14 days), each marked `synced` once the cloud inbox or PC server has accepted it |
+| `campuswayStatusCache` | both pages | The last live campus status received |
+| `campusway_wayframe_v2_<building>`, `campusway_wayframe_last_building`, `campusway_wayframe_last_floor_<building>` | WayFrame editor | Editor autosave and last position (developer tool) |
+
+The campus map also copies the first eight keys above (language to class reminders) into `sessionStorage`, so the indoor page in the same tab always sees the current choice.
+
+### `sessionStorage` (kept for this tab until it is closed)
+
+| Key | Written by | Content |
+|---|---|---|
+| `journeyPlan` | both pages | `{version: 1, currentLeg, legs: [{kind: "indoor" \| "outdoor" \| "transfer", …}]}`: the legs of the whole journey and the current one |
+| `journeyStage` | both pages | `origin`, `destination`, `same-building` or `intermediate` |
+| `indoorBuilding` | both pages | Building key for the indoor page |
+| `indoorContext` | campus map | Destination: `{destinationNodeId, destinationNodeIds, destinationLabel, destinationDisplayLabel, destinationType, buildingKey, entranceId, startNodeId}` |
 | `indoorStartContext` | campus map | Origin: `{buildingKey, startNodeId, exitEntranceId, label}` |
 | `outdoorJourneyContext` | campus map | Snapshot used to rebuild the outdoor leg after the origin leg |
 | `sharedIndoorTransfer` | campus map | `{originBuilding, destinationBuilding, method}` (Rabin ↔ Terrace) |
-| `intermediateIndoorTransfer` | campus map | Rabin pass-through leg on the Main → Terrace chain |
+| `intermediateIndoorTransfer` | campus map | `{building, startNodeId, destinationNodeId, destinationBuilding}`: Rabin pass-through leg on the Main → Terrace chain |
 | `originIndoorComplete` | indoor page | Signals the campus map to resume the journey |
 | `campusTransitionDirection` | indoor page | Shows the "switching to outdoor" overlay |
 | `sharedNavigationResume` | indoor page | `{building, mode}`: continue navigation in the next building |
 | `madrigaTransferEntrance` | indoor page | Arrival node in Terrace after the transfer |
 | `campusway.pendingSharedElevatorRide` | indoor page | Elevator ride in progress across buildings |
-
-### `localStorage` (persistent)
-
-| Key | Content |
-|---|---|
-| `campusway.favourites.v1` | Array of `{kind: "place", name, lat, lng}` or `{kind: "indoor", name, nodeId, type, buildingKey, buildingName, floor}` |
-| `campusway.audioEnabled` | Audio guide on or off (written by the campus map; currently read only by the audio test page) |
-| `campusway.legendOpen` | Map key open or closed |
-| `campuswayIndoorVoice` | Indoor voice guidance `on` or `off` |
-| `campuswayReports` | Problem reports made on this device (up to 50, kept 14 days) |
-| `campuswayStatusCache` | Last downloaded campus-status file |
-| `campusway_wayframe_v2_<building>` | WayFrame editor autosave (developer tool) |
+| `newRouteStartContext` | indoor page | `{version: 1, buildingKey, nodeId, label, displayLabel}`: the reached room, used as the start after *New route from here* |
+| `campusway.outdoorDemo` | campus map | `true` when the journey was started with `?demo=1`, so the indoor page uses Auto mode |
+| `campusway.indoorManualCheckpoints` | indoor page | `true` when motion sensors were unavailable; later buildings in the same visit use tap-to-confirm checkpoints without asking again |
+| `campusway.speechVoice.<language>` | both pages | The speech voice picked for that language |
+| `campuswayDismissedAnnouncements` | both pages | Ids of announcement banners the user closed |
 
 ## 7. URL parameters
 
 | Page | Parameter | Example | Effect |
 |---|---|---|---|
-| `index.html` | `from`, `to` | `?from=building:Rabin%20Building&to=room:madriga:floor1_n6` | Opens with this route (share links). Values are `building:<name>`, `room:<buildingKey>:<nodeId>` or `place:<name>`. |
-| `index.html` | `emergency=1` | `?emergency=1&from=building:Main%20Building` | Starts nearest-shelter routing |
+| `index.html` | `from`, `to` | `?from=building:Rabin%20Building&to=room:madriga:floor1_n6` | Opens with this route (share links). Values are `building:<name>`, `room:<buildingKey>:<nodeId>` or `place:<name>` (`place:<name>@<buildingKey>` for a place with several branches). Without `from`, the route starts at the phone's position when it is on campus. |
+| `index.html` | `meet=lat,lng` | `?meet=32.7612,35.0205` | *Share my location* link: routes the receiver to that point (accepted only around the campus) |
+| `index.html` | `emergency=1` | `?emergency=1&from=building:Main%20Building` | Starts nearest-shelter routing (used by the indoor page's emergency button) |
 | `index.html` | `resumeJourney=1` | | Used by the indoor page to resume the outdoor leg |
+| `index.html` | `newRouteFromHere=1` | | Used by the indoor page's *New route from here*: the reached room becomes the start (from `newRouteStartContext`) |
+| `index.html` | `demo=1` | `?demo=1` | Demonstration: outdoor guidance simulates walking, and the indoor page opens in Auto mode |
 | `index.html` | `debug` | `?debug` | Clicking the map shows coordinates |
 | `navigation-demo.html` | `building` | `?building=rabin` | Building to load |
 | `navigation-demo.html` | `from`, `to` | `?building=rabin&from=floor7_n108&to=floor5_n0` | Opens with this indoor route |
+| `navigation-demo.html` | `demo=1` | `?building=rabin&demo=1` | Auto mode (except for the Mobility profile, which always uses Manual / Wheelchair) |
 
 ## 8. Data statistics
 
@@ -301,21 +332,23 @@ The live file currently lists no outages, closures or hours.
 
 | Building (key) | Floors with nodes | Nodes | Connections | Room nodes | Elevator / stair nodes | Entrance nodes | Restrooms | Shelters |
 |---|---|---|---|---|---|---|---|---|
-| Main Building (`main`) | 500, 600, 700 | 415 | 422 | 124 | 3 / 24 | 9 | 15 | 0 |
+| Main Building (`main`) | 500, 600, 700 | 411 | 419 | 124 | 3 / 24 | 7 | 15 | 1 |
 | Rabin Building (`rabin`) | 5, 6, 7 | 593 | 605 | 202 | 12 / 40 | 8 | 5 | 4 |
-| Terrace Building (`madriga`) | −1, 0, 1, 2, 3, 4 | 484 | 476 | 189 | 8 / 19 | 4 | 8 | 0 |
-| Student House (`student`) | 0–4 | 405 | 405 | 141 | 10 / 36 | 5 | 5 | 1 |
-| Multi-Purpose (`multi-purpose`) | 0, 1 | 359 | 307 | 180 | 2 / 8 | 7 | 2 | 1 |
-| Education and Science (`education`) | 1–6 | 751 | 754 | 290 | 12 / 20 | 1 | 28 | 14 |
-| **Total** | | **3,007** | **2,969** | **1,126** | **47 / 147** | **34** | **63** | **20** |
+| Terrace Building (`madriga`) | −1, 0, 1, 2, 3, 4 | 390 | 388 | 137 | 8 / 25 | 4 | 8 | 1 |
+| Student House (`student`) | 0–4 | 415 | 412 | 140 | 10 / 42 | 2 | 5 | 4 |
+| Multi-Purpose (`multi-purpose`) | 1 | 301 | 308 | 125 | 2 / 8 | 7 | 0 | 0 |
+| Education and Science (`education`) | 1–6 | 741 | 745 | 290 | 12 / 20 | 1 | 28 | 4 |
+| **Total** | | **2,851** | **2,877** | **1,018** | **47 / 159** | **29** | **61** | **14** |
+
+Counted from `buildings/*/*-indoor-graph.json`. Multi-Purpose and Education and Science also list empty floors (−1, 0, 2 and −1, 0) in their files.
 
 ### Outdoor network and places
 
 | Item | Count |
 |---|---|
 | OSM nodes / ways in the extract | 947 / 157 |
-| Routing nodes / edges after corrections | 1,064 / 1,089 |
+| Routing nodes / edges after corrections | 1,067 / 1,096 |
 | Buildings on the map | 10 |
 | Building entrances | 22 |
-| Food places / shops / gates / clinic | 10 / 7 / 2 / 1 |
-| Floor-plan SVGs | 28 (about 92 MB) |
+| Food places / shops / gates / clinic / smoking areas | 10 / 7 / 2 / 1 / 3 |
+| Floor-plan SVGs | 27 (about 96 MB); the 24 for floors with nodes are pre-cached for offline use |

@@ -5,7 +5,7 @@ stateDiagram-v2
     Planning --> Origin: start is a room
     Planning --> Outdoor: start is outdoors
 
-    Origin --> Outdoor: reached exit<br/>(auto return to map)
+    Origin --> Outdoor: reached exit,<br/>"Continue outdoors"
     Origin --> SharedTransfer: Rabin ↔ Terrace<br/>shared stairs / elevator
 
     Outdoor --> Intermediate: Main → Terrace chain<br/>(pass through Rabin)

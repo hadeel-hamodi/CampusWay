@@ -25,6 +25,7 @@ flowchart TB
     subgraph uimods["UI and services"]
         direction LR
         cui["campus-ui.js<br/><i>toasts, menus, ARIA</i>"]
+        voice["speech-voice.js + haptics.js<br/><i>voices, vibration</i>"]
         status["campus-status.js<br/><i>outages, closures, reports</i>"]
         qr["qr-code.js + share.js"]
         leaflet["Leaflet 1.9.4<br/><i>map library</i>"]

@@ -1,6 +1,6 @@
 # 17 · Admin screen and local server
 
-> The admin screen (`admin.html`) lets the campus team handle problem reports and keep the live campus status up to date without editing JSON by hand. It runs on one PC, with a small server that comes with CampusWay and saves to plain JSON files. No database account, cloud service or payment is involved.
+> The admin screen (`admin.html`) lets the campus team handle problem reports and keep the live campus status up to date without editing JSON by hand. It runs on one PC, with a small Node.js server that comes with CampusWay and saves to plain JSON files in `server/db/` (no database software). Reports and counts from the public site arrive through the free cloud inbox (a Cloudflare Worker with a D1 database), and the live status is published to everyone through it. No payment is involved. The whole picture of what is stored where: [18 · Data, servers and offline use](18-data-servers-and-offline.md).
 
 **Contents:** [How it works](#1-how-it-works) · [Starting it](#2-starting-it) · [Pages](#3-pages) · [Roles](#4-roles) · [Where data is kept](#5-where-data-is-kept) · [Publishing to the live site](#6-publishing-to-the-live-site) · [Privacy and security](#7-privacy-and-security) · [Cloud inbox](#8-reports-from-the-public-site-the-cloud-inbox) · [Limits](#9-limits)
 
@@ -18,13 +18,13 @@ flowchart LR
 ```
 
 - The server is one Node.js file that uses only built-in modules. It serves the app (replacing `http-server`) and a small API.
-- The app works exactly as before when the server is not there. On GitHub Pages it sends nothing unless the optional [cloud inbox](#8-reports-from-the-public-site-the-cloud-inbox) is set up; otherwise reports stay on the device.
+- The app never needs the server to navigate: it runs from the phone's offline copy. On GitHub Pages it sends problem reports and anonymous counts to the [cloud inbox](#8-reports-from-the-public-site-the-cloud-inbox) (set up and live), and reads the live status from it. Without an inbox, reports would stay on the phone.
 - When the app is opened from the server (for example `http://localhost:8080` or `http://<PC address>:8080` on the same Wi-Fi), problem reports and anonymous usage counts are also sent to the PC. Reports made while the PC is unreachable are sent the next time the app opens.
-- The admin screen writes `app/data/campus-status.json`, the same file the app already reads. Committing and pushing it publishes the change to everyone.
+- The admin screen writes `app/data/campus-status.json` on the PC and publishes it to the cloud inbox on every save, so phones get it the next time they open CampusWay; no commit is needed (see [section 6](#6-publishing-to-the-live-site)). The copy of the file in the repository is only the offline fallback.
 
 ## 2. Starting it
 
-Requires [Node.js](https://nodejs.org) 18 or newer. From the project folder:
+Requires [Node.js](https://nodejs.org) 18 or newer (the team uses Node.js 24). The port can also be set with the `CAMPUSWAY_PORT` environment variable. From the project folder:
 
 ```powershell
 node server/campusway-server.js
@@ -91,6 +91,7 @@ Everything is in `server/db/`, which is listed in `.gitignore` and never committ
 | `audit.json` | Activity log (up to 5,000 entries). |
 | `status-history/` | The status file as it was before each save (last 200). |
 | `cloud.json` | Cloud inbox address and sync key, last fetch, and any batch not yet confirmed. |
+| `tests.json` | The last test run from the **Tests** page. |
 
 The files are plain JSON: you can open them, back them up by copying the folder, or move them to another PC. Each write goes to a temporary file first, so a crash never leaves a half-written file.
 
@@ -124,7 +125,7 @@ The Overview page reminds you when changes are not live yet.
 
 ## 8. Reports from the public site: the cloud inbox
 
-Phones using the GitHub Pages site cannot reach the PC. The optional **cloud inbox** ([`cloud/`](../cloud/README.md)) is a free Cloudflare Worker that collects their reports and usage counts until the PC fetches them:
+Phones using the GitHub Pages site cannot reach the PC. The **cloud inbox** ([`cloud/`](../cloud/README.md)), set up and live at `https://campusway-inbox.campusway.workers.dev/`, is a free Cloudflare Worker with a small D1 (SQLite) database. It holds their reports and usage counts until the PC fetches them, and serves the live status. Its tables and what they keep are listed in [18 · Data, servers and offline use](18-data-servers-and-offline.md#5-the-cloud-inbox-cloudflare-worker--d1).
 
 - The app sends to the PC server when it was opened from it, otherwise to the inbox named by `reportEndpoint` in the status file, otherwise it keeps reports on the phone.
 - While the server runs, it fetches from the inbox every 5 minutes (`--cloud-minutes` changes this; **Fetch now** on the Cloud inbox and Reports pages does it at once). Each fetch also sends report statuses back, so reporters on the public site see "Fixed".
@@ -135,6 +136,6 @@ Setting it up takes about 15 minutes and a free Cloudflare account; the **Cloud 
 
 ## 9. Limits
 
-- Without the cloud inbox, reports from the GitHub Pages site stay on the reporter's phone.
+- If the cloud inbox cannot be reached, reports from the GitHub Pages site wait on the reporter's phone and are sent the next time CampusWay opens.
 - Reports in the cloud inbox reach the admin screen only when the PC is on; they wait in the inbox (up to 90 days) until then.
 - The admin screen edits live status and names. Indoor maps are still edited in the WayFrame editor (see [13 · Developer tools](13-developer-tools-and-mapping.md)).

@@ -1,6 +1,6 @@
 flowchart TD
-    A([Open CampusWay]) --> B{Language chosen<br/>this session?}
-    B -- No --> C[Language screen:<br/>English / עברית / العربية]
+    A([Open CampusWay]) --> B{Language and profile<br/>saved on this device?}
+    B -- No --> C["First-run screens:<br/>1. English / עברית #8206;/ العربية / Русский<br/>2. accessibility profile"]
     C --> D
     B -- Yes --> D[Campus map]
     D --> E["Optional: set From<br/>(type, voice, GPS or room)<br/>default = Carmel Gate"]
@@ -9,8 +9,8 @@ flowchart TD
     G -- General --> H[Shortest weighted route]
     G -- Mobility --> I[Exclude stairs and<br/>stair-only entrances]
     G -- Spatial --> J[Prefer fewer turns]
-    G -- Visual --> K[Turn voice guidance on]
-    G -- Mental health --> L[Show suggested rest spaces]
+    G -- Visual --> K[Voice guidance and<br/>high contrast on]
+    G -- Sensory and wellbeing --> L["Prefer quieter paths;<br/>'I need a break' finds<br/>a rest space"]
     H & I & J & K & L --> M[Compare every allowed exit ×<br/>entrance pair, pick the fastest]
     M --> N{Route found?}
     N -- No, Mobility --> O["Explain: no step-free<br/>route is mapped"]

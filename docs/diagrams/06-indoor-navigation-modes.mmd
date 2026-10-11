@@ -1,9 +1,13 @@
 stateDiagram-v2
-    [*] --> RouteReady: graph loaded, route planned
+    state Pick <<choice>>
+    [*] --> Pick: graph loaded, route planned
+    Pick --> Wheel: Mobility profile
+    Pick --> Auto: ?demo=1 link
+    Pick --> Sensors: everyone else
 
-    state "Auto mode (preview)" as Auto {
+    state "Auto mode (demo)" as Auto {
         [*] --> Moving
-        Moving --> FloorPause: floor change<br/>(2 s pause)
+        Moving --> FloorPause: floor change<br/>(elevator 3 s + 1 s per floor,<br/>stairs 4 s per floor)
         FloorPause --> Moving
         Moving --> [*]: end of route
     }
@@ -19,19 +23,19 @@ stateDiagram-v2
         Tracking --> FloorConfirm: reached stairs /<br/>elevator
         FloorConfirm --> Calibrating: user confirms floor
         Tracking --> EstimatedArrival: last node
+        EstimatedArrival --> [*]: "✓ I have arrived" /<br/>"✓ I reached the exit"
     }
 
-    state "Manual / Wheelchair mode" as Wheel {
+    state "Manual / Wheelchair mode (tap-to-confirm)" as Wheel {
         [*] --> Checkpoint
-        Checkpoint --> Checkpoint: "I reached the next point"
+        Checkpoint --> Checkpoint: "✓ I reached the next point"
         Checkpoint --> FloorStep: elevator checkpoint
-        FloorStep --> Checkpoint: "Reached floor X"
+        FloorStep --> Checkpoint: "✓ Reached Floor X"
         Checkpoint --> [*]: final checkpoint
     }
 
-    RouteReady --> Auto: Auto selected
-    RouteReady --> Sensors: Phone Sensors selected
-    RouteReady --> Wheel: Wheelchair selected<br/>(pre-selected for Mobility profile)
+    Sensors --> Wheel: permission refused or<br/>no motion sensors<br/>(same route, stairs allowed)
     Auto --> Arrived
+    Sensors --> Arrived
     Wheel --> Arrived
-    Arrived --> [*]: Done / continue journey
+    Arrived --> [*]: Done / Continue outdoors /<br/>New route from here
