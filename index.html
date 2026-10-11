@@ -904,6 +904,23 @@ Object.assign(T.ru, {
   sharedLinkMissing:'Место из этой общей ссылки больше не отмечено на карте.',
   outdoorElevator:'Наружный лифт (Главное здание, этаж 600)', restroomLabel:'Туалет'
 });
+// Shown when the shelter button or a reminder cannot start from the phone's position.
+Object.assign(T.en, {
+  startGateNoLocation:'Could not get your location, so directions start at {gate}. Change “From” to start somewhere else.',
+  startGateOffCampus:'You seem to be off campus, so directions start at {gate}. Change “From” to start somewhere else.'
+});
+Object.assign(T.he, {
+  startGateNoLocation:'לא הצלחנו לאתר את המיקום שלך, ולכן ההוראות מתחילות ב{gate}. שנה את „מאיפה” כדי להתחיל ממקום אחר.',
+  startGateOffCampus:'נראה שאתה מחוץ לקמפוס, ולכן ההוראות מתחילות ב{gate}. שנה את „מאיפה” כדי להתחיל ממקום אחר.'
+});
+Object.assign(T.ar, {
+  startGateNoLocation:'تعذّر تحديد موقعك، لذلك تبدأ الاتجاهات من {gate}. غيّر „من“ للبدء من مكان آخر.',
+  startGateOffCampus:'يبدو أنك خارج الحرم الجامعي، لذلك تبدأ الاتجاهات من {gate}. غيّر „من“ للبدء من مكان آخر.'
+});
+Object.assign(T.ru, {
+  startGateNoLocation:'Не удалось определить ваше местоположение, поэтому маршрут начинается здесь: {gate}. Измените поле «Откуда», чтобы начать из другого места.',
+  startGateOffCampus:'Похоже, вы не на кампусе, поэтому маршрут начинается здесь: {gate}. Измените поле «Откуда», чтобы начать из другого места.'
+});
 Object.assign(T.en, {
   nearestRestroom:'Nearest restroom', nearestFood:'Food & cafés near me', nearestShop:'Shops near me',
   nearestClinic:'University clinic', nearestLibrary:'Nearest library', nearestGym:'Nearest gym',
@@ -1814,6 +1831,8 @@ async function startReminderRoute(){
   dismissScheduleReminder();
   if(!entry?.target) return;
   const target = entry.target;
+  // The reminder appears wherever the student is: start the route from there.
+  await startFromPhoneWhenUnset();
   if(target.kind === 'room'){
     const building = CAMPUS_DATA.buildings.find(
   item => item.name === target.buildingName
@@ -9649,6 +9668,9 @@ async function openSharedLink(){
     return;
   }
 
+  // A link without a start gives directions from where the receiver is.
+  const startsFromReceiver = from ? true : await startFromPhoneWhenUnset({quiet:true});
+
   if(sharedLocation){
     if(sharedLocationMarker) map.removeLayer(sharedLocationMarker);
     sharedLocationMarker = L.circleMarker([sharedLocation.lat, sharedLocation.lng], {
@@ -9666,7 +9688,7 @@ async function openSharedLink(){
     };
     await routeTo(t.sharedLocation, sharedLocation.lat, sharedLocation.lng);
     sharedLocationMarker.openPopup();
-    notify(t.sharedLocationHint);
+    if(!startsFromReceiver) notify(t.sharedLocationHint);
     return;
   }
 
@@ -9682,7 +9704,7 @@ async function openSharedLink(){
     else if(to.place.type === 'shop') routeToShopPlace(to.place);
     else pickDestination(to.place.name, to.place.lat, to.place.lng);
   }
-  if(!from) notify(t.sharedLinkStart);
+  if(!startsFromReceiver) notify(t.sharedLinkStart);
 }
 
 // ═══════════════════════════════════════════
@@ -9788,6 +9810,7 @@ function shelterBuildings(){
 }
 
 async function emergencyStartPoint(){
+  await startFromPhoneWhenUnset();
   return getStart();
 }
 
@@ -9964,39 +9987,86 @@ function toggleGPS(){
 function useGPS_do(){
   if(!('geolocation' in navigator)){ notify(t.gpsError); return; }
   navigator.geolocation.getCurrentPosition(
-  pos=>{
-  clearIndoorStartJourney();
-
-  const {latitude:lat, longitude:lng} = pos.coords;
-      customStart = {lat, lng, label:'📍 GPS'};
-      document.getElementById('startInput').value = t.gpsActive;
-      selectedStartLocation = {kind:'gps', displayValue:t.gpsActive};
-      document.getElementById('gpsBtn').classList.add('active');
-      document.getElementById('startInput').disabled = false;
-      if(gpsMarker) map.removeLayer(gpsMarker);
-      gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#0891B2',fillColor:'#0891B2',fillOpacity:0.4,weight:3}).addTo(map);
-            const hereLabel = {
-        en: 'You are here',
-        he: 'אתה כאן',
-        ar: 'أنت هنا',
-        ru: 'Вы здесь'
-      }[lang] || 'You are here';
-
-      gpsMarker.bindTooltip('📍 ' + hereLabel, {
-        permanent: true,
-        direction: 'top',
-        offset: [0, -12],
-        className: 'location-label'
-      }).openTooltip();
-      map.flyTo([lat,lng],17,{duration:0.8});
-      speak(t.gpsActive);
-    },
+    pos=>applyGpsStart(pos.coords.latitude, pos.coords.longitude),
     ()=>{
       speak(t.gpsError);
       document.getElementById('gpsBtn').classList.remove('active');
       notify(t.gpsError);
     }
   );
+}
+
+function applyGpsStart(lat, lng){
+  clearIndoorStartJourney();
+  customStart = {lat, lng, label:'📍 GPS'};
+  document.getElementById('startInput').value = t.gpsActive;
+  selectedStartLocation = {kind:'gps', displayValue:t.gpsActive};
+  document.getElementById('gpsBtn').classList.add('active');
+  document.getElementById('startInput').disabled = false;
+  if(gpsMarker) map.removeLayer(gpsMarker);
+  gpsMarker = L.circleMarker([lat,lng],{radius:10,color:'#0891B2',fillColor:'#0891B2',fillOpacity:0.4,weight:3}).addTo(map);
+  const hereLabel = {
+    en: 'You are here',
+    he: 'אתה כאן',
+    ar: 'أنت هنا',
+    ru: 'Вы здесь'
+  }[lang] || 'You are here';
+
+  gpsMarker.bindTooltip('📍 ' + hereLabel, {
+    permanent: true,
+    direction: 'top',
+    offset: [0, -12],
+    className: 'location-label'
+  }).openTooltip();
+  map.flyTo([lat,lng],17,{duration:0.8});
+  speak(t.gpsActive);
+}
+
+// Directions should start where the user is. When no start has been chosen, the
+// shelter button, shared links and class reminders try the phone's position first
+// (on campus only) instead of silently starting at the default gate.
+const CAMPUS_AREA = {south:32.7560, west:35.0140, north:32.7655, east:35.0255}; // same box as the map's campusBounds
+const PHONE_START_TIMEOUT_MS = 4000;
+
+function isOnCampus(lat, lng){
+  return lat >= CAMPUS_AREA.south && lat <= CAMPUS_AREA.north &&
+    lng >= CAMPUS_AREA.west && lng <= CAMPUS_AREA.east;
+}
+
+function currentPhonePosition(timeout = PHONE_START_TIMEOUT_MS){
+  return new Promise(resolve => {
+    if(!('geolocation' in navigator)){ resolve(null); return; }
+    let settled = false;
+    // Some browsers never answer while the permission prompt is ignored.
+    const timer = setTimeout(() => finish(null), timeout + 500);
+    function finish(value){
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => finish({lat:pos.coords.latitude, lng:pos.coords.longitude}),
+      () => finish(null),
+      {enableHighAccuracy:true, timeout, maximumAge:60000}
+    );
+  });
+}
+
+// Returns true when the route will start from a chosen place or the phone's position.
+async function startFromPhoneWhenUnset({quiet = false} = {}){
+  if(customStart) return true;
+  const position = await currentPhonePosition();
+  if(customStart) return true; // a start was chosen while waiting
+  if(position && isOnCampus(position.lat, position.lng)){
+    applyGpsStart(position.lat, position.lng);
+    return true;
+  }
+  if(!quiet){
+    const gate = localizedBuildingNameByEnglishName(DEFAULT_START.name);
+    notify((position ? t.startGateOffCampus : t.startGateNoLocation).replace('{gate}', gate));
+  }
+  return false;
 }
 
 const startSuggestions = document.getElementById('startSuggestions');
