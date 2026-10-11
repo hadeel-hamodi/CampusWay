@@ -1238,6 +1238,7 @@ function applyLanguagePreference(l, _dir, {persist = true} = {}){
   buildProfiles();
   if(currentProfile !== 'general') showAlert(currentProfile);
   buildLegend();
+  if(typeof refreshMarkerNames === 'function') refreshMarkerNames();
   buildFavouriteList();
   if(window.CampusUI) window.CampusUI.refresh();
   if(typeof refreshRouteSteps === 'function') refreshRouteSteps();
@@ -2795,6 +2796,25 @@ const map = L.map('map', {
   maxBoundsViscosity: 1.0
 }).setView(center, 16);
 
+// Screen readers: Leaflet makes every marker a focusable button but only gives it
+// a hover title, so the symbol inside (+, ▲, ≡, 🚬) or nothing at all was read out.
+// The marker's title becomes its accessible name, also after setIcon().
+const initMarkerIcon = L.Marker.prototype._initIcon;
+L.Marker.prototype._initIcon = function(){
+  initMarkerIcon.call(this);
+  if(this._icon && this.options.title) this._icon.setAttribute('aria-label', this.options.title);
+};
+
+function setMarkerName(marker, name){
+  if(!marker || !name) return;
+  marker.options.title = name;
+  const element = marker.getElement();
+  if(element){
+    element.title = name;
+    element.setAttribute('aria-label', name);
+  }
+}
+
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
    maxNativeZoom: 19,
   maxZoom: 23,
@@ -3037,7 +3057,7 @@ CAMPUS_DATA.buildings.forEach(b=>{
     iconAnchor:[15,15]
   });
 
-  const m = L.marker([b.lat,b.lng],{icon, title: b.name, alt: b.name}).addTo(map);
+  const m = L.marker([b.lat,b.lng],{icon, title: localizedBuildingName(b), alt: b.name}).addTo(map);
 
   m.buildingData = b;
 
@@ -3091,11 +3111,15 @@ CAMPUS_DATA.buildings.forEach(b=>{
 // Restrooms — blue, small
 const restroomMarkers = [];
 
+function restroomMarkerName(restroom){
+  return `${t.restroomLabel} — ${restroom.name}`;
+}
+
 CAMPUS_DATA.points.restrooms.slice(0,30).forEach((r, restroomIndex)=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:14px;height:14px;border-radius:50%;background:#0891B2;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
     iconSize:[14,14],iconAnchor:[7,7]});
-const marker = L.marker([r.lat,r.lng],{icon})
+const marker = L.marker([r.lat,r.lng],{icon, title:restroomMarkerName(r)})
   .bindPopup(() => `<b>🚻</b> ${r.name}
     <button class="building-popup-btn secondary" onclick="openRestroomReport(${restroomIndex})">⚠ ${t.reportProblem}</button>`);
 
@@ -3109,7 +3133,7 @@ CAMPUS_DATA.points.gates.forEach(g=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:18px;height:18px;border-radius:50%;background:#9CA3AF;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
-const marker = L.marker([g.lat,g.lng],{icon})
+const marker = L.marker([g.lat,g.lng],{icon, title:localizedBuildingNameByEnglishName(g.name)})
   .addTo(map)
   .bindPopup(() =>
   `<b>🚪</b> ${localizedBuildingNameByEnglishName(g.name)}`
@@ -3181,7 +3205,8 @@ function routeToFoodPlace(food){
 
 CAMPUS_DATA.points.food.forEach(f => {
   const marker = L.marker([f.lat, f.lng], {
-    icon: normalFoodIcon
+    icon: normalFoodIcon,
+    title: localizedPlaceName(f)
   })
     .addTo(map)
     .bindPopup(() => `
@@ -3275,7 +3300,8 @@ function routeToShopPlace(shop){
 
 CAMPUS_DATA.points.shops.forEach(s => {
   const marker = L.marker([s.lat, s.lng], {
-    icon: normalShopIcon
+    icon: normalShopIcon,
+    title: localizedPlaceName(s)
   })
     .addTo(map)
     .bindPopup(() => `
@@ -3374,6 +3400,7 @@ const smokingMarkers = [];
       return popup;
     });
 
+  marker.nameFor = smokingLabel;
   smokingMarkers.push(marker);
 });
 
@@ -3384,7 +3411,7 @@ CAMPUS_DATA.points.clinic.forEach(c=>{
   const icon = L.divIcon({className:'',
     html:`<div style="width:18px;height:18px;border-radius:50%;background:#EF4444;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6875rem;font-weight:900;">+</div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
-const marker = L.marker([c.lat,c.lng],{icon})
+const marker = L.marker([c.lat,c.lng],{icon, title:t.legendClinic})
   .addTo(map)
   .bindPopup(() => `<b>🏥</b> ${t.legendClinic}${placeHoursHtml(c.name)}
     <button class="building-popup-btn" onclick="map.closePopup();routeTo('${c.name.replace(/'/g,"\\'")}',${c.lat},${c.lng})">${t.navigateHere}</button>
@@ -3465,11 +3492,16 @@ function verticalIcon(v){
     html:`<div style="width:18px;height:18px;border-radius:4px;background:${bg};border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.625rem;font-weight:900;">${broken ? '✕' : isElevator ? '▲' : '≡'}</div>`,
     iconSize:[18,18],iconAnchor:[9,9]});
 }
+function verticalMarkerName(v){
+  if(v.type !== 'elevator') return t.legendStairs;
+  const broken = window.CampusStatus && CampusStatus.isElevatorOut('campus', v.statusId);
+  return broken ? `${t.legendElevator} — ${t.outOfService}` : t.legendElevator;
+}
 const verticalMarkers = [];
 vertical.forEach(v=>{
   const isElevator = v.type === 'elevator';
   if(isElevator) v.statusId = OUTDOOR_ELEVATOR_ID;
-  const marker = L.marker([v.lat,v.lng],{icon:verticalIcon(v)}).addTo(map)
+  const marker = L.marker([v.lat,v.lng],{icon:verticalIcon(v), title:verticalMarkerName(v)}).addTo(map)
     .bindPopup(() => {
       const broken = isElevator && window.CampusStatus &&
         CampusStatus.isElevatorOut('campus', v.statusId);
@@ -3479,7 +3511,10 @@ vertical.forEach(v=>{
   verticalMarkers.push({marker, v});
 });
 function refreshVerticalMarkers(){
-  verticalMarkers.forEach(({marker, v}) => marker.setIcon(verticalIcon(v)));
+  verticalMarkers.forEach(({marker, v}) => {
+    setMarkerName(marker, verticalMarkerName(v));
+    marker.setIcon(verticalIcon(v));
+  });
 }
 
 function buildLegend(){
@@ -4100,6 +4135,12 @@ async function rankNearbyRestSpaces(
 let restSpacePreviewRequestId = 0;
 let restSpacePreviewMarkers = [];
 
+// Named like the button that shows them (Quiet spaces, or Rest Spaces for Sensory & Wellbeing).
+function restSpaceMarkerName(building){
+  const label = document.getElementById('lbl-service-landmarks')?.textContent || t.serviceRestSpaces;
+  return `${label} · ${localizedBuildingName(building)}`;
+}
+
 function clearRestSpacePreview(){
   restSpacePreviewRequestId++;
 
@@ -4332,7 +4373,7 @@ row.append(description, actions);      popup.appendChild(row);    }
           iconSize: [44, 44],
           iconAnchor: [22, 22]
         }),
-        title: t.serviceRestSpaces,
+        title: restSpaceMarkerName(group[0].building),
         zIndexOffset: 500
       }
     );
@@ -4342,6 +4383,7 @@ row.append(description, actions);      popup.appendChild(row);    }
       maxWidth: 230
     });
     marker.addTo(map);
+    marker.nameFor = () => restSpaceMarkerName(group[0].building);
     restSpacePreviewMarkers.push(marker);
   }
 }
@@ -8753,6 +8795,7 @@ const roundedHeading = Number.isFinite(heading)
 if(!state.marker){
   state.marker = L.marker(point, {
     icon: outdoorPositionIcon(roundedHeading),
+    title: outdoorGuidanceText('Current position', 'מיקום נוכחי', 'الموقع الحالي', 'Текущая позиция'),
     zIndexOffset:1000
   }).addTo(map);
 
@@ -9754,7 +9797,7 @@ async function routeToOutdoorShelter(){
 const outdoorShelterMarker = L.marker(
   [OUTDOOR_SHELTER.lat, OUTDOOR_SHELTER.lng],
   {
-    title: 'Outdoor shelter',
+    title: outdoorShelterName(),
     icon: L.divIcon({
       className: 'outdoor-shelter-marker',
       html: '<span aria-hidden="true">🛡️</span>',
@@ -9794,6 +9837,22 @@ outdoorShelterMarker.bindPopup(() => {
   content.append(title, document.createElement('br'), button);
   return content;
 });
+
+// Marker names follow the language: Settings can change it without reloading the map.
+var markerNamesReady = true;
+function refreshMarkerNames(){
+  if(!markerNamesReady) return;
+  Object.values(buildingMarkers).forEach(marker => setMarkerName(marker, localizedBuildingName(marker.buildingData)));
+  restroomMarkers.forEach((marker, index) => setMarkerName(marker, restroomMarkerName(CAMPUS_DATA.points.restrooms[index])));
+  gateMarkers.forEach((marker, index) => setMarkerName(marker, localizedBuildingNameByEnglishName(CAMPUS_DATA.points.gates[index].name)));
+  foodMarkers.forEach(marker => setMarkerName(marker, localizedPlaceName(marker.foodData)));
+  shopMarkers.forEach(marker => setMarkerName(marker, localizedPlaceName(marker.shopData)));
+  clinicMarkers.forEach(marker => setMarkerName(marker, t.legendClinic));
+  smokingMarkers.forEach(marker => setMarkerName(marker, marker.nameFor()));
+  verticalMarkers.forEach(({marker, v}) => setMarkerName(marker, verticalMarkerName(v)));
+  setMarkerName(outdoorShelterMarker, outdoorShelterName());
+  restSpacePreviewMarkers.forEach(marker => setMarkerName(marker, marker.nameFor()));
+}
 
 function shelterBuildings(){
   return Object.entries(REPORT_BUILDING_NAMES).map(([key, name]) => {
