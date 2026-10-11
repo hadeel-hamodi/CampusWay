@@ -1530,10 +1530,17 @@ function saveScheduleEntries(){
 
 function scheduleTargetLabel(target){
   if(!target) return '';
-  const building = CAMPUS_DATA.buildings.find(item => item.name === target.buildingName);
-  const buildingLabel = building ? localizedBuildingName(building) : target.buildingName;
+
+  const building = CAMPUS_DATA.buildings.find(
+    item => item.name === target.buildingName
+  );
+
+  const buildingLabel = building
+    ? localizedBuildingName(building)
+    : target.buildingName;
+
   return target.kind === 'room'
-    ? `${target.label} — ${buildingLabel}`
+    ? `${t.room} ${target.label} · ${buildingLabel}`
     : buildingLabel;
 }
 
@@ -1640,10 +1647,45 @@ function showScheduleDestinationSuggestions(value){
     hideScheduleDestinationSuggestions();
     return;
   }
-  const matches = [...scheduleTargets.values()]
-    .filter(target => scheduleTargetMatches(target, query))
-    .sort((a, b) => scheduleTargetLabel(a).localeCompare(scheduleTargetLabel(b), undefined, {numeric:true}))
-    .slice(0, 7);
+const seen = new Set();
+
+const matches = [...scheduleTargets.values()]
+  .filter(target => scheduleTargetMatches(target, query))
+  .filter(target => {
+    const key = target.kind === 'room'
+      ? `room:${target.buildingKey}:${String(target.label)
+          .trim()
+          .toLowerCase()}`
+      : target.id;
+
+    if(seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  })
+.sort((a, b) => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const rank = target => {
+    const label = String(
+      target.kind === 'room'
+        ? target.label
+        : scheduleTargetLabel(target)
+    ).trim().toLowerCase();
+
+    if(label === normalizedQuery) return 0;
+    if(label.startsWith(normalizedQuery)) return 1;
+    return 2;
+  };
+
+  return rank(a) - rank(b) ||
+    scheduleTargetLabel(a).localeCompare(
+      scheduleTargetLabel(b),
+      undefined,
+      {numeric: true}
+    );
+})
+  .slice(0, 7);
   box.innerHTML = '';
   matches.forEach(target => {
     const option = document.createElement('button');
@@ -1770,7 +1812,22 @@ async function startReminderRoute(){
   if(!entry?.target) return;
   const target = entry.target;
   if(target.kind === 'room'){
-    await pickIndoorDestination(target.nodeId, target.label, target.buildingKey, target.label);
+    const building = CAMPUS_DATA.buildings.find(
+  item => item.name === target.buildingName
+);
+
+const buildingLabel = building
+  ? localizedBuildingName(building)
+  : target.buildingName;
+
+const roomLabel = `${t.room} ${String(target.label).replace(/^room\s+/i, '')}`;
+
+await pickIndoorDestination(
+  target.nodeId,
+  target.label,
+  target.buildingKey,
+  `${roomLabel} · ${buildingLabel}`
+);
   }else{
     await pickDestination(target.name, target.lat, target.lng);
   }
