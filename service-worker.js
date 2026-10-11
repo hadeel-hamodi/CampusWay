@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v67-speech-voices';
+const CACHE_NAME = 'campusway-v68-fresh-maps';
 
 const APP_FILES = [
 './',
@@ -131,9 +131,11 @@ self.addEventListener('fetch', event => {
       .catch(() => caches.match(event.request, {ignoreSearch}));
   }
 
-  // Live campus status: try the network first so new outages and closures
-  // show up at once; use the saved copy when offline.
-  if(requestUrl.pathname.endsWith('/app/data/campus-status.json')){
+  // Live campus status, indoor maps and floor plans: try the network first
+  // so new outages and map fixes show up at once (a cached map would keep
+  // offering rooms the current map has moved or reconnected); use the saved
+  // copy when offline.
+  if(/\.(json|svg)$/i.test(requestUrl.pathname)){
     event.respondWith(
       networkFirst({ignoreSearch: true})
     );
