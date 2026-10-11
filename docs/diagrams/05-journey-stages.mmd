@@ -6,14 +6,14 @@ stateDiagram-v2
     Planning --> Outdoor: start is outdoors
 
     Origin --> Outdoor: reached exit,<br/>"Continue outdoors"
-    Origin --> SharedTransfer: Rabin ↔ Terrace<br/>shared stairs / elevator
+    Origin --> SharedTransfer: Rabin ↔ Terrace<br/>shared elevator
 
     Outdoor --> Intermediate: Main → Terrace chain<br/>(pass through Rabin)
     Outdoor --> Destination: "Continue indoors"
     Outdoor --> [*]: destination is a building<br/>or outdoor place
 
     Intermediate --> SharedTransfer
-    SharedTransfer --> Destination: ride / walk into<br/>next building
+    SharedTransfer --> Destination: elevator ride into<br/>next building
 
     SameBuilding --> Arrived
     Destination --> Arrived

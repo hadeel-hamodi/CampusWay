@@ -24,6 +24,7 @@ Administrators can also run the same suite from the admin screen: **Tests → Ru
 
 | Date | Node.js | Tests | Passed | Failed | Duration |
 |---|---|---|---|---|---|
+| 2026-10-11 (`main` at `1558574`, 39 files) | 24.20.0 | 542 | 542 | 0 | about 20 s |
 | 2026-10-11 (`main` at `5b2d9d5`, 39 files) | 24.20.0 | 539 | 539 | 0 | about 18 s |
 | 2026-10-09 (admin screen branch) | 24.20.0 | 320 | 320 | 0 | about 7.5 s |
 | 2026-10-07 (commit `521863b`) | 22.22.0 | 171 | 171 | 0 | about 1.7 s |
@@ -47,7 +48,7 @@ Administrators can also run the same suite from the admin screen: **Tests → Ru
 | `admin-server.test.cjs` | 17 | The PC server: first administrator, hashed passwords, sessions and roles, reports and usage counts, saving the status with a backup, what it refuses to serve (database, server code, other host names), the admin page's security policy, markup removal, and the **Tests** page runner |
 | `admin-status-tools.test.cjs` | 8 | Status-file validation, roles, active and scheduled entries, data health (the Terrace step-free gap) and the impact of outages and closures |
 | `arabic-building-labels.test.cjs` | 1 | Arabic building names with the Hebrew name in brackets |
-| `building-journeys.test.cjs` | 177 | Generated for every building and profile: same-floor and cross-floor routes in all six buildings, complete building-to-building journeys, the Terrace ↔ Rabin shared elevator, the Main ↔ Rabin bridge, entrance choice that includes the indoor leg, elevators out of service, no invented straight-line route, both gates reaching every mapped building |
+| `building-journeys.test.cjs` | 179 | Generated for every building and profile: same-floor and cross-floor routes in all six buildings, complete building-to-building journeys, the Terrace ↔ Rabin shared elevator and journeys around it while it is out of service, the Main ↔ Rabin bridge, entrance choice that includes the indoor leg, elevators out of service, no invented straight-line route, both gates reaching every mapped building |
 | `campus-reachability.test.cjs` | 5 | Every building from both gates (General and Mobility); every entrance on the path network; indoor destinations reachable from an entrance; dead-end routes answered quickly |
 | `campus-status-admin.test.cjs` | 8 | Name corrections and announcements from the status file; reports and counts go to the PC server, to the cloud inbox, or wait on the device; markup removed from names |
 | `cloud-inbox.test.cjs` | 10 | Allowed sites, rate limits without storing addresses, daily counts, the sync key, clean-up, the round trip with the PC server without losing or double counting, storage and daily caps |
@@ -56,7 +57,7 @@ Administrators can also run the same suite from the admin screen: **Tests → Ru
 | `heading-tracker.test.cjs` | 28 | Compass calibration; relative vs iOS headings; invalid, stale and oscillating readings; reverse detection; 0°/360° wrap-around; posture and rotation changes |
 | `journey-transition.test.cjs` | 10 | Resuming Main → Rabin after a reload; room destinations wait for arrival before indoor navigation; rebuilding the outdoor leg from stored contexts; persistent preferences; the user continues outdoors after the origin leg; *New route from here* and *Done* after arriving indoors |
 | `live-status-publishing.test.cjs` | 7 | Only the PC can publish the live status; retry when the inbox is down; the public site shows what was published without a commit; the status file as the fallback; the PC's file when the app is opened from the PC server; markup removed |
-| `live-status-routing.test.cjs` | 13 | Outage and closure dates; elevator number matching; the user's own reports (24 h) and rest-space reports (2 h); the indoor page, the campus planner and the outdoor router obeying outages, closures, no-go zones and the outdoor elevator |
+| `live-status-routing.test.cjs` | 14 | Outage and closure dates; elevator number matching; the user's own reports (24 h) and rest-space reports (2 h); the indoor page, the campus planner and the outdoor router obeying outages, closures, no-go zones and the outdoor elevator; the indoor page not offering the shared elevator while either building lists it out |
 | `location-sharing.test.cjs` | 3 | *Share my location* from the sidebar; links accepted only inside the University of Haifa area; a one-time position snapshot |
 | `map-data-integrity.test.cjs` | 7 | Graph building keys, node types and positions; unique ids and same-floor connections; campus entrances and places linked to real nodes; everything on campus; a floor plan for every mapped floor |
 | `map-marker-names.test.cjs` | 3 | Every map marker has a name that screen readers announce, kept after icon changes and refreshed when the language changes |
@@ -82,7 +83,7 @@ Administrators can also run the same suite from the admin screen: **Tests → Ru
 | `step-integration.test.cjs` | 41 | End-to-end indoor navigation: calibration gating, step animation queue, arrival confirmed by the user in Phone Sensors mode, tap-to-confirm when motion permission is refused or no readings arrive, stairs confirmation, mode switching, background and rotation, wheelchair checkpoints, Spatial elevator guidance, shared-elevator ride restore, reject and exit, Auto mode floor skipping |
 | `student-graph-source.test.cjs` | 9 | The campus page loads all six JSON graphs; the pages and the service worker use the same graph files; no stale suggestions; Main floor 600 updates; Rabin–Terrace transfer nodes; Student House graph connectivity and room search |
 | `wheelchair-navigation.test.cjs` | 6 | Checkpoint simplification, turns and elevator boundaries, multi-floor rides, noise tolerance, going back, distance excluding vertical travel |
-| **Total (39 files)** | **539** | |
+| **Total (39 files)** | **542** | |
 
 ## 5. Not covered by automated tests
 

@@ -49,7 +49,7 @@
 | **Schedule reminders** | Optional class timetable in Settings. While CampusWay is open, a reminder appears up to 15 minutes before a saved class and starts the route to it. |
 | **Sensory & Wellbeing Support** | The profile for people who need a quiet break or feel overwhelmed (formerly *Mental Health Support*; internal id `mental`). It prefers quieter paths and suggests rest spaces. |
 | **Service worker** | Background script that caches the app for offline use (`service-worker.js`). |
-| **Shared transfer** | The direct indoor connection between Rabin floor 5 and Terrace floor 4, by stairs or the shared elevator. |
+| **Shared transfer** | The direct indoor connection between Rabin floor 5 and Terrace floor 4 through the shared elevator. Not used while that elevator is out of service. |
 | **Shelter** | A protected space (ממ"ד / מקלט), mapped as `shelter` nodes and used by Nearest shelter. |
 | **Snapping** | Moving a start or end point to the nearest node of the path network. |
 | **Step-free route** | A route with no stairs; required by the Mobility profile. |

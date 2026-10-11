@@ -1,6 +1,6 @@
 # Screenshots
 
-Screenshots of CampusWay taken on 11 October 2026 from branch `Fix-docs-data-and-servers` (based on `main` at `5b2d9d5`). They are used throughout the documentation and can be reused in reports and presentations.
+Screenshots of CampusWay taken on 11 October 2026 from branch `Fix-docs-data-and-servers` (based on `main` at `5b2d9d5`). The five phone screenshots were retaken the same day from `main` at `1558574`, with the resizable phone panel. They are used throughout the documentation and can be reused in reports and presentations.
 
 **How they were taken:** headless Chrome, desktop at 1440 × 900 and phone at 390 × 844 (2× pixel density), with the service worker disabled. The app was served by `server/campusway-server.js` with a throwaway database, and the simulated GPS position was on campus. The OpenStreetMap street tiles were online, so the campus map shows the street map under the building outlines. Indoor journeys marked *demo* used `?demo=1`, which simulates walking.
 
@@ -43,8 +43,8 @@ Screenshots of CampusWay taken on 11 October 2026 from branch `Fix-docs-data-and
 
 | File | Shows |
 |---|---|
-| `mobile-01-home.png` | Campus screen on a phone |
-| `mobile-02-route.png` | Route on a phone: map with the direction strip |
+| `mobile-01-home.png` | Campus screen on a phone: the map on top and the route planner in the panel below it, with the blue resize handle |
+| `mobile-02-route.png` | Route Student House → Main Building on a phone: map with the direction strip, and the route card in the half-open panel |
 | `mobile-03-route-directions.png` | Route on a phone with the directions list opened from the direction strip |
 | `mobile-04-indoor.png` | Indoor route in Main Building (room 705 → 716, Spatial profile) on a phone, ready to start |
 | `mobile-05-indoor-navigating.png` | Auto navigation (demo) in progress on a phone |

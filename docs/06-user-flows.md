@@ -82,14 +82,14 @@ stateDiagram-v2
     Planning --> Outdoor: start is outdoors
 
     Origin --> Outdoor: reached exit,<br/>"Continue outdoors"
-    Origin --> SharedTransfer: Rabin ↔ Terrace<br/>shared stairs / elevator
+    Origin --> SharedTransfer: Rabin ↔ Terrace<br/>shared elevator
 
     Outdoor --> Intermediate: Main → Terrace chain<br/>(pass through Rabin)
     Outdoor --> Destination: "Continue indoors"
     Outdoor --> [*]: destination is a building<br/>or outdoor place
 
     Intermediate --> SharedTransfer
-    SharedTransfer --> Destination: ride / walk into<br/>next building
+    SharedTransfer --> Destination: elevator ride into<br/>next building
 
     SameBuilding --> Arrived
     Destination --> Arrived
@@ -105,7 +105,7 @@ stateDiagram-v2
 | Room → building | indoor (*origin*) → outdoor |
 | Room → room, different buildings | indoor (*origin*) → outdoor → indoor (*destination*) |
 | Room → room, same building | indoor (*same-building*) |
-| Rabin ↔ Terrace | indoor → shared stairs or elevator → indoor (no outdoor leg) |
+| Rabin ↔ Terrace | indoor → shared elevator → indoor (no outdoor leg; outdoors while the elevator is out of service) |
 | Main → Terrace | Main indoor → bridge → Rabin (*intermediate*) → shared elevator → Terrace (*destination*) |
 
 ## 4. Indoor navigation modes
@@ -176,14 +176,16 @@ The arrival dialog never moves on by itself. At the destination it offers **Done
 
 ## 5. Shared-elevator crossing (Rabin ↔ Terrace)
 
-Rabin floor 5 and Terrace floor 4 share an elevator and a stair connection. A step-free route between them uses the elevator:
+Rabin floor 5 and Terrace floor 4 share an elevator, which journeys between the two buildings use for every profile:
 
 1. The route in the first building ends at the shared elevator. The banner shows **Enter the shared elevator** with the button **✓ I entered the elevator**.
 2. CampusWay saves the pending ride (`campusway.pendingSharedElevatorRide`) and opens the second building's floor plan.
 3. The second page restores the ride and shows **Stay in the elevator until Floor X**, with **✓ I exited on Floor X**.
 4. Navigation continues in the second building in the same mode.
 
-On the way from Main Building to Terrace, the journey passes through Rabin: Main floor 600 → outdoor bridge → Rabin floor 7 entrance → Rabin floor 5 (the shared elevator for step-free routes, otherwise the stairs connection) → Terrace floor 4. Trips that leave Terrace through Rabin use the same *intermediate* stage in the other direction.
+On the way from Main Building to Terrace, the journey passes through Rabin: Main floor 600 → outdoor bridge → Rabin floor 7 entrance → Rabin floor 5 (the shared elevator) → Terrace floor 4. Trips that leave Terrace through Rabin use the same *intermediate* stage in the other direction.
+
+While the shared elevator is out of service in either building (in the live status, or reported by the user in the last 24 hours), no journey uses it: trips between Rabin and Terrace go outdoors between the two buildings, and Main ↔ Terrace takes the normal outdoor route. The indoor page also checks this when the first leg ends at the elevator, so a journey planned before the outage does not send the user into it.
 
 ## 6. Nearest shelter
 
