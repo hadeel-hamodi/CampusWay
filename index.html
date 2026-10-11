@@ -13722,8 +13722,28 @@ handle.addEventListener('click', function () {
   preferMap = false;
 });
 
+let beforeSearchState = null;
+
 sidebar.addEventListener('focusin', function (event) {
-  if (event.target.closest('.planner')) preferMap = false;
+  if (!phone.matches || !event.target.matches('.planner input')) return;
+
+  preferMap = false;
+
+  if (beforeSearchState === null) beforeSearchState = state;
+});
+
+sidebar.addEventListener('focusout', function () {
+  setTimeout(function () {
+    if (sidebar.querySelector('.planner').contains(document.activeElement)) return;
+
+    if (beforeSearchState !== null) {
+      const previousState = beforeSearchState;
+      beforeSearchState = null;
+      snapTo(previousState);
+    }
+
+    syncViewport();
+  }, 350);
 });
 
   const hasRoute = () => routeCard.classList.contains('show');
@@ -13742,13 +13762,28 @@ sidebar.addEventListener('focusin', function (event) {
   }
 
   // Keeps the layout inside the visible area when the phone keyboard opens.
-  function syncViewport() {
-    const root = document.documentElement;
-    if (!phone.matches) { root.style.removeProperty('--cw-viewport-h'); return; }
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    root.style.setProperty('--cw-viewport-h', Math.round(h) + 'px');
-    refreshMap();
+function syncViewport() {
+  const root = document.documentElement;
+
+  if (!phone.matches) {
+    root.style.removeProperty('--cw-viewport-h');
+    return;
   }
+
+  const viewport = window.visualViewport;
+
+  // Don't resize the layout during browser pinch zoom.
+  if (viewport && Math.abs(viewport.scale - 1) > 0.05) return;
+
+  // Keep the existing height while the search keyboard is open.
+  if (sidebar.querySelector('.planner').contains(document.activeElement)) {
+    return;
+  }
+
+  const h = viewport ? viewport.height : window.innerHeight;
+  root.style.setProperty('--cw-viewport-h', Math.round(h) + 'px');
+  refreshMap();
+}
 
   function snapTo(i) {
     if (!phone.matches) return;
