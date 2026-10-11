@@ -13045,8 +13045,10 @@ if(includeOutdoor && !directIndoorTransfer){
 if(intermediateLeg && intermediateAfterOutdoor){
   legs.push(intermediateLeg);
 }
-  if(destination?.buildingKey && destination?.startNodeId && destination?.destinationNodeId && destination.startNodeId !== destination.destinationNodeId){
-    legs.push({kind:'indoor', building:destination.buildingKey, from:destination.startNodeId, to:destination.destinationNodeId});
+  // A service destination (nearest restroom, quiet space…) has a type instead of a room node.
+  const destinationTarget = destination?.destinationNodeId || destination?.destinationType;
+  if(destination?.buildingKey && destination?.startNodeId && destinationTarget && destination.startNodeId !== destinationTarget){
+    legs.push({kind:'indoor', building:destination.buildingKey, from:destination.startNodeId, to:destinationTarget});
   }
 
   return {version:1, currentLeg:0, legs};
