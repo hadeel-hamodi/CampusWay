@@ -129,14 +129,19 @@ test('Enter keeps duplicate room numbers as explicit building choices', () => {
 });
 
 test('Starting From hides a room node that has no mapped connection', () => {
-  const h = searchHarness();
-  const result = vm.runInContext("getStartMatches('624')", h.context);
+  const graph = {floors:{floor600:{nodes:[
+    {id:'isolated',label:'9998',type:'room'},
+    {id:'connected',label:'9998/1',type:'room'},
+    {id:'corridor',type:'corridor'}
+  ],connections:[{from:'connected',to:'corridor'}]}}};
+  const h = searchHarness({MAIN_GRAPH:graph});
+  const result = vm.runInContext("getStartMatches('9998')", h.context);
   assert.equal(
-    result.roomMatches.some(match => String(match.node.label) === '624'),
+    result.roomMatches.some(match => String(match.node.label) === '9998'),
     false
   );
   assert.equal(
-    result.roomMatches.some(match => String(match.node.label) === '624/1'),
+    result.roomMatches.some(match => String(match.node.label) === '9998/1'),
     true
   );
 });

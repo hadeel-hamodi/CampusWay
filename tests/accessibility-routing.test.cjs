@@ -40,7 +40,7 @@ test('display and audio controls live in Settings and share audio with indoor na
   assert.doesNotMatch(topbar, /id="contrastBtn"|id="audioBtn"/);
   assert.match(settings, /id="contrastBtn"[^>]+role="switch"/);
   assert.match(settings, /id="audioBtn"[^>]+role="switch"/);
-  assert.match(navigation, /SHARED_AUDIO_KEY='campusway\.audioEnabled'/);
+  assert.match(navigation, /SHARED_AUDIO_KEY\s*=\s*'campusway\.audioEnabled'/);
   assert.match(navigation, /sharedVoice!==null[\s\S]+savedVoice!==null[\s\S]+selectedRoutingProfile\(\)==='visual'/);
 });
 
@@ -215,6 +215,7 @@ function indoorHarness(graph, accessible = true, profile = 'general') {
     function localizedInstruction(en){return en}
     function resolveSelection(value){return value}
     function selectionLabel(value){return nodeById(value)?.label||value}
+    function indoorEndpointLabel(node){return node?.label||''}
     function floorLabel(value){return value}
     function localizedFloor(value){return value}
     function localizedNodeLabel(value){return value}
@@ -415,7 +416,7 @@ test('Mobility outdoor failure does not draw the unverified fallback path', asyn
     clearInterval() {}
   });
   vm.runInContext(between(index, 'async function routeTo(', 'function closeRoute(){'), context,);
-  await vm.runInContext("routeTo('Main Building',3,4)", context);
+  await vm.runInContext("routeTo('Outdoor destination',3,4)", context);
   assert.equal(calls.length, 1);
   assert.equal(calls[0][4].avoidSteps, true);
   assert.match(element('routeTitle').textContent, /No step-free/);

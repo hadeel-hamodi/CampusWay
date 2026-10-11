@@ -39,6 +39,13 @@ test('from both gates and every building, the nearest shelter is a real shelter 
   for(const start of starts(h)){
     const result = await plan(h, start);
     assert.ok(result, `no shelter from ${start.label}`);
+    if(result.outdoorOnly){
+      const target = h.run('OUTDOOR_SHELTER');
+      const outdoor = await h.context.CampusOutdoorRouting.route(start.lat,start.lng,target.lat,target.lng);
+      assert.ok(outdoor && Number.isFinite(outdoor.distance), start.label);
+      assert.ok(Math.abs(result.meters-outdoor.distance)<0.01, start.label);
+      continue;
+    }
     assert.equal(result.shelter.type, 'shelter', start.label);
     assert.ok(result.indoorGuided, `${start.label}: the indoor part should be guided`);
     assert.ok(Number.isFinite(result.seconds) && result.seconds > 0, start.label);
@@ -55,6 +62,12 @@ test('Mobility: every shelter route is step-free outdoors and indoors, or the us
     const result = await plan(h, start);
     if(!result){ noStepFreeShelter.push(start.label); continue; }
     assert.ok(result.indoorGuided, `${start.label}: a Mobility shelter must have a mapped step-free path`);
+    if(result.outdoorOnly){
+      const target = h.run('OUTDOOR_SHELTER');
+      const outdoor = await routing.route(start.lat,start.lng,target.lat,target.lng,{avoidSteps:true});
+      assert.ok(outdoor && outdoor.edges.every(edge=>edge.type!=='steps'), start.label);
+      continue;
+    }
     const nodes = pathTypes(h, result, true);
     assert.ok(nodes, start.label);
     assert.ok(nodes.every(node => node.type !== 'stairs'), `${start.label}: the indoor path uses stairs`);
@@ -64,7 +77,7 @@ test('Mobility: every shelter route is step-free outdoors and indoors, or the us
   }
   // Known gaps in the mapped data today. A new place without a step-free
   // shelter route makes this test fail; fixing the map shortens the list.
-  assert.deepEqual(noStepFreeShelter.sort(), ['Multi-Purpose Building', 'Welfare and Health Building']);
+  assert.deepEqual(noStepFreeShelter.sort(), ['Welfare and Health Building']);
 });
 
 test('the gates always have a step-free shelter route', async () => {
@@ -123,6 +136,8 @@ test('Mobility: an elevator out of service is never part of the shelter route', 
 
 test('the shelter button starts a guided emergency route to the chosen shelter', async () => {
   const h = await harness();
+  const building = h.run("CAMPUS_DATA.buildings.find(item=>item.name==='Student House')");
+  h.startAt({lat:building.lat,lng:building.lng,label:building.name});
   await h.run('startEmergencyShelterRoute()');
   assert.equal(h.calls.routeTo.length, 1);
   const call = h.calls.routeTo[0];
@@ -138,17 +153,26 @@ test('the shelter button starts a guided emergency route to the chosen shelter',
 
 test('when no shelter can be reached, the user is told and no route is drawn', async () => {
   const h = await harness({profile:'mobility'});
-  const welfare = h.run("CAMPUS_DATA.buildings.find(item => item.name === 'Welfare and Health Building')");
-  h.startAt({lat:welfare.lat, lng:welfare.lng, label:'Welfare and Health Building'});
+  h.context.CampusOutdoorRouting.route = async () => null;
+  ['MAIN_GRAPH', 'RABIN_GRAPH', 'STUDENT_GRAPH', 'MADRIGA_GRAPH', 'EDUCATION_GRAPH', 'MULTI_PURPOSE_GRAPH'].forEach(name => { h.context[name] = {floors:{}}; });
   await h.run('startEmergencyShelterRoute()');
   assert.deepEqual(h.calls.notify, [h.run('t.emergencyNoShelter')]);
   assert.equal(h.calls.routeTo.length, 0);
+});
 
+test('the shelter button can route to the outdoor shelter without an indoor handoff', async () => {
   const empty = await harness();
   ['MAIN_GRAPH', 'RABIN_GRAPH', 'STUDENT_GRAPH', 'MADRIGA_GRAPH', 'EDUCATION_GRAPH', 'MULTI_PURPOSE_GRAPH'].forEach(name => { empty.context[name] = {floors:{}}; });
   await empty.run('startEmergencyShelterRoute()');
-  assert.deepEqual(empty.calls.notify, [empty.run('t.emergencyNoShelter')]);
-  assert.equal(empty.calls.routeTo.length, 0);
+  assert.deepEqual(empty.calls.notify, []);
+  assert.equal(empty.calls.routeTo.length, 1);
+  const target=empty.run('OUTDOOR_SHELTER');
+  const call=empty.calls.routeTo[0];
+  assert.equal(call.lat,target.lat);
+  assert.equal(call.lng,target.lng);
+  assert.equal(call.options.emergency,true);
+  assert.equal(call.options.keepIndoorContext,false);
+  assert.equal(empty.sessionStorage.getItem('indoorContext'),null);
 });
 
 test('if the path network cannot load (offline before first use), a shelter is still found', async () => {

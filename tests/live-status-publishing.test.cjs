@@ -56,6 +56,8 @@ test('the inbox keeps the live status: only the PC can publish, everyone can rea
 // ── The PC publishes on save ──
 
 test('saving in the admin publishes the live status; when the inbox is down it retries on the next fetch', async t => {
+  // Publishing does not depend on the host having an accessible LAN adapter.
+  t.mock.method(os, 'networkInterfaces', () => ({}));
   const cloud = inbox();
   let down = false;
   const cloudServer = http.createServer(async (req, res) => {

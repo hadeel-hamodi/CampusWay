@@ -138,10 +138,11 @@ function coldReloadHarness(hasIndoorDestination) {
         lng: destination.lng
       }]
     },
+    outdoorGuidance:{finished:false},
     routeTo: async (...args) => {
       calls.push(args);
       const button = element('continueIndoorBtn');
-      button.style.display = 'block';
+      button.style.display = 'none';
       button.dataset.destinationBuilding = 'rabin';
     }
   });
@@ -176,7 +177,7 @@ test('cold reload resumes Main-to-Rabin outdoors from the saved Main exit', asyn
   assert.equal(h.session.values.has('outdoorJourneyContext'), true);
 });
 
-test('room destination resumes outdoors and then offers Rabin indoor navigation', async () => {
+test('room destination resumes outdoors and gates Rabin indoor navigation until arrival', async () => {
   const h = coldReloadHarness(true);
 
   await vm.runInContext('handleCampusPageShow()', h.context);
@@ -184,7 +185,8 @@ test('room destination resumes outdoors and then offers Rabin indoor navigation'
   const button = h.element('continueIndoorBtn');
   assert.equal(h.calls.length, 1);
   assert.equal(h.calls[0][3].keepIndoorContext, true);
-  assert.equal(button.style.display, 'block');
+  assert.equal(button.style.display, 'none');
+  assert.equal(button.dataset.gated, '1');
   assert.equal(button.dataset.stage, 'destination');
   assert.equal(button.dataset.building, 'rabin');
   assert.equal(button.dataset.destinationBuilding, 'rabin');
@@ -285,6 +287,10 @@ test('finishing the origin indoor leg waits for the user to continue outdoors', 
   let backed = false;
 
   const context = vm.createContext({
+    indoorDemoMode:false,
+    indoorVoiceOn:false,
+    currentGuidanceText(){return "";},
+    isSharedElevatorTransferEnd(){return false;},
     sessionStorage: session.api,
     window: {
       location: {
@@ -303,6 +309,7 @@ test('finishing the origin indoor leg waits for the user to continue outdoors', 
       timers.push({fn, delay});
       return timers.length;
     },
+    document:{body:{classList:{contains(){return false;}}}},
     $: element,
     localizedInstruction: english => english,
     localizedFloor: floor => floor,
@@ -331,7 +338,7 @@ test('finishing the origin indoor leg waits for the user to continue outdoors', 
   vm.runInContext('completeNavigation()', context);
 
   assert.equal(session.values.get('originIndoorComplete'), 'true');
-  assert.equal(session.values.get('journeyStage'), 'destination');
+  assert.equal(session.values.get('journeyStage'), 'origin');
     // The completion dialog lets the person choose when to leave the building.
   assert.equal(timers.length, 0);
   assert.equal(replaced, null);
@@ -345,6 +352,7 @@ test('finishing the origin indoor leg waits for the user to continue outdoors', 
     'outdoor'
   );
   assert.equal(replaced, '../index.html?resumeJourney=1');
+  assert.equal(session.values.get('journeyStage'), 'destination');
   assert.equal(backed, false);
 });
 
@@ -356,6 +364,7 @@ test('New route from here returns to the campus planner with the arrived node', 
   });
   let replaced = null;
   const context = vm.createContext({
+    indoorDemoMode:false,
     sessionStorage: session.api,
     BUILDING: 'rabin',
     routeNodes: [{id: 'floor7_n42', floor: 'floor7', label: '7001'}],
@@ -387,6 +396,7 @@ test('Done returns to the campus map and clears completed journey state', () => 
   });
   let replaced = null;
   const context = vm.createContext({
+    indoorDemoMode:false,
     sessionStorage: session.api,
     window: {location: {replace(url) { replaced = url; }}},
     console: {warn() {}}

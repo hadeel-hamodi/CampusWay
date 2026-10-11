@@ -26,14 +26,16 @@ test('schedule reminders are an optional Settings-only feature with translated m
   assert.match(index, /id="scheduleReminder"[^>]+role="alertdialog"/);
   assert.match(index, /id="scheduleDestination"[^>]+role="combobox"/);
   assert.match(index, /id="scheduleDestinationSuggestions"[^>]+role="listbox"/);
-  assert.match(index, /id="scheduleTime"[^>]+aria-describedby="scheduleTimeHint"/);
-  assert.match(index, /id="scheduleTimeHint">Use 24-hour time, for example 09:30/);
+  assert.match(index, /<label[^>]*>\s*<span id="scheduleTimeLabel">Time<\/span>\s*<input id="scheduleTime"/);
+  assert.match(index, /id="scheduleTime"[^>]+type="time"[^>]+required/);
+
   assert.match(index, /function showScheduleDestinationSuggestions\(value\)/);
   assert.match(index, /\.slice\(0, 7\)/);
   for(const label of [
     'Schedule reminders', 'תזכורות מערכת שעות', 'تذكيرات الجدول', 'Напоминания о занятиях'
   ]) assert.ok(index.includes(label), label);
-  assert.match(serviceWorker, /campusway-v68-fresh-maps/);
+  assert.match(serviceWorker, /const CACHE_NAME\s*=\s*['"]campusway-/);
+  assert.match(serviceWorker, /['"](?:\.\/)?index\.html['"]/);
 });
 
 test('the outdoor route card keeps directions focused and does not duplicate a route sharing control', () => {

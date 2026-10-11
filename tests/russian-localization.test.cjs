@@ -137,7 +137,7 @@ function parseCall(source, start, name) {
 
 test('main setup and Settings expose complete Russian translations in LTR', () => {
   assert.match(index, /pickLang\('ru','ltr'\)[\s\S]*?>[\s\S]*?Русский/);
-  assert.match(index, /changeSettingsLanguage\('ru','ltr'\)/);
+  assert.match(index, /chooseSettingsLanguage\('ru','ltr'\)/);
   assert.match(index, /LANGUAGE_IDS\s*=\s*new Set\(\['en','he','ar','ru'\]\)/);
 
   const english = mainTranslations('en');
@@ -241,7 +241,7 @@ test('indoor Russian dictionaries match English and every dynamic instruction ha
   assert.ok(count > 150, 'expected all indoor dynamic guidance calls to be checked');
   assert.match(navigation, /const rtl=indoorLang==='ar'\|\|indoorLang==='he'/);
   assert.match(navigation, /const arrow=\(indoorLang==='ar'\|\|indoorLang==='he'\) \? '←' : '→'/);
-  assert.match(navigation, /indoorLang==='ru'\?'ru-RU'/);
+  assert.match(navigation, /indoorLang\s*===\s*'ru'\s*\?\s*'ru-RU'/);
 });
 
 test('four language choices fit the UI and the new release refreshes cached files', () => {

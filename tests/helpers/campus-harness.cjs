@@ -49,6 +49,13 @@ function campusHarness(options = {}){
   const context = vm.createContext({
     console:{log(){}, warn(){}, error(){}},
     URL, URLSearchParams, Promise, setTimeout, clearTimeout,
+    // Map rendering is mocked; routes still use the real campus graph.
+    L:{
+      divIcon(options){return options;},
+      marker(){return {addTo(){return this;},bindPopup(){return this;},openPopup(){return this;}};},
+      circleMarker(){return this.marker();}
+    },
+    map:{removeLayer(){}},
     // options.clock = {now: <ms>} sets "now" for the app code; tests can move it.
     Date: options.clock ? class extends Date {
       constructor(...args){ super(...(args.length ? args : [options.clock.now])); }

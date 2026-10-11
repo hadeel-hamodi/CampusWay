@@ -75,8 +75,13 @@ window.clearTimeout = clearTimeoutMock;
   if(testPage){
     run([...tester.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n'));
   }else{
+    run(between(nav,'const ORDER = [','const FLOOR_PLAN_FLOORS='));
     run(between(nav,'let routePath=[];',"const svg=$('mapSvg');"));
     run(`let BUILDING='main'; let GRAPH={floors:{}};
+      let indoorDemoMode=false, indoorVoiceOn=false;
+      function currentGuidanceText(){return $('instruction').textContent;}
+      function indoorEndpointLabel(node){return node?.label || '';}
+      function isSharedElevatorTransferEnd(){return false;}
       function localizedInstruction(en){return en;} function it(key){return key;}
       function drawBaseMap(){} function floorButtons(){} function followNode(){}
       function syncMobileIndoorGuide(){}
@@ -284,11 +289,12 @@ test('Phone Sensors exit confirmation on the origin leg hands the journey back o
   assert.match(h.element('sensorConfirmBtn').textContent,/I reached the exit/);
   await h.run("$('sensorConfirmBtn').onclick()");
   assert.equal(h.run("sessionStorage.getItem('originIndoorComplete')"),'true');
-  assert.equal(h.run("sessionStorage.getItem('journeyStage')"),'destination');
+  assert.equal(h.run("sessionStorage.getItem('journeyStage')"),'origin');
   // Arrival waits for the user to choose the next journey leg.
   assert.equal(h.run('arrivalNextStep.kind'),'outdoor');
   assert.equal(h.run('window.replacedWith'),undefined);
   h.run('arrivalNextStep.run()');
+  assert.equal(h.run("sessionStorage.getItem('journeyStage')"),'destination');
   assert.equal(h.run('window.replacedWith'),'../index.html?resumeJourney=1');});
 
 test('endpoint pause and automatic recalibration facing start allows backtracking',async()=>{
@@ -906,7 +912,12 @@ test('auto mode rides straight to the final floor without showing pass-through f
   ]);
   h.run("setNavigationMode('auto')");
   await h.run('startNavigation()');
-  h.run('advanceAutoAlongRoute(1000)');
+  h.run('this.autoTestClock=0; Date.now=()=>autoTestClock; advanceAutoAlongRoute(1000)');
+  assert.equal(h.run('progressIndex'),1, 'the elevator ride waits before changing floors');
+  assert.equal(h.run('activeFloor'),'floor500');
+  h.run('autoTestClock=4999; advanceAutoAlongRoute(0.001)');
+  assert.equal(h.run('progressIndex'),1, 'the two-floor ride has not finished yet');
+  h.run('autoTestClock=5000; advanceAutoAlongRoute(0.001)');
   assert.equal(h.run('progressIndex'),3);
   assert.equal(h.run('activeFloor'),'floor700');
   assert.match(h.element('instruction').textContent,/Take the elevator to Floor floor700/);

@@ -15,8 +15,8 @@ const KEY_BY_NAME = {
 
 // Entrances the outdoor path network cannot reach today, from the Carmel gate.
 const KNOWN_ENTRANCE_GAPS = {
-  general:['multi-purpose floor1_n2'],
-  mobility:['madriga floor4_n46', 'multi-purpose floor1_n2', 'rabin floor5_n162']
+  general:[],
+  mobility:['madriga floor4_n46', 'rabin floor5_n162']
 };
 
 // Indoor destinations that cannot be reached from any entrance, and those
