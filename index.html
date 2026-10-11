@@ -97,7 +97,17 @@
   <div id="cwAnnouncements" class="cw-announcements" hidden></div>
 
   <div class="app">
-    <aside class="sidebar" aria-label="Route planner">
+    <aside class="sidebar" id="sidebar" aria-label="Route planner">
+  <button
+    class="sheet-handle"
+    id="sheetHandle"
+    type="button"
+    aria-label="Resize route panel"
+    aria-controls="sidebar"
+    aria-expanded="true"
+  >
+    <span aria-hidden="true"></span>
+  </button>
 
       <!-- Route planner: From → To -->
       <section class="panel planner" aria-labelledby="lbl-plan-route">
@@ -13662,6 +13672,206 @@ if('serviceWorker' in navigator){
 
   });
 }
+</script>
+
+<script>
+(function () {
+  const handle = document.getElementById('sheetHandle');
+  const sidebar = document.getElementById('sidebar');
+  const routeCard = document.getElementById('routeCard');
+  const app = document.querySelector('.app');
+  if (!handle || !sidebar || !routeCard || !app) return;
+
+  const phone = window.matchMedia('(max-width: 768px)');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const names = ['peek', 'half', 'full'];
+  const sizes = ['30%', '48%', '100%']; // the CSS caps the largest at (100% - MAP_STRIP)
+  const MAP_STRIP = 72;                    // keep equal to the "72px" in the CSS
+  const prefix = {
+    en: 'Resize route panel', he: 'שינוי גודל לוח המסלול',
+    ar: 'تغيير حجم لوحة المسار', ru: 'Изменить размер панели маршрута'
+  };
+  const labels = {
+    en: ['collapsed', 'half open', 'expanded'],
+    he: ['מכווץ', 'פתוח למחצה', 'מורחב'],
+    ar: ['مطوية', 'مفتوحة جزئياً', 'موسعة'],
+    ru: ['свернута', 'открыта наполовину', 'развернута']
+  };
+  let state = 1;
+  let mapTimer;
+  let drag = null;
+  let preferMap = false;
+
+sidebar.addEventListener('click', function (event) {
+  if (!phone.matches || !event.target.closest('.service-grid button')) return;
+
+  preferMap = true;
+  snapTo(0);
+
+  document.getElementById('appWrap').scrollIntoView({
+    block: 'start',
+    behavior: reducedMotion.matches ? 'auto' : 'smooth'
+  });
+}, true);
+
+handle.addEventListener('pointerdown', function () {
+  preferMap = false;
+});
+
+handle.addEventListener('click', function () {
+  preferMap = false;
+});
+
+sidebar.addEventListener('focusin', function (event) {
+  if (event.target.closest('.planner')) preferMap = false;
+});
+
+  const hasRoute = () => routeCard.classList.contains('show');
+
+  function updateLabel() {
+    const code = (document.documentElement.lang || 'en').split('-')[0];
+    const l = labels[code] ? code : 'en';
+    handle.setAttribute('aria-label', `${prefix[l]}: ${labels[l][state]}`);
+  }
+
+  function refreshMap() {
+    clearTimeout(mapTimer);
+    mapTimer = setTimeout(() => {
+      if (typeof map !== 'undefined') map.invalidateSize({ pan: false, animate: false });
+    }, 100);
+  }
+
+  // Keeps the layout inside the visible area when the phone keyboard opens.
+  function syncViewport() {
+    const root = document.documentElement;
+    if (!phone.matches) { root.style.removeProperty('--cw-viewport-h'); return; }
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    root.style.setProperty('--cw-viewport-h', Math.round(h) + 'px');
+    refreshMap();
+  }
+
+  function snapTo(i) {
+    if (!phone.matches) return;
+    state = Math.max(0, Math.min(names.length - 1, i));
+    document.documentElement.style.setProperty('--sheet-h', sizes[state]);
+    sidebar.dataset.sheet = names[state];
+    handle.setAttribute('aria-expanded', String(state > 0));
+    updateLabel();
+    refreshMap();
+  }
+  window.setSheetState = snapTo;
+
+  // ── Heights in pixels, for dragging ──
+  function peekHeight() {
+    const prevSheet = sidebar.dataset.sheet;
+    const prevHeight = sidebar.style.height;
+    sidebar.dataset.sheet = 'peek';
+    sidebar.style.height = 'auto';
+    const h = Math.min(sidebar.scrollHeight, app.clientHeight * 0.45);
+    sidebar.style.height = prevHeight;
+    if (prevSheet) sidebar.dataset.sheet = prevSheet; else delete sidebar.dataset.sheet;
+    return h;
+  }
+  const snapHeights = () => [
+  app.clientHeight * 0.30,
+  app.clientHeight * 0.48,
+  app.clientHeight - MAP_STRIP
+];
+  const closest = (indexes, heights, h) =>
+    indexes.reduce((best, i) => Math.abs(heights[i] - h) < Math.abs(heights[best] - h) ? i : best, indexes[0]);
+
+  function settle(index, px) {
+    const finish = () => {
+      sidebar.style.transition = '';
+      sidebar.style.height = '';
+      snapTo(index);
+    };
+    if (reducedMotion.matches) { finish(); return; }
+    sidebar.style.transition = 'height .2s ease';
+    sidebar.style.height = px + 'px';
+    setTimeout(finish, 220);
+  }
+
+  // ── Dragging the handle ──
+  handle.addEventListener('pointerdown', e => {
+    if (!phone.matches || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    drag = {
+      id: e.pointerId, startY: e.clientY, startH: sidebar.getBoundingClientRect().height,
+      lastY: e.clientY, lastT: e.timeStamp, velocity: 0, moved: false,
+      heights: snapHeights(),
+      indexes: [0, 1, 2]
+    };
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  handle.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = drag.startY - e.clientY;             // positive = dragging up
+    if (!drag.moved && Math.abs(dy) < 6) return;    // ignore finger wobble
+    if (!drag.moved) { drag.moved = true; sidebar.dataset.sheet = 'half'; } // show all content while dragging
+    const lowest = drag.heights[drag.indexes[0]];
+    const highest = drag.heights[2];
+    sidebar.style.height = Math.max(lowest, Math.min(highest, drag.startH + dy)) + 'px';
+    const dt = e.timeStamp - drag.lastT;
+    if (dt > 0) drag.velocity = (drag.lastY - e.clientY) / dt;   // px per ms
+    drag.lastY = e.clientY;
+    drag.lastT = e.timeStamp;
+    refreshMap();
+  });
+
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag;
+    drag = null;
+    if (handle.hasPointerCapture(e.pointerId)) handle.releasePointerCapture(e.pointerId);
+    if (!d.moved) return;                           // a plain tap does nothing
+    const current = sidebar.getBoundingClientRect().height;
+    let target = closest(d.indexes, d.heights, current);
+    if (e.type !== 'pointercancel' && Math.abs(d.velocity) > 0.5) {      // a quick flick moves one step
+      const from = d.indexes.indexOf(closest(d.indexes, d.heights, d.startH));
+      const next = from + (d.velocity > 0 ? 1 : -1);
+      target = d.indexes[Math.max(0, Math.min(d.indexes.length - 1, next))];
+    }
+    settle(target, d.heights[target]);
+  }
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+
+  // Keyboard and screen readers: Enter/Space (a click with no pointer) and the arrow keys.
+  handle.addEventListener('click', e => {
+    if (e.detail === 0) snapTo(state === 2 ? 0 : state + 1);
+  });
+  handle.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp') { e.preventDefault(); snapTo(state + 1); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); snapTo(state - 1); }
+  });
+
+  // A new route opens half way so the whole card shows; clearing it never leaves an empty collapsed sheet.
+  let hadRoute = hasRoute();
+  new MutationObserver(() => {
+    const now = hasRoute();
+if (now && !hadRoute) snapTo(preferMap ? 0 : 1);
+    hadRoute = now;
+  }).observe(routeCard, { attributes: true, attributeFilter: ['class'] });
+
+  new MutationObserver(updateLabel)
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', syncViewport);
+  window.addEventListener('resize', syncViewport);
+
+  phone.addEventListener('change', () => {
+    syncViewport();
+    if (phone.matches) snapTo(1);
+    else {
+      document.documentElement.style.removeProperty('--sheet-h');
+      delete sidebar.dataset.sheet;
+    }
+  });
+
+  syncViewport();
+  snapTo(1);
+})();
 </script>
 
 </body>

@@ -1445,6 +1445,7 @@ dialog.cancel-journey-dialog h2{
   outline-offset:3px;
 }
 
+
 /* Outdoor arrival: shown when the outdoor walk ends the journey (matches the indoor arrival message). */
 dialog.outdoor-arrival-dialog{
   box-sizing:border-box;
@@ -1496,3 +1497,162 @@ body.hc dialog.outdoor-arrival-dialog::backdrop{background:rgba(0,0,0,.88);}
   .outdoor-arrival-icon::after{animation:none!important;}
   .outdoor-arrival-check{animation:none!important;stroke-dashoffset:0;}
 }
+
+/* Mobile resizable route panel */
+.sheet-handle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #appWrap.visible {
+    height: var(--cw-viewport-h, 100dvh);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #appWrap > .topbar,
+  #appWrap > .cw-announcements {
+    flex-shrink: 0;
+  }
+
+  #appWrap > .app {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app > .map-wrap {
+    order: 1;
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+  }
+
+  .app > .sidebar {
+    order: 2;
+    flex: 0 0 auto;
+    height: var(--sheet-h, 48%);
+    max-height: calc(100% - 72px);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 0 12px max(12px, env(safe-area-inset-bottom));
+    border-inline-end: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 18px 18px 0 0;
+  }
+
+  .sheet-handle {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    flex-shrink: 0;
+    width: 100%;
+    min-height: 20px;
+    margin: 0 0 -8px;
+    padding: 7px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--bg, #f1f5f9);
+    cursor: grab;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .sheet-handle > span {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--mid, #94a3b8);
+  }
+
+  .sheet-handle:active { cursor: grabbing; }
+
+  .sheet-handle:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: -4px;
+  }
+
+  .sidebar[data-sheet="peek"] {
+    height: auto;
+    max-height: min(45%, calc(100% - 72px));
+  }
+
+  .sidebar[data-sheet="peek"] > .panel,
+  .sidebar[data-sheet="peek"] .journey-plan,
+  .sidebar[data-sheet="peek"] .route-steps-wrap {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .app > .sidebar {
+    border-radius: 0;
+  }
+
+  .sheet-handle {
+    height: 0;
+    min-height: 0;
+    flex-basis: 0;
+    margin: 0 0 -14px;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+  }
+
+  /* Invisible touch area: no extra row of empty space. */
+  .sheet-handle::before {
+    content: "";
+    position: absolute;
+    width: 88px;
+    height: 44px;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .sheet-handle > span {
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 5px;
+    background: var(--mid);
+    box-shadow: 0 0 0 4px var(--bg);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar[data-sheet="peek"] {
+    height: var(--sheet-h, 30%);
+    max-height: calc(100% - 72px);
+  }
+
+  .sidebar[data-sheet="peek"] > .panel,
+  .sidebar[data-sheet="peek"] .journey-plan {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .sheet-handle > span {
+    width: 72px;
+    height: 12px;
+    top: -6px;
+    background: var(--primary, #2563eb);
+    border-radius: 999px;
+    box-shadow:
+      0 0 0 3px var(--surface, #fff),
+      0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
