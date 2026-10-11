@@ -1,4 +1,4 @@
-const CACHE_NAME = 'campusway-v66-live-status';
+const CACHE_NAME = 'campusway-v67-speech-voices';
 
 const APP_FILES = [
 './',
@@ -16,6 +16,7 @@ const APP_FILES = [
   './app/ui/qr-code.js',
   './app/ui/share.js',
   './app/ui/campus-status.js',
+  './app/ui/speech-voice.js',
   './app/data/campus-status.json',
 
   './app/prototype/data.js',
