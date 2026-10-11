@@ -1192,7 +1192,8 @@ const INDOOR_NAVIGATION_BUILDINGS = {
   'Rabin Building': 'rabin',
   'Student House': 'student',
   'Terrace Building': 'madriga',
-  'Education and Science': 'education'
+  'Education and Science': 'education',
+  'Multi-Purpose Building': 'multi-purpose'
 };
 
 // Non-blocking messages (replaces browser alert() popups).
@@ -3030,21 +3031,16 @@ gateMarkers.push(marker);
 const foodMarkers = [];
 
 const normalFoodIcon = L.divIcon({
-  className:'',
-  html:`<div style="width:14px;height:14px;border-radius:50%;background:#00B09B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
-  iconSize:[14,14],
-  iconAnchor:[7,7]
+  className: '',
+  html: `<div style="width:14px;height:14px;border-radius:50%;background:#00B09B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
 });
 
 function routeToFoodPlace(food){
-
   // Outdoor-only food place
   if(!food.indoor){
-    routeTo(
-      food.name,
-      food.lat,
-      food.lng
-    );
+    routeTo(food.name, food.lat, food.lng);
     return;
   }
 
@@ -3076,8 +3072,7 @@ function routeToFoodPlace(food){
     education: 'Education and Science'
   };
 
-  const buildingName =
-    buildingNameByKey[food.indoor.buildingKey];
+  const buildingName = buildingNameByKey[food.indoor.buildingKey];
 
   const building = CAMPUS_DATA.buildings.find(
     b => b.name === buildingName
@@ -3085,54 +3080,61 @@ function routeToFoodPlace(food){
 
   if(!building) return;
 
-  // Keep the indoor destination so "Continue indoors" leads to the place itself.
   routeTo(
     building.name,
     building.lat,
     building.lng,
-    {keepIndoorContext:true}
+    {keepIndoorContext: true}
   );
 }
 
-CAMPUS_DATA.points.food.forEach(f=>{
-  const marker = L.marker([f.lat,f.lng],{
+CAMPUS_DATA.points.food.forEach(f => {
+  const marker = L.marker([f.lat, f.lng], {
     icon: normalFoodIcon
   })
-  .addTo(map)
-  .bindPopup(() => `
-    <b>🍽️ ${localizedPlaceName(f)}</b>
-    ${placeHoursHtml(f.name)}
+    .addTo(map)
+    .bindPopup(() => `
+      <b>🍽️ ${localizedPlaceName(f)}</b>
+      ${placeHoursHtml(f.name)}
 
-    <button
-      class="building-popup-btn"
-      onclick='routeToFoodPlace(${JSON.stringify(f)})'
-    >
-      ${t.navigateHere}
-    </button>
-    <button class="building-popup-btn secondary" onclick="sharePlace('${f.name.replace(/'/g,"\\'")}', '${f.indoor?.buildingKey || ''}')">↗ ${t.shareLabel}</button>
-  `);
+      <button
+        class="building-popup-btn"
+        onclick='routeToFoodPlace(${JSON.stringify(f)})'
+      >
+        ${t.navigateHere}
+      </button>
+
+      ${popupFavouriteButton({
+        ...f,
+        kind: 'place',
+        serviceType: 'food'
+      })}
+
+      <button
+        class="building-popup-btn secondary"
+        onclick="sharePlace('${f.name.replace(/'/g,"\\'")}', '${f.indoor?.buildingKey || ''}')"
+      >
+        ↗ ${t.shareLabel}
+      </button>
+    `);
 
   marker.foodData = f;
   foodMarkers.push(marker);
 });
 
-// Shops & services — blue
+// Shops & services — amber
 const shopMarkers = [];
 
 const normalShopIcon = L.divIcon({
-  className:'',
+  className: '',
   html: `<div style="width:14px;height:14px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2);"></div>`,
-  iconAnchor:[7,7]
+  iconAnchor: [7, 7]
 });
-function routeToShopPlace(shop){
 
+function routeToShopPlace(shop){
   // Outdoor-only shop
   if(!shop.indoor){
-    routeTo(
-      shop.name,
-      shop.lat,
-      shop.lng
-    );
+    routeTo(shop.name, shop.lat, shop.lng);
     return;
   }
 
@@ -3164,8 +3166,7 @@ function routeToShopPlace(shop){
     education: 'Education and Science'
   };
 
-  const buildingName =
-    buildingNameByKey[shop.indoor.buildingKey];
+  const buildingName = buildingNameByKey[shop.indoor.buildingKey];
 
   const building = CAMPUS_DATA.buildings.find(
     b => b.name === buildingName
@@ -3173,38 +3174,49 @@ function routeToShopPlace(shop){
 
   if(!building) return;
 
-  // Keep the indoor destination so "Continue indoors" leads to the place itself.
   routeTo(
     building.name,
     building.lat,
     building.lng,
-    {keepIndoorContext:true}
+    {keepIndoorContext: true}
   );
 }
 
-CAMPUS_DATA.points.shops.forEach(s=>{
-  const marker = L.marker([s.lat,s.lng],{
+CAMPUS_DATA.points.shops.forEach(s => {
+  const marker = L.marker([s.lat, s.lng], {
     icon: normalShopIcon
   })
-  .addTo(map)
-  .bindPopup(() => `
-    <b>🛍️ ${localizedPlaceName(s)}</b>
-    ${placeHoursHtml(s.name)}
+    .addTo(map)
+    .bindPopup(() => `
+      <b>🛍️ ${localizedPlaceName(s)}</b>
+      ${placeHoursHtml(s.name)}
 
-    <button
-      class="building-popup-btn"
-      onclick='routeToShopPlace(${JSON.stringify(s)})'
-    >
-      ${t.navigateHere}
-    </button>
-    <button class="building-popup-btn secondary" onclick="sharePlace('${s.name.replace(/'/g,"\\'")}', '${s.indoor?.buildingKey || ''}')">↗ ${t.shareLabel}</button>
-  `);
+      <button
+        class="building-popup-btn"
+        onclick='routeToShopPlace(${JSON.stringify(s)})'
+      >
+        ${t.navigateHere}
+      </button>
+
+      ${popupFavouriteButton({
+        ...s,
+        kind: 'place',
+        serviceType: 'shop'
+      })}
+
+      <button
+        class="building-popup-btn secondary"
+        onclick="sharePlace('${s.name.replace(/'/g,"\\'")}', '${s.indoor?.buildingKey || ''}')"
+      >
+        ↗ ${t.shareLabel}
+      </button>
+    `);
 
   marker.shopData = s;
   shopMarkers.push(marker);
 });
 
-// Smoking areas — map markers only; no legend entry
+// Smoking areas
 const smokingMarkers = [];
 
 (CAMPUS_DATA.points.smoking || []).forEach(place => {
@@ -3234,8 +3246,8 @@ const smokingMarkers = [];
         font-size:12px;
       ">🚬</div>
     `,
- iconSize: [20, 20],
-iconAnchor: [10, 10]
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
   });
 
   const marker = L.marker([place.lat, place.lng], {
@@ -3260,7 +3272,14 @@ iconAnchor: [10, 10]
         routeTo(smokingLabel(), place.lat, place.lng);
       };
 
-      popup.append(heading, button);
+      const saveButton = popupFavouriteElement({
+        ...place,
+        kind: 'place',
+        serviceType: 'smoking',
+        name: place.name || 'Smoking area'
+      });
+
+      popup.append(heading, button, saveButton);
       return popup;
     });
 
@@ -4200,7 +4219,17 @@ actions.style.flexDirection = 'column';
 
 button.style.width = '100%';
 reportButton.style.width = '100%';
-actions.append(button, reportButton);
+const saveButton = popupFavouriteElement({
+  kind: 'indoor',
+  name: String(place.node.label || place.node.type).trim(),
+  nodeId: place.node.id,
+  type: place.node.type,
+  buildingKey: place.buildingKey,
+  buildingName: place.building.name,
+  floor: place.floor
+});
+
+actions.append(button, saveButton, reportButton);
 row.append(description, actions);      popup.appendChild(row);    }
 
     const marker = L.marker(
@@ -12162,6 +12191,34 @@ try {
   console.warn('Could not load favourites:', error);
 }
 
+function popupFavouriteButton(place){
+  const saved = favourites.some(
+    item => favouriteKey(item) === favouriteKey(place)
+  );
+
+  const payload = encodeURIComponent(
+    JSON.stringify(place)
+  ).replace(/'/g, '%27');
+
+  return `
+    <button
+      type="button"
+      class="building-popup-btn secondary"
+      data-favourite="${payload}"
+      data-popup-favourite
+      aria-pressed="${saved}"
+    >
+      ${saved ? '★ ' + t.removeFromFav : t.saveToFav}
+    </button>
+  `;
+}
+
+function popupFavouriteElement(place){
+  const container = document.createElement('div');
+  container.innerHTML = popupFavouriteButton(place);
+  return container.firstElementChild;
+}
+
 function favouriteButton(place) {
   const isSaved = favourites.some(
     item => favouriteKey(item) === favouriteKey(place)
@@ -12219,9 +12276,26 @@ function favouriteKey(place) {
 }
 
 function favouriteLabel(place) {
-  if (place.kind !== 'indoor') {
-    return localizedBuildingNameByEnglishName(place.name);
+if(place.kind !== 'indoor'){
+  if(place.serviceType === 'outdoor-shelter'){
+    return outdoorShelterName();
   }
+
+  if(place.serviceType === 'smoking'){
+    return {
+      en: 'Smoking area',
+      he: 'אזור עישון',
+      ar: 'منطقة تدخين',
+      ru: 'Место для курения'
+    }[lang] || 'Smoking area';
+  }
+
+  if(['food', 'shop'].includes(place.serviceType)){
+    return localizedPlaceName(place);
+  }
+
+  return localizedBuildingNameByEnglishName(place.name);
+}
 
   const name = place.type === 'room'
     ? `${t.room} ${place.name.replace(/^room\s+/i, '')}`
@@ -12270,8 +12344,11 @@ function toggleSavedPlace(place) {
       item => favouriteKey(item) === favouriteKey(savedPlace)
     );
 
-    button.textContent = isSaved ? '★' : '☆';
-    button.setAttribute('aria-pressed', String(isSaved));
+    button.textContent = isSaved ? '★' : '☆';button.textContent = button.hasAttribute('data-popup-favourite')
+  ? (isSaved ? '★ ' + t.removeFromFav : t.saveToFav)
+  : (isSaved ? '★' : '☆');
+
+button.setAttribute('aria-pressed', String(isSaved));
   });
 }
 
@@ -12313,20 +12390,34 @@ function buildFavouriteList() {
       cursor: pointer;
       min-height: 44px;
     `;
+destination.onclick = () => {
+  map.closePopup();
 
-    destination.onclick = () => {
-      if (place.kind === 'indoor') {
-        pickIndoorDestination(
-          place.nodeId,
-          place.name,
-          place.buildingKey
-        );
-      } else if (place.indoor) {
-        routeToFoodPlace(place);
-      } else {
-        pickDestination(place.name, place.lat, place.lng);
-      }
-    };
+  if(place.kind === 'indoor'){
+    pickIndoorDestination(
+      place.nodeId,
+      place.name,
+      place.buildingKey
+    );
+  }else if(place.serviceType === 'outdoor-shelter'){
+    void routeToOutdoorShelter().catch(error => {
+      console.error('Could not route to outdoor shelter:', error);
+      notify(t.emergencyNoShelter);
+    });
+  }else if(place.serviceType === 'shop'){
+    routeToShopPlace(place);
+  }else if(place.serviceType === 'food' || place.indoor){
+    routeToFoodPlace(place);
+  }else if(place.serviceType === 'smoking'){
+    pickDestination(
+      favouriteLabel(place),
+      place.lat,
+      place.lng
+    );
+  }else{
+    pickDestination(place.name, place.lat, place.lng);
+  }
+};
 
     const remove = document.createElement('button');
     remove.type = 'button';
