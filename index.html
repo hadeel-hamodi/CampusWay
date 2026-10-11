@@ -6,6 +6,8 @@
 <title>CampusWay — University of Haifa</title>
 <link rel="stylesheet" href="app/vendor/leaflet.css" />
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="app/vendor/images/icon-192.png">
+<link rel="apple-touch-icon" href="app/vendor/images/apple-touch-icon.png">
 <meta name="theme-color" content="#0D1B3E">
 <script src="app/vendor/leaflet.js"></script>
 <script src="app/prototype/data.js"></script>
@@ -783,7 +785,7 @@ const T = {
     profile:'Профиль доступности',
     liveAlert:'Полезная информация',
     navigateHere:'Проложить маршрут',
-    routeFrom:'От',
+    routeFrom:'Маршрут:',
     optimizedFor:'Маршрут для профиля',
     gpsActive:'Используется ваше местоположение GPS',
     currentLocation:'вашего текущего местоположения',
@@ -818,7 +820,7 @@ const T = {
     continueIndoors:'Продолжить внутри →', switchingIndoor:'Переход к навигации внутри здания…', room:'Аудитория',
     yourLocation:'Ваше местоположение', hour:'ч', hours:'ч', noBuildingOrRoom:'Подходящее здание или аудитория не найдены.',
     planRoute:'Планирование маршрута', campusMapLabel:'Карта кампуса', zoomIn:'Увеличить', zoomOut:'Уменьшить', closePopup:'Закрыть всплывающее окно', servicesHint:'Ближайшие к начальной точке', mapKey:'Обозначения', changeProfile:'Изменить',
-    startIndoorRoute:'Начать маршрут внутри →', startIndoorFirst:'Сначала начните внутренний маршрут. Указания снаружи появятся после выхода.', nearestShelter:'Ближайшее укрытие', routeTo:'до', clearRoute:'Очистить маршрут',
+    startIndoorRoute:'Начать маршрут внутри →', startIndoorFirst:'Сначала начните внутренний маршрут. Указания снаружи появятся после выхода.', nearestShelter:'Ближайшее укрытие', routeTo:'—', clearRoute:'Очистить маршрут',
     headerSub:'Хайфский университет · Доступная навигация', useMyLocation:'Использовать моё местоположение', voiceSearch:'Голосовой поиск',
     showCampus:'Показать весь кампус', outOfService:'Не работает', voiceError:'Голосовой поиск не сработал. Попробуйте снова или введите текст.',
     noMatchHint:'Попробуйте название здания, номер аудитории (например, 5001) или место, например библиотеку.',
@@ -2238,12 +2240,15 @@ function updateVisualVoiceControls(){
       'خطط للمسار بالصوت'
     );
 
-  document.getElementById('visualVoiceStopBtn').textContent =
+  const stopButton = document.getElementById('visualVoiceStopBtn');
+  stopButton.textContent =
     visualVoiceText(
       'Stop voice planning',
       'עצור תכנון קולי',
       'أوقف التخطيط الصوتي'
     );
+  // Only offered while voice planning is running.
+  stopButton.style.display = visualVoiceActive ? '' : 'none';
 }
 
 function applyTranslations(){
@@ -3924,15 +3929,19 @@ async function restSpaceIndoorJourneySeconds(match, start){
 async function restSpaceJourneySeconds(match, start){
   const destinationKey = match.buildingKey;
 
+  const sharedElevatorUsable = !sharedElevatorOutOfService();
+
   const usesIndoorConnection =
     start.buildingKey === destinationKey ||
-    Boolean(
-      SHARED_INDOOR_TRANSFERS[
-        `${start.buildingKey}:${destinationKey}`
-      ]
-    ) ||
-    (start.buildingKey === 'main' && destinationKey === 'madriga') ||
-    (start.buildingKey === 'madriga' && destinationKey === 'main');
+    (sharedElevatorUsable && (
+      Boolean(
+        SHARED_INDOOR_TRANSFERS[
+          `${start.buildingKey}:${destinationKey}`
+        ]
+      ) ||
+      (start.buildingKey === 'main' && destinationKey === 'madriga') ||
+      (start.buildingKey === 'madriga' && destinationKey === 'main')
+    ));
 
   if(usesIndoorConnection){
     return restSpaceIndoorJourneySeconds(match, start);
@@ -3966,7 +3975,7 @@ async function restSpaceJourneySeconds(match, start){
     }
 
     // Madriga may reach an outdoor destination through Rabin.
-    if(start.buildingKey === 'madriga'){
+    if(start.buildingKey === 'madriga' && sharedElevatorUsable){
       const connection = SHARED_INDOOR_TRANSFERS['madriga:rabin'];
       const transfers = start.accessible
         ? [connection.mobility]
@@ -4506,9 +4515,14 @@ if(type === 'rest-space' || type === 'landmark'){
             building,
             buildingKey: item.buildingKey,
             serviceType: type,
+            // Gym and library nodes are labelled in lower-case English in the maps.
             displayLabel: type === 'rest-space'
               ? t.suggestedRestSpace
-              : String(node.label || node.type).trim(),
+              : type === 'gym'
+                ? t.serviceGym
+                : type === 'library'
+                  ? t.serviceLibrary
+                  : String(node.label || node.type).trim(),
             distance: Math.hypot(
               building.lat - start.lat,
               building.lng - start.lng
@@ -4745,6 +4759,7 @@ if(type === 'shop'){
 
     if(!clinic) return;
 
+    showServiceDestination(t.nearestClinic);
     routeTo(
       clinic.name,
       clinic.lat,
@@ -4814,6 +4829,7 @@ if(type === 'shop'){
     ru: 'Место для курения'
   })[lang] || 'Smoking area';
 
+  showServiceDestination(label);
   await routeTo(
     label,
     nearestSmoking.lat,
@@ -4843,18 +4859,20 @@ if(type === 'shop'){
   if(!nearest) return;
 
   if(type === 'restroom'){
+    const restroomLabel = {
+      en: 'Nearest restroom',
+      he: 'השירותים הקרובים ביותר',
+      ar: 'أقرب مرحاض',
+      ru: 'Ближайший туалет'
+    }[lang] || 'Nearest restroom';
+    showServiceDestination(restroomLabel);
     sessionStorage.setItem(
       'indoorContext',
       JSON.stringify({
         entranceId: null,
         startNodeId: null,
         destinationLabel: 'Restroom',
-        destinationDisplayLabel: {
-          en: 'Nearest restroom',
-          he: 'השירותים הקרובים ביותר',
-          ar: 'أقرب مرحاض',
-          ru: 'Ближайший туалет'
-        }[lang] || 'Nearest restroom',
+        destinationDisplayLabel: restroomLabel,
         destinationType: 'restroom',
         buildingKey: nearest.buildingKey
       })
@@ -4878,6 +4896,7 @@ if(type === 'shop'){
   }
 
   if(type === 'shelter'){
+    showServiceDestination(t.nearestShelter);
     sessionStorage.setItem(
       'indoorContext',
       JSON.stringify({
@@ -4912,6 +4931,14 @@ if(type === 'shop'){
     nearest.lat,
     nearest.lng
   );
+}
+
+// Routes started from Services Near Me name their destination in "To"
+// (it used to keep showing the previous destination).
+function showServiceDestination(label){
+  const input = document.getElementById('searchInput');
+  if(input) input.value = label || '';
+  selectedSearchDestination = null;
 }
 
 function showFoodPlaces(){
@@ -5180,6 +5207,19 @@ const SHARED_INDOOR_TRANSFERS = {
   }
 };
 
+// Terrace floor 4 and Rabin floor 5 are joined by one elevator: elevator 1 in
+// both buildings' graphs (floor4_n43 / floor5_n104). While the live status
+// lists it out of service in either building, no journey may use it.
+const SHARED_ELEVATOR_CONNECTORS = {madriga:'elevator1', rabin:'elevator1'};
+
+function sharedElevatorOutOfService(){
+  return typeof CampusStatus !== 'undefined' &&
+    Object.entries(SHARED_ELEVATOR_CONNECTORS).some(
+      ([building, connectorId]) =>
+        CampusStatus.isElevatorOut(building, connectorId)
+    );
+}
+
 function sharedIndoorTransfer(
   originBuilding,
   destinationBuilding,
@@ -5190,7 +5230,9 @@ function sharedIndoorTransfer(
       `${originBuilding}:${destinationBuilding}`
     ];
 
-  return connection?.mobility || null;
+  if(!connection || sharedElevatorOutOfService()) return null;
+
+  return connection.mobility;
 }
 
 async function chooseSharedIndoorTransfer(
@@ -5818,6 +5860,16 @@ async function routeTo(name, lat, lng, options={}){
   emergency: options.emergency === true
 };
   if(!keepIndoorContext) sessionStorage.removeItem('indoorContext');
+  // Building transfers are worked out again below for this route; ones left
+  // by an earlier, unfinished journey must not be reused.
+  sessionStorage.removeItem('sharedIndoorTransfer');
+  sessionStorage.removeItem('intermediateIndoorTransfer');
+  // No start chosen: the route begins at the default gate, so a saved indoor
+  // start (room → exit) belongs to an earlier, unfinished journey.
+  if(!customStart){
+    sessionStorage.removeItem('indoorStartContext');
+    sessionStorage.removeItem('originIndoorComplete');
+  }
   if(typeof renderRouteSteps === 'function') renderRouteSteps(null);
   if(typeof emergencyRouteActive !== 'undefined') emergencyRouteActive = options.emergency === true;
 
@@ -5979,11 +6031,6 @@ if(
 
 const start = getStart();
 
-console.log?.(
-  'ROUTE DEBUG',
-  'start =', start,
-  'destination =', { name, lat, lng }
-);
 
 // Rabin uses the Floor 7 bridge entrance when travelling to Main.
 if(
@@ -6077,13 +6124,17 @@ const chainStartKey =
 
 let usesMainToMadrigaChain =
   (
-    chainStartKey === 'main' &&
-    entranceKey === 'madriga'
-  ) ||
-  (
-    chainStartKey === 'madriga' &&
-    entranceKey === 'main'
-  );
+    (
+      chainStartKey === 'main' &&
+      entranceKey === 'madriga'
+    ) ||
+    (
+      chainStartKey === 'madriga' &&
+      entranceKey === 'main'
+    )
+  ) &&
+  // The chain rides the shared Rabin ↔ Terrace elevator.
+  !sharedElevatorOutOfService();
 
 if(entranceKey){
   let destinationContext = {};
@@ -6440,19 +6491,6 @@ if(
           indoorSeconds + outdoorSeconds;
 
 
-        console.log?.(
-          'ENTRANCE CANDIDATE:',
-          originExit.nodeId,
-          '→',
-          destinationEntrance.nodeId,
-          '| indoor:',
-          indoorSeconds,
-          'sec | outdoor:',
-          outdoorSeconds,
-          'sec | total:',
-          totalJourneySeconds,
-          'sec'
-        );
 
 
         // ----------------------------------------------
@@ -6525,13 +6563,6 @@ if(
           currentProfile === 'mobility'
         );
 
-      console.log?.(
-        'DESTINATION ENTRANCE CANDIDATE:',
-        destinationEntrance.nodeId,
-        '| outdoor:',
-        outdoorSeconds,
-        'sec'
-      );
 
       if(outdoorSeconds < shortestDestinationSeconds){
         shortestDestinationSeconds = outdoorSeconds;
@@ -6598,7 +6629,8 @@ if(
         )
       ];
 
-for(const madrigaToRabin of madrigaToRabinOptions){
+// sharedIndoorTransfer() is null while the shared elevator is out of service.
+for(const madrigaToRabin of madrigaToRabinOptions.filter(Boolean)){
 
   // TEMPORARY: Madriga and Rabin share the same elevator, so for Eshkol
 // always continue through it instead of switching to the stairs.
@@ -6665,11 +6697,6 @@ if(
   continue;
 }
 
-console.log?.('TRANSFER CHECK', madrigaToRabin.method, {
-  arrivesByElevator,
-  madrigaIndoorSeconds,
-  originNodeId: madrigaToRabin.originNodeId
-});
 
 
       if(madrigaIndoorSeconds !== null){
@@ -6780,29 +6807,6 @@ const transferSeconds =
               };
             }
 
-              console.log?.(
-                'MADRIGA → RABIN CANDIDATE:',
-                madrigaStartNodeId,
-                '→',
-                madrigaToRabin.originNodeId,
-                '→',
-                madrigaToRabin.destinationNodeId,
-                '→',
-                rabinExit.nodeId,
-                '→',
-                destinationEntrance.nodeId,
-                '| Madriga:',
-                madrigaIndoorSeconds,
-                'sec | transfer:',
-                transferSeconds,
-                'sec | Rabin:',
-                rabinIndoorSeconds,
-                'sec | outdoor:',
-                outdoorSeconds,
-                'sec | total:',
-                totalJourneySeconds,
-                'sec'
-              );
 
             }catch(error){
 
@@ -6873,14 +6877,6 @@ const directIndoorSeconds =
   }
 
 
-  console.log?.(
-    'MADRIGA ROUTE COMPARISON:',
-    'direct =',
-    directMadrigaSeconds,
-    'sec | via Rabin =',
-    bestMadrigaRabinCandidate.totalJourneySeconds,
-    'sec'
-  );
 
 
   // --------------------------------------------------
@@ -6987,15 +6983,6 @@ if(rabinTransfer?.building === 'rabin'){
     // Outdoor portion begins at the chosen Rabin exit
     // ----------------------------------------------
 
-    console.log?.(
-      'SELECTED MADRIGA → RABIN ROUTE:',
-      candidate.rabinExit.nodeId,
-      '→',
-      candidate.destinationEntrance.nodeId,
-      '| total:',
-      candidate.totalJourneySeconds,
-      'sec'
-    );
   }
 }
 
@@ -7140,20 +7127,12 @@ if(
     );
   }
 
-  console.log?.(
-    'SELECTED ORIGIN EXIT:',
-    selectedOriginExit
-  );
 }
 
 if(selectedEntrance){
   lat = selectedEntrance.lat;
   lng = selectedEntrance.lng;
 
-  console.log?.(
-  'SELECTED DESTINATION ENTRANCE:',
-  selectedEntrance
-);
 
   let indoorContext = {};
 
@@ -7945,6 +7924,7 @@ const hasDestinationIndoorJourney =
 // screen only presents the instructions for the current place.
 const awaitingOriginIndoorExit =
   hasOriginIndoorJourney &&
+  !sameBuilding &&
   sessionStorage.getItem('originIndoorComplete') !== 'true';
 
 if(awaitingOriginIndoorExit){
@@ -11376,7 +11356,6 @@ const buildingNames = {
 
   searchSuggestions.style.display = 'none';
 
-  console.log('INDOOR CONTEXT BEFORE ROUTETO:', sessionStorage.getItem('indoorContext'));
 
 return routeTo(
   building.name,
@@ -11780,7 +11759,7 @@ function speakVisualQuestion(text){
   });
 }
 
-let visualVoiceActive = false;
+var visualVoiceActive = false;
 
 let visualVoiceRunId = 0;
 let cancelVisualListening = null;
@@ -11788,6 +11767,7 @@ let cancelVisualListening = null;
 function stopVisualVoiceFlow(){
   visualVoiceRunId++;
   visualVoiceActive = false;
+  updateVisualVoiceControls();
 
   if(cancelVisualSpeaking) cancelVisualSpeaking();
   if(cancelVisualListening) cancelVisualListening();
@@ -12287,6 +12267,7 @@ async function startVisualVoiceFlow(){
 
   const runId = visualVoiceRunId;
   visualVoiceActive = true;
+  updateVisualVoiceControls();
   const isCurrent = () =>
     currentProfile === 'visual' &&
     runId === visualVoiceRunId;
@@ -12511,6 +12492,7 @@ await speakVisualQuestion(
     finally{
       if(runId === visualVoiceRunId){
         visualVoiceActive = false;
+        updateVisualVoiceControls();
 
         if(lastRouteStepsInput && !outdoorGuidance){
           startOutdoorGuidance();
@@ -13230,7 +13212,7 @@ function journeyLegLabel(leg){
     madriga:'Terrace Building','multi-purpose':'Multi-Purpose Building',education:'Education and Science'
   };
   const name=localizedBuildingNameByEnglishName(buildingNames[leg.building] || leg.building || '');
-  if(leg.kind==='indoor') return `${{en:'Inside',he:'בתוך',ar:'داخل',ru:'Внутри'}[lang] || 'Inside'} ${name}`;
+  if(leg.kind==='indoor') return `${{en:'Inside',he:'בתוך',ar:'داخل',ru:'Внутри:'}[lang] || 'Inside'} ${name}`;
   if(leg.kind==='outdoor') return ({en:'Walk outdoors',he:'הליכה בחוץ',ar:'المشي خارج المباني',ru:'Маршрут снаружи'}[lang] || 'Walk outdoors');
   const from=localizedBuildingNameByEnglishName(buildingNames[leg.fromBuilding] || leg.fromBuilding || '');
   const to=localizedBuildingNameByEnglishName(buildingNames[leg.toBuilding] || leg.toBuilding || '');

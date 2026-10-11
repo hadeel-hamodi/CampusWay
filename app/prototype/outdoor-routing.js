@@ -2400,8 +2400,6 @@ addEdge(
     connections: graph.get(node) || []
   };
 
-  console.log('Nearest outdoor routing node:', result);
-
   return result;
 }
 
@@ -2704,9 +2702,6 @@ loadingPromise =
 
           loaded = true;
 
-          console.log(
-            `Campus outdoor routing loaded: ${ways.length} walkways / ${graph.size} routing nodes`
-          );
         })
 
         .catch(error => {

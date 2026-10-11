@@ -1254,6 +1254,8 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
 @media (max-width:768px){
   .route-card .route-steps-wrap{display:none!important;}
   .mobile-route-guide{display:block;position:absolute;z-index:850;inset:0;pointer-events:none;}
+  /* Keep the zoom buttons above the direction strip, and the directions list below the Map key. */
+  .map-wrap:has(> #mobileOutdoorGuide:not([hidden])) .leaflet-bottom.leaflet-right{bottom:72px;}
   .mobile-route-current,.mobile-route-panel{pointer-events:auto;background:rgba(255,255,255,.98);border:1px solid var(--line);box-shadow:var(--shadow-lg);}
   .mobile-route-current{position:absolute;left:10px;right:10px;bottom:12px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;padding:9px 10px;border-radius:14px;}
   .mobile-route-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--primary-soft);color:var(--primary);font-weight:900;font-size:1.15rem;}
@@ -1263,7 +1265,7 @@ body.hc .leaflet-control-attribution a{color:#FFD400!important;}
   .mobile-route-toggle span{display:block;transition:transform .18s ease;}
   .mobile-route-guide.is-open .mobile-route-toggle span{transform:rotate(180deg);}
   .mobile-route-guide.is-open .mobile-route-toggle{transform:translateY(-50%);}
-  .mobile-route-panel{position:absolute;left:0;top:10px;bottom:72px;width:min(72vw,280px);max-height:none;margin:0;padding:11px;border-radius:0 16px 16px 0;overflow:auto;}
+  .mobile-route-panel{position:absolute;left:0;top:60px;bottom:72px;width:min(72vw,280px);max-height:none;margin:0;padding:11px;border-radius:0 16px 16px 0;overflow:auto;}
   .mobile-route-panel[hidden]{display:none;}
   .mobile-route-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:.875rem;}
   .mobile-route-close{width:30px;height:30px;border:0;border-radius:8px;background:var(--surface-2);color:var(--ink);font-size:1rem;}

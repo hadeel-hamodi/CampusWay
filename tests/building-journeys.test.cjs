@@ -358,3 +358,35 @@ for(const profile of ['general','mobility']){
     }
   });
 }
+
+// The Terrace ↔ Rabin connection is one elevator (elevator 1 in both graphs).
+// An outage listed in either building must keep every journey out of it.
+const SHARED_ELEVATOR_NODES = ['floor4_n43', 'floor5_n104'];
+for(const [label, outage] of [['Rabin', {building:'rabin', elevator:'1'}], ['Terrace', {building:'madriga', elevator:'1'}]]){
+  test(`shared elevator out of service (${label} status): journeys go around it`, async()=>{
+    const h=makeHarness({elevators:[outage]});
+    await h.ready();
+    for(const profile of ['general','mobility']){
+      for(const [from,start,to,end] of [
+        ['rabin','floor5_n13','madriga','floor1_n6'],
+        ['madriga','floor1_n6','rabin','floor5_n13'],
+        ['main','floor700_n69','madriga','floor1_n6'],
+        ['madriga','floor1_n6','main','floor700_n69'],
+        ['madriga','floor4_n1','education','floor4_n2']
+      ]){
+        const where=`${from} → ${to} (${profile})`;
+        const plan=await h.journey(from,start,to,end,profile);
+        assert.ok(plan && plan.ok!==false,`${where}: a journey is still found`);
+        assert.equal(plan.activeSharedTransfer,null,`${where}: no shared elevator transfer`);
+        assert.equal(plan.usesMainToMadrigaChain,false,`${where}: no Main → Rabin → Terrace chain`);
+        assert.equal(plan.transfer,null,`${where}: no shared transfer handed to the indoor page`);
+        assert.equal(plan.intermediate,null,`${where}: no Rabin leg towards the shared elevator`);
+        assert.ok(!SHARED_ELEVATOR_NODES.includes(plan.origin.exitEntranceId),`${where}: does not leave by the shared elevator`);
+        assert.ok(!SHARED_ELEVATOR_NODES.includes(plan.destination.startNodeId),`${where}: does not arrive by the shared elevator`);
+        validateOutdoor(h,plan.outdoorResult,profile);
+        validateIndoor(h,from,h.indoor(from,start,plan.origin.exitEntranceId,profile),profile);
+        validateIndoor(h,to,h.indoor(to,plan.destination.startNodeId,end,profile),profile);
+      }
+    }
+  });
+}

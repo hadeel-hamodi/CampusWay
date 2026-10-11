@@ -258,3 +258,57 @@ test('the campus map hands the live status to the outdoor router', async () => {
   assert.equal(calls.length, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), {blockedAreas:[zone], avoidElevator:true});
 });
+
+// ── Indoor page: the shared Terrace ↔ Rabin elevator (elevator 1 in both) ──
+
+// Finishes a Terrace leg that ends at the shared elevator, with these
+// elevators out of service: [[building, number], …].
+function arriveAtSharedElevator(outages){
+  const values = new Map(Object.entries({
+    journeyStage:'origin',
+    sharedIndoorTransfer:JSON.stringify({originBuilding:'madriga', destinationBuilding:'rabin', method:'elevator'})
+  }));
+  const elements = new Map();
+  const element = id => {
+    if(!elements.has(id)) elements.set(id, {textContent:'', style:{}, disabled:false});
+    return elements.get(id);
+  };
+  const rides = [];
+  const context = vm.createContext({
+    BUILDING:'madriga', indoorDemoMode:false, indoorVoiceOn:false,
+    currentGuidanceText(){ return ''; },
+    beginSharedElevatorRide(){ rides.push(true); return true; },
+    CampusStatus:{isElevatorOut:(building, id) => outages.some(([b, n]) => b === building && String(id).replace(/\D/g, '') === n)},
+    sessionStorage:{getItem:key => values.has(key) ? values.get(key) : null, setItem:(key, value) => values.set(key, String(value)), removeItem:key => values.delete(key)},
+    window:{location:{search:'?building=madriga', replace(){}}},
+    URLSearchParams,
+    document:{body:{classList:{contains(){ return false; }}}},
+    $:element,
+    localizedInstruction:english => english, localizedFloor:floor => floor, localizedNodeLabel:label => label,
+    stopNavigationMotion(){}, followNode(){}, floorButtons(){}, drawBaseMap(){}, updateProgressUI(){},
+    console:{warn(){}, error(){}}
+  });
+  vm.runInContext(
+    "let progressIndex=0,progressT=0,activeFloor='floor4',navMode='wheelchair';\n" +
+    "const routeNodes=[{id:'floor4_n43',type:'elevator',connectorId:'elevator1',floor:'floor4',label:'elevator'}];\n" +
+    between(navigation, 'function setJourneyPlanLegByKind(kind)', 'function screenOrientationAngle()') +
+    between(navigation, 'function isSharedElevatorTransferEnd(){', 'function updateDirectionControls(){'),
+    context
+  );
+  vm.runInContext('completeNavigation()', context);
+  return {rides, values, next:vm.runInContext('arrivalNextStep', context)};
+}
+
+test('indoor page: the shared Terrace ↔ Rabin elevator is not offered while either building lists it out', () => {
+  const usual = arriveAtSharedElevator([]);
+  assert.equal(usual.rides.length, 1, 'normally the shared ride starts at the elevator');
+  for(const outage of [['rabin', '1'], ['madriga', '1']]){
+    const out = arriveAtSharedElevator([outage]);
+    assert.equal(out.rides.length, 0, `${outage[0]} elevator 1 out: no shared ride`);
+    assert.notEqual(out.next?.kind, 'building', 'no hand-off into the next building');
+    assert.equal(out.values.get('indoorBuilding'), undefined);
+    assert.equal(out.values.get('journeyStage'), 'origin');
+  }
+  // Another Rabin elevator being out does not block the shared one.
+  assert.equal(arriveAtSharedElevator([['rabin', '2']]).rides.length, 1);
+});
