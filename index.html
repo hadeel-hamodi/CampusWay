@@ -6013,7 +6013,7 @@ const chainStartKey =
   entranceKeyByBuilding[customStart?.label] ||
   null;
 
-const usesMainToMadrigaChain =
+let usesMainToMadrigaChain =
   (
     chainStartKey === 'main' &&
     entranceKey === 'madriga'
@@ -6024,12 +6024,45 @@ const usesMainToMadrigaChain =
   );
 
 if(entranceKey){
+  let destinationContext = {};
+
+try{
+  destinationContext = JSON.parse(
+    sessionStorage.getItem('indoorContext') || '{}'
+  );
+}catch(error){}
+
+const destinationNodeIds =
+  destinationContext.buildingKey === entranceKey
+    ? [...new Set([
+        destinationContext.destinationNodeId,
+        ...(destinationContext.destinationNodeIds || [])
+      ].filter(Boolean))]
+    : [];
+
+const destinationGraph = destinationNodeIds.length
+  ? await loadIndoorGraphForEta(entranceKey)
+  : null;
+
+const destinationNodes =
+  Object.values(destinationGraph?.floors || {})
+    .flatMap(floor => floor.nodes || []);
+
+const destinationServiceType =
+  destinationContext.destinationType ||
+  destinationNodes.find(
+    node => destinationNodeIds.includes(node.id)
+  )?.type;
   const entrances = BUILDING_ENTRANCES[entranceKey] || [];
 const profileEntrances =
   entrances.filter(entrance => {
-    if(entrance.onlyForService){
-      return false;
-    }
+if(entrance.onlyForService){
+  return entrance.onlyForService === destinationServiceType &&
+    (
+      currentProfile !== 'mobility' ||
+      (!entrance.requiresStairs && !entrance.avoidForMobility)
+    );
+}
 
     if(currentProfile === 'mobility'){
       return (
@@ -6046,7 +6079,7 @@ const originBuildingKey =
   entranceKeyByBuilding[customStart?.label] ||
   null;
 
-const sharedTransfer =
+let sharedTransfer =
   typeof chooseSharedIndoorTransfer === 'function'
     ? await chooseSharedIndoorTransfer(
         originBuildingKey,
@@ -6056,6 +6089,33 @@ const sharedTransfer =
         originBuildingKey,
         entranceKey
       );
+
+  // Check whether the shared connection can reach the destination.
+const transferArrivalNode =
+  sharedTransfer?.destinationNodeId ||
+  (
+    usesMainToMadrigaChain && entranceKey === 'madriga'
+      ? 'floor4_n43'
+      : null
+  );
+
+if(transferArrivalNode && destinationNodeIds.length){
+  const costs = await Promise.all(
+    destinationNodeIds.map(nodeId =>
+      getIndoorLegEtaSeconds(
+        entranceKey,
+        transferArrivalNode,
+        nodeId,
+        currentProfile === 'mobility'
+      )
+    )
+  );
+
+  if(!costs.some(cost => cost !== null && Number.isFinite(cost))){
+    sharedTransfer = null;
+    usesMainToMadrigaChain = false;
+  }
+}
 
   activeSharedTransfer = sharedTransfer;
 
@@ -6084,7 +6144,51 @@ let selectedOriginExit = null;
 // --------------------------------------------------
 // Get usable destination entrances
 // --------------------------------------------------
-const destinationEntrances = profileEntrances;
+const destinationEntrances = [];
+
+for(const entrance of profileEntrances){
+  if(
+    destinationNodeIds.length &&
+    !sharedTransfer &&
+    !usesMainToMadrigaChain
+  ){
+    const costs = await Promise.all(
+      destinationNodeIds.map(nodeId =>
+        getIndoorLegEtaSeconds(
+          entranceKey,
+          entrance.nodeId,
+          nodeId,
+          currentProfile === 'mobility'
+        )
+      )
+    );
+
+    if(!costs.some(cost => cost !== null && Number.isFinite(cost))){
+      continue;
+    }
+  }
+
+  destinationEntrances.push(entrance);
+}
+
+if(!destinationEntrances.length){
+  const message = currentProfile === 'mobility'
+    ? t.noAccessibleRoute
+    : visualVoiceText(
+        'No mapped indoor route was found from an entrance to this destination.',
+        'לא נמצא מסלול פנימי ממופה מכניסה אל היעד הזה.',
+        'لم يتم العثور على مسار داخلي مرسوم من مدخل إلى هذه الوجهة.'
+      );
+
+  document.getElementById('continueIndoorBtn').style.display = 'none';
+  document.getElementById('routeTitle').textContent = message;
+  document.getElementById('routeSub').textContent = '';
+  document.getElementById('routeEta').textContent = '—';
+  document.getElementById('routeCard').classList.add('show');
+
+  speak(message);
+  return {ok:false, message};
+}
 
 
 // ==================================================
