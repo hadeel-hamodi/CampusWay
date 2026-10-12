@@ -2965,19 +2965,72 @@ function updateSpatialInstruction(){
     targetIndex
   );
   const distanceText=spatialDistanceText(distance);
-  const currentTurn=progressT===0 ? wheelchairTurnAt(progressIndex) : 0;
-  if($('turnIcon')){
-  $('turnIcon').textContent =
-    currentTurn > 0 ? '↱' :
-    currentTurn < 0 ? '↰' :
-    '↑';
-}
+    const currentTurnAtPoint = wheelchairTurnAt(progressIndex);
+  const travelled = indoorDistanceMeters(current, next) * progressT;
 
-  $('instruction').textContent=currentTurn>0
-    ? localizedInstruction('Turn right, then continue','انعطف يمينًا، ثم تابع','פנה ימינה והמשך','Поверните направо и продолжайте')
-    : currentTurn<0
-      ? localizedInstruction('Turn left, then continue','انعطف يسارًا، ثم تابع','פנה שמאלה והמשך','Поверните налево и продолжайте')
-      : localizedInstruction('Continue straight','تابع للأمام','המשך ישר','Продолжайте прямо');
+  const upcomingTurn = ['elevator', 'stairs', 'ramp'].includes(target.type)
+    ? 0
+    : wheelchairTurnAt(targetIndex);
+
+  const atCurrentTurn =
+    currentTurnAtPoint !== 0 && travelled <= 1;
+
+  const nearUpcomingTurn =
+    upcomingTurn !== 0 && distance <= 2;
+
+  const approachingTurn =
+    !atCurrentTurn &&
+    upcomingTurn !== 0 &&
+    distance > 2 &&
+    distance <= 7.7;  //approaching announcment
+
+  const currentTurn = atCurrentTurn
+    ? currentTurnAtPoint
+    : nearUpcomingTurn ? upcomingTurn : 0;
+
+  const displayedTurn = currentTurn ||
+    (approachingTurn ? upcomingTurn : 0);
+
+  $('instruction').dataset.spatialSpeechKey = currentTurn
+    ? `turn:${atCurrentTurn ? progressIndex : targetIndex}`
+    : approachingTurn
+      ? `approach:${targetIndex}`
+      : `straight:${targetIndex}`;
+
+  if($('turnIcon')){
+    $('turnIcon').textContent =
+      displayedTurn > 0 ? '↱' :
+      displayedTurn < 0 ? '↰' : '↑';
+  }
+
+  $('instruction').textContent = currentTurn > 0
+    ? localizedInstruction(
+        'Turn right', 'انعطف يمينًا',
+        'פנה ימינה', 'Поверните направо'
+      )
+    : currentTurn < 0
+      ? localizedInstruction(
+          'Turn left', 'انعطف يسارًا',
+          'פנה שמאלה', 'Поверните налево'
+        )
+      : approachingTurn
+        ? upcomingTurn > 0
+          ? localizedInstruction(
+              'At the next turn, turn right',
+              'عند المنعطف التالي، انعطف يمينًا',
+              'בפנייה הבאה, פנה ימינה',
+              'На следующем повороте поверните направо'
+            )
+          : localizedInstruction(
+              'At the next turn, turn left',
+              'عند المنعطف التالي، انعطف يسارًا',
+              'בפנייה הבאה, פנה שמאלה',
+              'На следующем повороте поверните налево'
+            )
+        : localizedInstruction(
+            'Continue straight', 'تابع للأمام',
+            'המשך ישר', 'Продолжайте прямо'
+          );
 
   if(targetIndex===routeNodes.length-1){
     const label=target._displayLabel||target.label;
@@ -5025,7 +5078,10 @@ function startAutoDemo(){
       node && ['stairs', 'elevator'].includes(node.type)
     );
 
-    advanceAlongRoute(slowSegment ? 0.2 : 0.5);
+    const spatialDemo = selectedRoutingProfile() === 'spatial';
+    advanceAlongRoute(
+      slowSegment ? 0.2 : spatialDemo ? 0.35 : 0.5
+    );
 
     if(navigationActive && followCamera){
       followNode(currentInterpolated());
@@ -6252,9 +6308,25 @@ function automaticIndoorSpeech(){
 
   indoorAutoSpeechIndex = progressIndex;
 
-  const text = currentGuidanceText();
+    const text = currentGuidanceText();
   const icon = $('turnIcon').textContent.trim();
   const minor = icon === '↑';
+
+  if(
+    navMode !== 'wheelchair' &&
+    selectedRoutingProfile() === 'spatial' &&
+    ['↑', '↱', '↰'].includes(icon)
+  ){
+    const main = $('instruction').textContent.trim();
+    const stepKey =
+      $('instruction').dataset.spatialSpeechKey || main;
+
+    return {
+      text: main,
+      key: `spatial:${routeNodes[progressIndex]?.floor}:${stepKey}`,
+      minor: minor || stepKey.startsWith('approach:')
+    };
+  }
 
   // Preserve profile-specific and floor-change guidance.
   if(
