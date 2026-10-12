@@ -2008,8 +2008,8 @@
           "label": "Node 79",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.966317,
-          "y": 0.31849,
+          "x": 0.964449,
+          "y": 0.317991,
           "floor": "floor600"
         },
         {
@@ -2089,8 +2089,8 @@
           "label": "Node 92",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.966046,
-          "y": 0.389563,
+          "x": 0.964449,
+          "y": 0.389739,
           "floor": "floor600"
         },
         {
@@ -2098,8 +2098,8 @@
           "label": "Node 93",
           "type": "corridor",
           "connectorId": "",
-          "x": 0.962341,
-          "y": 0.447624,
+          "x": 0.963596,
+          "y": 0.447441,
           "floor": "floor600"
         },
         {
@@ -3288,6 +3288,10 @@
         {
           "from": "floor600_n165",
           "to": "floor600_n105"
+        },
+        {
+          "from": "floor600_n91",
+          "to": "floor600_n92"
         }
       ],
       "nextNodeId": 166
@@ -5395,10 +5399,6 @@
         {
           "from": "floor700_n126",
           "to": "floor700_n51"
-        },
-        {
-          "from": "floor700_n81",
-          "to": "floor700_n82"
         }
       ],
       "nextNodeId": 168
