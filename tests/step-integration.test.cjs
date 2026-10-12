@@ -9,7 +9,7 @@ function between(source,start,end){
 }
 function harness(testPage=false,permission){
   const elements=new Map(),listeners=new Map(),timers=new Map(),frames=new Map();let clock=0,serial=0;
-  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,hidden:false,className:'',attributes:{},setAttribute(name,value){this.attributes[name]=String(value);},addEventListener(){}});return elements.get(id);};
+  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',dataset:{},style:{},disabled:false,hidden:false,className:'',attributes:{},setAttribute(name,value){this.attributes[name]=String(value);},addEventListener(){}});return elements.get(id);};
   const bodyClasses = new Set();
 const document = {
   body: {
@@ -624,7 +624,10 @@ test('Spatial guidance holds one instruction until the next meaningful turn',()=
     {id:'t',label:'Room',type:'room',floor:'floor500',x:.02,y:.02}
   ]);
   h.run("testProfile='spatial'; updateTurnInstruction()");
-  assert.match(h.element('instruction').textContent,/Continue straight/);
+    assert.equal(
+    h.element('instruction').textContent,
+    'At the next turn, turn right'
+  );
   assert.match(h.element('subInstruction').textContent,/then turn (right|left)/);
 });
 
