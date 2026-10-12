@@ -8885,6 +8885,18 @@ if(!state.marker){
     }
   }
 
+    // Keep elevator guidance active until the exit.
+  const elevatorIndex = state.steps.findIndex(step =>
+    step.kind === 'elevator' &&
+    Number.isFinite(step.endAt) &&
+    state.distance >= step.at &&
+    state.distance < step.endAt
+  );
+
+  if(elevatorIndex !== -1){
+    index = elevatorIndex;
+  }
+
   if(state.currentIndex !== index){
   state.currentIndex = index;
   highlightRouteStep(index);
@@ -9201,7 +9213,39 @@ const edge = result.edges?.[segmentIndex - 1];
 const onStairs = edge?.type === 'steps';
 state.onStairs = onStairs;
 
-const speed = onStairs ? 1.5 : 6; //outdoor demo speed
+const onElevator =
+  edge?.type === 'elevator' &&
+  Boolean(edge.elevatorDirection);
+
+if(onElevator){
+  if(state.elevatorDemoSegment !== segmentIndex){
+    state.elevatorDemoSegment = segmentIndex;
+    state.elevatorDemoUntil = timestamp + 3000;
+  }
+
+  if(timestamp < state.elevatorDemoUntil){
+    previousTime = timestamp;
+    state.frame = requestAnimationFrame(animate);
+    return;
+  }
+
+  // The simulated ride is finished: move to the exit.
+  const exitDistance = state.cumulative[segmentIndex + 1];
+
+  updateOutdoorGuidance(
+    state,
+    exitDistance,
+    outdoorPointAt(state, exitDistance)
+  );
+
+  previousTime = timestamp;
+  if(!state.finished){
+    state.frame = requestAnimationFrame(animate);
+  }
+  return;
+}
+
+const speed = onStairs ? 1.5 : 6; //outdoor speed demo
 
 const distance = Math.min(
   state.total,

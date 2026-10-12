@@ -3341,18 +3341,18 @@ function updateWheelchairInstruction(){
   const checkpoint=wheelchairCheckpointName(targetIndex);
   // The reminder to confirm only on arrival is given at the first point; after
   // that the distance to the next point is enough.
-  $('subInstruction').textContent=progressIndex===0
+   $('subInstruction').textContent = progressIndex === 0
     ? localizedInstruction(
-        `${distanceText} to ${checkpoint}. Confirm only when you reach it.`,
-        `${distanceText} حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
-        `${distanceText} עד ${checkpoint}. אשר רק לאחר ההגעה.`,
-        `${distanceText} до ${checkpoint}. Подтвердите только после прибытия.`
+        `Go to ${checkpoint}. Confirm only when you reach it.`,
+        `تابع حتى ${checkpoint}. أكّد فقط عندما تصل إليها.`,
+        `התקדם עד ${checkpoint}. אשר רק לאחר ההגעה.`,
+        `Следуйте до ${checkpoint}. Подтвердите только после прибытия.`
       )
     : localizedInstruction(
-        `${distanceText} to ${checkpoint}.`,
-        `${distanceText} حتى ${checkpoint}.`,
-        `${distanceText} עד ${checkpoint}.`,
-        `${distanceText} до ${checkpoint}.`
+        `Go to ${checkpoint}.`,
+        `تابع حتى ${checkpoint}.`,
+        `התקדם עד ${checkpoint}.`,
+        `Следуйте до ${checkpoint}.`
       );
 let isOutdoorExit = false;
 
@@ -6345,14 +6345,12 @@ const second = indoorTurnWords(secondTurn);
 
   return {text, key: text, minor};
 }
-
 function currentGuidanceText(){
   const main = $('instruction').textContent.trim();
   const sub = $('subInstruction').textContent.trim();
 
-  // Keep the destination visible, but omit it from repeated speech.
   const destinationSubtitle =
-  /^(?:Destination\s*:|الوجهة\s*:|יעד\s*:|Пункт назначения\s*:|Estimated position|موقع تقديري|מיקום משוער|Приблизительная позиция)/i.test(sub);
+    /^(?:Destination\s*:|الوجهة\s*:|יעד\s*:|Пункт назначения\s*:|Estimated position|موقع تقديري|מיקום משוער|Приблизительная позиция)/i.test(sub);
 
   return sub && !destinationSubtitle
     ? `${main}. ${sub}`

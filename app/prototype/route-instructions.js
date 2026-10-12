@@ -160,10 +160,29 @@
     const exclude = new Set([options.startName, options.endName].filter(Boolean));
     const candidates = [];
     for(let i = 1; i < points.length - 1; i += 1){
+            // Elevator entry and exit are not walking turns.
+      if(
+        segmentType(i - 1) === 'elevator' ||
+        segmentType(i) === 'elevator'
+      ) continue;
       const at = cumulative[i];
-      if(at < MIN_STEP_METERS || total - at < MIN_STEP_METERS) continue;
-      const before = pointAtDistance(points, cumulative, Math.max(0, at - LOOK_METERS));
-      const after = pointAtDistance(points, cumulative, Math.min(total, at + LOOK_METERS));
+
+      const mainExitTurn =
+        edges[i - 2]?.from === 'campus_main_floor600_exit' &&
+        edges[i - 2]?.to === 'campus_main_floor600_garden_junction';
+
+      if(
+        (!mainExitTurn && at < MIN_STEP_METERS) ||
+        total - at < MIN_STEP_METERS
+      ) continue;
+
+      const before = mainExitTurn
+        ? points[i - 1]
+        : pointAtDistance(points, cumulative, Math.max(0, at - LOOK_METERS));
+
+      const after = mainExitTurn
+        ? points[i + 1]
+        : pointAtDistance(points, cumulative, Math.min(total, at + LOOK_METERS));
       if(metersBetween(before, points[i], refLat) < 1 || metersBetween(points[i], after, refLat) < 1) continue;
       const angle = headingChange(
         bearing(before, points[i], refLat),
@@ -209,6 +228,20 @@
     for(let i = 1; i < points.length - 1; i += 1){
       if(segmentType(i) === 'steps' && segmentType(i - 1) !== 'steps'){
         events.push({kind: 'stairs', at: cumulative[i], point: points[i], landmark: null});
+      }
+            if(
+        segmentType(i) === 'elevator' &&
+        edges[i - 1]?.elevatorDirection &&
+        segmentType(i - 1) !== 'elevator'
+      ){
+        events.push({
+          kind: 'elevator',
+          direction: edges[i - 1]?.elevatorDirection || null,
+          at: cumulative[i],
+          endAt: cumulative[i + 1],
+          point: points[i],
+          landmark: null
+        });
       }
     }
     events.sort((a, b) => a.at - b.at);
@@ -362,6 +395,23 @@
       return text.turn(distance, text.turns[step.turn] || step.turn, step.landmark ? nameFor(step.landmark) : '');
     }
     if(step.kind === 'stairs') return text.stairs(distance);
+    if(step.kind === 'elevator'){
+      const level = {
+        en: {up: ' to the upper level', down: ' to the lower level'},
+        he: {up: ' למפלס העליון', down: ' למפלס התחתון'},
+        ar: {up: ' إلى المستوى العلوي', down: ' إلى المستوى السفلي'},
+        ru: {up: ' на верхний уровень', down: ' на нижний уровень'}
+      };
+
+      const suffix = (level[lang] || level.en)[step.direction] || '';
+
+      return ({
+        en: `Walk ${distance}, then take the outdoor elevator${suffix}`,
+        he: `התקדם ${distance}, ואז השתמש במעלית החיצונית${suffix}`,
+        ar: `تابع ${distance}، ثم استخدم المصعد الخارجي${suffix}`,
+        ru: `Пройдите ${distance}, затем воспользуйтесь наружным лифтом${suffix}`
+      })[lang] || `Walk ${distance}, then take the outdoor elevator${suffix}`;
+    }
     if(step.kind === 'pass') return text.pass(distance, nameFor(step.landmark), step.side);
     if(step.kind === 'arrive') return text.arrive(distance, name);
     return '';
@@ -374,7 +424,25 @@
     const name = step.name ? nameFor(step.name) : '';
     if(step.kind === 'start') return text.start('', text.compass[step.heading] || step.heading);
     if(step.kind === 'turn') return text.turns[step.turn] || step.turn;
-    if(step.kind === 'stairs') return text.compact.stairs;
+       if(step.kind === 'stairs') return text.compact.stairs;
+
+    if(step.kind === 'elevator'){
+      const level = {
+        en: {up: ' to the upper level', down: ' to the lower level'},
+        he: {up: ' למפלס העליון', down: ' למפלס התחתון'},
+        ar: {up: ' إلى المستوى العلوي', down: ' إلى المستوى السفلي'},
+        ru: {up: ' на верхний уровень', down: ' на нижний уровень'}
+      };
+
+      const suffix = (level[lang] || level.en)[step.direction] || '';
+
+      return ({
+        en: `Take the outdoor elevator${suffix}`,
+        he: `השתמש במעלית החיצונית${suffix}`,
+        ar: `استخدم المصعد الخارجي${suffix}`,
+        ru: `Воспользуйтесь наружным лифтом${suffix}`
+      })[lang] || `Take the outdoor elevator${suffix}`;
+    }
     if(step.kind === 'pass') return text.compact.continue;
     if(step.kind === 'arrive') return text.compact.arrive(name);
     return '';

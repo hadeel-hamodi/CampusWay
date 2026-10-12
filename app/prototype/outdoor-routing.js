@@ -2287,7 +2287,7 @@ addCampusNode(
 );
 
 addEdge(
-  'campus_main_floor600_garden_link',
+  'campus_main_floor600_exit',
   'campus_main_floor600_garden_junction',
   'footway'
 );
@@ -2829,7 +2829,22 @@ const routeOptions = {
     ],
 
     distance: result.distance,
-    edges: result.edges,
+    edges: result.edges.map((edge, index) => {
+      const from = result.nodes[index];
+      const to = result.nodes[index + 1];
+
+      const upper = 'campus_main_floor600_elevator';
+      const lower = 'campus_floor6_buffet_long_stairs_bottom';
+
+      const elevatorDirection =
+        edge.type === 'elevator' && from === upper && to === lower
+          ? 'down'
+          : edge.type === 'elevator' && from === lower && to === upper
+            ? 'up'
+            : null;
+
+      return {...edge, from, to, elevatorDirection};
+    }),
     startNode,
     endNode
   };
