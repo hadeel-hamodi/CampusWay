@@ -2536,6 +2536,15 @@ function closestNodesBetweenComponents(componentA, componentB){
   }
 
 function shortestPath(start, end, options = {}) {
+    if(options.avoidNoise && !options.noiseSearch){
+    return shortestPath(start, end, {
+      ...options,
+      noiseSearch: 'quiet'
+    }) || shortestPath(start, end, {
+      ...options,
+      noiseSearch: 'fallback'
+    });
+  }
   const noisyNodeIds = new Set();
 
 if(
@@ -2577,7 +2586,13 @@ if(
       edgeAllowed: (edge, fromId) => !(
         options.avoidSteps &&
         edge.type === 'steps'
-      ) && !edgeIsBlocked(fromId, edge),
+      ) && !edgeIsBlocked(fromId, edge) && !(
+        options.noiseSearch === 'quiet' &&
+        (
+          noisyNodeIds.has(String(fromId)) ||
+          noisyNodeIds.has(String(edge.node))
+        )
+      ),
       point: nodeId => {
         const coordinate = coordinates.get(nodeId);
         if(!coordinate) return null;
@@ -2606,10 +2621,17 @@ if(
         0
       );
 
+    const passesNoisyArea = nodes.some(id =>
+      noisyNodeIds.has(String(id))
+    );
+
     return {
       nodes,
       edges,
-      distance: realDistance
+      distance: realDistance,
+      passesNoisyArea,
+      // Selection priority only; never added to displayed distance.
+      noisePenaltyMeters: passesNoisyArea ? 1200000000 : 0
     };
   }
 
@@ -2829,6 +2851,8 @@ const routeOptions = {
     ],
 
     distance: result.distance,
+        passesNoisyArea: result.passesNoisyArea === true,
+    noisePenaltyMeters: result.noisePenaltyMeters || 0,
     edges: result.edges.map((edge, index) => {
       const from = result.nodes[index];
       const to = result.nodes[index + 1];

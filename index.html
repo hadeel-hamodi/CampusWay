@@ -4043,7 +4043,9 @@ async function restSpaceJourneySeconds(match, start){
     });
   }
 
-  let bestSeconds = Infinity;
+    let bestSeconds = Infinity;
+  let bestNoise = Infinity;
+  match.passesNoisyArea = false;
 
   for(const entrance of destinationEntrances){
     const destinationSeconds = await getIndoorLegEtaSeconds(
@@ -4082,8 +4084,18 @@ async function restSpaceJourneySeconds(match, start){
           ) +
           destinationSeconds;
 
-        if(Number.isFinite(seconds)){
-          bestSeconds = Math.min(bestSeconds, seconds);
+        const noise = outdoorRoute.passesNoisyArea ? 1 : 0;
+
+        if(
+          Number.isFinite(seconds) &&
+          (
+            noise < bestNoise ||
+            (noise === bestNoise && seconds < bestSeconds)
+          )
+        ){
+          bestNoise = noise;
+          bestSeconds = seconds;
+          match.passesNoisyArea = noise === 1;
         }
       }catch(error){
         console.warn('Could not compare rest-space route:', error);
@@ -4144,6 +4156,12 @@ async function rankNearbyRestSpaces(
   if(!startIsUnchanged()) return null;
 
   ranked.sort((a, b) =>
+    (
+      currentProfile === 'mental'
+        ? Number(a.passesNoisyArea === true) -
+          Number(b.passesNoisyArea === true)
+        : 0
+    ) ||
     a.seconds - b.seconds ||
     a.buildingKey.localeCompare(b.buildingKey) ||
     String(a.node.id).localeCompare(String(b.node.id))
@@ -6496,9 +6514,12 @@ if(
         // ----------------------------------------------
         // 4. Complete candidate journey cost
         // ----------------------------------------------
+        const noisePenaltySeconds = avoidNoise
+          ? (candidateRoute.noisePenaltyMeters || 0) / 1.2
+          : 0;
 
         const totalJourneySeconds =
-          indoorSeconds + outdoorSeconds;
+          indoorSeconds + outdoorSeconds + noisePenaltySeconds;
 
 
 
@@ -6574,8 +6595,14 @@ if(
         );
 
 
-      if(outdoorSeconds < shortestDestinationSeconds){
-        shortestDestinationSeconds = outdoorSeconds;
+      const selectionSeconds = outdoorSeconds + (
+        avoidNoise
+          ? (candidateRoute.noisePenaltyMeters || 0) / 1.2
+          : 0
+      );
+
+      if(selectionSeconds < shortestDestinationSeconds){
+        shortestDestinationSeconds = selectionSeconds;
         selectedEntrance = destinationEntrance;
         selectedOutdoorRoute = candidateRoute;
       }
@@ -7991,6 +8018,26 @@ if(hasOriginIndoorJourney){
   delete indoorBtn.dataset.destinationBuilding;
 }
 
+  document.getElementById('mentalNoiseNotice')?.remove();
+
+  if(
+    avoidNoise &&
+    !sameBuilding &&
+    !activeSharedTransfer &&
+    outdoorResult?.passesNoisyArea
+  ){
+    const notice = document.createElement('p');
+    notice.id = 'mentalNoiseNotice';
+    notice.setAttribute('role', 'status');
+    notice.textContent = {
+      en: 'This route passes through a reported noisy or crowded area. No mapped alternative avoiding it was found.',
+      he: 'המסלול עובר באזור שדווח כרועש או עמוס. לא נמצאה חלופה ממופה שעוקפת אותו.',
+      ar: 'يمر هذا المسار بمنطقة أُبلغ بأنها صاخبة أو مزدحمة. لم يُعثر على مسار بديل مرسوم يتجنبها.',
+      ru: 'Маршрут проходит через отмеченную шумную или многолюдную зону. Нанесенный на карту обходной маршрут не найден.'
+    }[lang] || 'This route passes through a reported noisy or crowded area. No mapped alternative avoiding it was found.';
+
+    document.getElementById('routeSub').after(notice);
+  }
   saveJourneyPlan(buildJourneyPlan({includeOutdoor: Boolean(outdoorResult && !sameBuilding && !activeSharedTransfer)}));
   document.getElementById('routeCard').classList.add('show');
   renderJourneyPlan();

@@ -19,7 +19,9 @@
       "id": "garden-cafe",
       "label": "Garden Café",
       "outdoorNodeIds": [
-        "campus_main_garden_path"
+        "campus_main_garden_path",
+        "campus_main_floor600_exit",
+        "campus_main_rabin_bridge_6"
       ],
       "noisy": true,
       "crowded": true,
