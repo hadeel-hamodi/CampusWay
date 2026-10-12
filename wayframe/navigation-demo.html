@@ -3306,6 +3306,7 @@ function wheelchairTurnAt(index){
 
 function updateWheelchairInstruction(){
   if(!routeNodes.length) return;
+  delete $('instruction').dataset.speech;
   if(progressIndex>=routeNodes.length-1){
     if($('turnIcon')) $('turnIcon').textContent = '✓';
     const destination=routeNodes.at(-1);
@@ -3407,6 +3408,23 @@ function updateWheelchairInstruction(){
         `התקדם עד ${checkpoint}.`,
         `Следуйте до ${checkpoint}.`
       );
+  // Voice guidance: say the turn and the distance instead of repeating
+  // "follow the highlighted route", which listeners cannot see. The short
+  // units let CampusSpeech say the number of metres grammatically.
+  const metres=Math.round(distance);
+  const spokenDistance=distance<1
+    ? localizedInstruction('less than 1 m','أقل من متر','פחות ממטר','меньше метра')
+    : localizedInstruction(`about ${metres} m`,`حوالي ${metres} م`,`כ-${metres} מ׳`,`примерно ${metres} м`);
+  const spokenStep=turn>0
+    ? localizedInstruction(`Turn right, then go ${spokenDistance} to ${checkpoint}.`,`انعطف يمينًا، ثم تابع ${spokenDistance} حتى ${checkpoint}.`,`פנה ימינה, ואז התקדם ${spokenDistance} עד ${checkpoint}.`,`Поверните направо, затем пройдите ${spokenDistance} до ${checkpoint}.`)
+    : turn<0
+      ? localizedInstruction(`Turn left, then go ${spokenDistance} to ${checkpoint}.`,`انعطف يسارًا، ثم تابع ${spokenDistance} حتى ${checkpoint}.`,`פנה שמאלה, ואז התקדם ${spokenDistance} עד ${checkpoint}.`,`Поверните налево, затем пройдите ${spokenDistance} до ${checkpoint}.`)
+      : localizedInstruction(`Go ${spokenDistance} to ${checkpoint}.`,`تابع ${spokenDistance} حتى ${checkpoint}.`,`התקדם ${spokenDistance} עד ${checkpoint}.`,`Пройдите ${spokenDistance} до ${checkpoint}.`);
+  $('instruction').dataset.speech = progressIndex === 0
+    ? `${spokenStep} ${localizedInstruction('Confirm only when you reach it.','أكّد فقط عندما تصل إليها.','אשר רק לאחר ההגעה.','Подтвердите только после прибытия.')}`
+    : spokenStep;
+  // Only valid while this instruction is on screen (arrival replaces it).
+  $('instruction').dataset.speechFor = $('instruction').textContent;
 let isOutdoorExit = false;
 
 if(
@@ -6334,7 +6352,8 @@ function automaticIndoorSpeech(){
     selectedRoutingProfile() === 'spatial' ||
     !['↑', '↱', '↰'].includes(icon)
   ){
-    return {text, key: text, minor: false};
+    // Manual mode: two points can share the same sentence, so key by point too.
+    return {text, key: navMode === 'wheelchair' ? `${progressIndex}:${text}` : text, minor: false};
   }
 
   const firstIndex = progressIndex + 1;
@@ -6418,6 +6437,12 @@ const second = indoorTurnWords(secondTurn);
   return {text, key: text, minor};
 }
 function currentGuidanceText(){
+  const instruction = $('instruction');
+  if(
+    navMode === 'wheelchair' &&
+    instruction.dataset.speech &&
+    instruction.dataset.speechFor === instruction.textContent
+  ) return instruction.dataset.speech;
   const main = $('instruction').textContent.trim();
   const sub = $('subInstruction').textContent.trim();
 
